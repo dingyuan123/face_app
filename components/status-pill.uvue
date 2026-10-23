@@ -1,0 +1,57 @@
+<template>
+	<view class="status-pill" :class="'status-' + tone">
+		<text class="status-pill-label">{{ label }}</text>
+	</view>
+</template>
+
+<script setup lang="uts">
+	defineProps({
+		label: {
+			type: String,
+			default: ''
+		},
+		tone: {
+			type: String,
+			default: 'neutral'
+		}
+	})
+</script>
+
+<style>
+	.status-pill {
+		padding: 4px 10px;
+		border-radius: 999px;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.status-pill-label {
+		font-size: 12px;
+		font-weight: 500;
+	}
+
+	.status-neutral {
+		background-color: #F9F3F0;
+		color: #756B66;
+	}
+
+	.status-success {
+		background-color: rgba(16, 185, 129, 0.12);
+		color: #10B981;
+	}
+
+	.status-warning {
+		background-color: rgba(245, 158, 11, 0.14);
+		color: #B45309;
+	}
+
+	.status-danger {
+		background-color: rgba(239, 68, 68, 0.12);
+		color: #EF4444;
+	}
+
+	.status-brand {
+		background-color: rgba(253, 90, 107, 0.12);
+		color: #FD5A6B;
+	}
+</style>

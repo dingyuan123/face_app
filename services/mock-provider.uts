@@ -1,0 +1,117 @@
+import {
+  ProviderApplicationDraft,
+  ProviderApplicationRecord,
+  ProviderSubmitResult
+} from '../types/models.uts'
+import {
+  setApplicationStatus,
+  setProviderPermission
+} from '../state/session-state.uts'
+
+const HISTORY_KEY = 'faceto.provider.application-history.v1'
+let historyLoaded = false
+let history: Array<ProviderApplicationRecord> = []
+
+function maskIdCard(value: string): string {
+  if (value.length < 6) {
+    return '***'
+  }
+  return value.slice(0, 3) + '***********' + value.slice(value.length - 2)
+}
+
+function persistHistory() {
+  uni.setStorageSync(HISTORY_KEY, JSON.stringify(history))
+}
+
+function ensureHistoryLoaded() {
+  if (historyLoaded) {
+    return
+  }
+  historyLoaded = true
+  const raw = uni.getStorageSync(HISTORY_KEY)
+  if (typeof raw == 'string' && raw.length > 0) {
+    try {
+      history = JSON.parse(raw) as Array<ProviderApplicationRecord>
+    } catch (e) {
+      history = []
+    }
+  }
+}
+
+function addRecord(record: ProviderApplicationRecord) {
+  const next: Array<ProviderApplicationRecord> = []
+  next.push(record)
+  for (let i = 0; i < history.length; i++) {
+    next.push(history[i])
+  }
+  history = next
+  persistHistory()
+}
+
+export function getApplicationHistory(): Array<ProviderApplicationRecord> {
+  ensureHistoryLoaded()
+  return history.slice()
+}
+
+export function getLatestApplication(): ProviderApplicationRecord | null {
+  ensureHistoryLoaded()
+  if (history.length == 0) {
+    return null
+  }
+  return history[0]
+}
+
+export function submitProviderApplication(draft: ProviderApplicationDraft): ProviderSubmitResult {
+  if (draft.avatarPath.length == 0 || draft.lifePhotoPath.length == 0) {
+    return { ok: false, code: 'MISSING_IMAGES', message: '请上传头像和生活照', record: null }
+  }
+  if (draft.bio.trim().length < 8) {
+    return { ok: false, code: 'INVALID_BIO', message: '个人简介至少填写 8 个字', record: null }
+  }
+  if (draft.realName.trim().length < 2) {
+    return { ok: false, code: 'INVALID_REAL_NAME', message: '请填写真实姓名', record: null }
+  }
+  if (draft.idCardNumber.trim().length != 18) {
+    return { ok: false, code: 'INVALID_ID_CARD', message: '请填写 18 位身份证号码', record: null }
+  }
+
+  const record: ProviderApplicationRecord = {
+    id: 'application-' + Date.now().toString(),
+    submittedAt: new Date().toISOString(),
+    status: 'pending',
+    rejectionReason: '',
+    avatarAsset: 'mock://avatar-submitted',
+    lifePhotoAsset: 'mock://life-photo-submitted',
+    bio: draft.bio.trim(),
+    realName: draft.realName.trim(),
+    idCardMasked: maskIdCard(draft.idCardNumber.trim())
+  }
+  addRecord(record)
+  setApplicationStatus('pending')
+  setProviderPermission(false)
+  return { ok: true, code: 'APPLICATION_SUBMITTED', message: '申请已提交，等待审核', record: record }
+}
+
+export function seedTestApplication(kind: string) {
+  ensureHistoryLoaded()
+  const status = kind == 'normal' ? 'none' : kind
+  if (status == 'none') {
+    history = []
+    persistHistory()
+    return
+  }
+
+  const record: ProviderApplicationRecord = {
+    id: 'test-application-' + kind,
+    submittedAt: new Date().toISOString(),
+    status: status,
+    rejectionReason: status == 'rejected' ? '个人简介信息不足，请补充服务经历后重新提交。' : '',
+    avatarAsset: 'mock://avatar-submitted',
+    lifePhotoAsset: 'mock://life-photo-submitted',
+    bio: '喜欢与人交流，可以在公共场所提供友好、安心的陪伴服务。',
+    realName: '测试用户',
+    idCardMasked: '110***********1234'
+  }
+  history = []
+  addRecord(record)
+}

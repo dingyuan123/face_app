@@ -1,0 +1,81 @@
+import { PendingIntent } from '../types/models.uts'
+import {
+  clearPendingIntent,
+  sessionState,
+  setPendingIntent
+} from '../state/session-state.uts'
+
+export const HOME_ROUTE = '/pages/index/index'
+export const LOGIN_ROUTE = '/pages/login/login'
+export const IDENTITY_ROUTE = '/pages/identity/identity'
+export const PROVIDER_APPLY_ROUTE = '/pages/provider/apply'
+
+export function saveIntent(action: string, route: string, payload: string) {
+  const intent: PendingIntent = {
+    action: action,
+    route: route,
+    payload: payload
+  }
+  setPendingIntent(intent)
+}
+
+export function openLogin(action: string, route: string, payload: string) {
+  saveIntent(action, route, payload)
+  uni.navigateTo({
+    url: LOGIN_ROUTE + '?source=' + encodeURIComponent(route)
+  })
+}
+
+export function openIdentity() {
+  uni.navigateTo({
+    url: IDENTITY_ROUTE
+  })
+}
+
+export function openProviderApply() {
+  uni.navigateTo({
+    url: PROVIDER_APPLY_ROUTE
+  })
+}
+
+export function finishAuthenticatedNavigation(resumeMessage: string) {
+  if (sessionState.identity == 'unset') {
+    uni.reLaunch({
+      url: IDENTITY_ROUTE
+    })
+    return
+  }
+
+  const action = sessionState.pendingAction
+  const route = sessionState.pendingRoute
+  const payload = sessionState.pendingPayload
+  clearPendingIntent()
+
+  let url = HOME_ROUTE
+  if (route == PROVIDER_APPLY_ROUTE) {
+    url = PROVIDER_APPLY_ROUTE
+  } else if (action.length > 0) {
+    url = HOME_ROUTE + '?resumeAction=' + encodeURIComponent(action) + '&resumePayload=' + encodeURIComponent(payload)
+  } else if (route.length > 0 && route != LOGIN_ROUTE) {
+    url = route
+  }
+  uni.reLaunch({
+    url: url,
+    complete: () => {
+      if (resumeMessage.length > 0) {
+        uni.showToast({
+          title: resumeMessage,
+          position: 'bottom'
+        })
+      }
+    }
+  })
+}
+
+export function requireAccount(action: string, route: string, payload: string): boolean {
+  if (sessionState.loggedIn) {
+    return true
+  }
+  openLogin(action, route, payload)
+  return false
+}

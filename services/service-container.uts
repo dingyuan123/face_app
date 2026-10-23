@@ -1,0 +1,64 @@
+import {
+  ActionOutcome,
+  AuthUser,
+  HomeFeedItem,
+  ProviderApplicationDraft,
+  ProviderApplicationRecord,
+  ProviderSubmitResult
+} from '../types/models.uts'
+import * as mockAuth from './mock-auth.uts'
+import * as mockPublic from './mock-public.uts'
+import * as mockProvider from './mock-provider.uts'
+
+/**
+ * 页面只依赖本文件中的业务服务。
+ * 后续接入真实 API 时，只替换这里的实现，不让页面直接导入 Mock。
+ */
+export function sendSmsCode(phone: string): ActionOutcome {
+  return mockAuth.sendSmsCode(phone)
+}
+
+export function loginWithPhone(phone: string, code: string): ActionOutcome {
+  return mockAuth.loginWithPhone(phone, code)
+}
+
+export function requestWechatLogin(): ActionOutcome {
+  return mockAuth.requestWechatLogin()
+}
+
+export function requestAppleLogin(): ActionOutcome {
+  return mockAuth.requestAppleLogin()
+}
+
+export function loginWithTestAccount(kind: string): ActionOutcome {
+  return mockAuth.loginWithTestAccount(kind)
+}
+
+export function getHomeFeed(): Array<HomeFeedItem> {
+  return mockPublic.getHomeFeed()
+}
+
+export function getApplicationHistory(): Array<ProviderApplicationRecord> {
+  return mockProvider.getApplicationHistory()
+}
+
+export function getLatestApplication(): ProviderApplicationRecord | null {
+  return mockProvider.getLatestApplication()
+}
+
+export function submitProviderApplication(draft: ProviderApplicationDraft): ProviderSubmitResult {
+  return mockProvider.submitProviderApplication(draft)
+}
+
+export function performAccountAction(action: string, targetId: string): ActionOutcome {
+  if (action == 'favorite') {
+    return { ok: true, code: 'MOCK_FAVORITE_ADDED', message: '已收藏（开发 Mock）' }
+  }
+  if (action == 'chat') {
+    return { ok: true, code: 'MOCK_CHAT_READY', message: '已进入会话准备状态（开发 Mock）' }
+  }
+  if (action == 'booking') {
+    return { ok: true, code: 'MOCK_BOOKING_READY', message: '已进入预约准备状态（开发 Mock）' }
+  }
+  return { ok: false, code: 'UNKNOWN_ACTION', message: '暂不支持该操作' }
+}

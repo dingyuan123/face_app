@@ -1,0 +1,389 @@
+<template>
+	<view class="page">
+		<view class="hero">
+			<image class="logo" src="/static/logo.png" mode="aspectFit"></image>
+			<text class="brand">见面聊</text>
+			<text class="slogan">见面聊，安心见</text>
+		</view>
+
+		<view class="form-card">
+			<text class="section-title">手机号登录</text>
+			<input
+				class="input"
+				type="number"
+				:value="phone"
+				maxlength="11"
+				placeholder="请输入手机号"
+				placeholder-class="placeholder"
+				@input="onPhoneInput"
+			/>
+			<view class="code-row">
+				<input
+					class="input code-input"
+					type="number"
+					:value="code"
+					maxlength="6"
+					placeholder="请输入验证码"
+					placeholder-class="placeholder"
+					@input="onCodeInput"
+				/>
+				<view class="code-button" @click="sendCode">
+					<text class="code-button-text">获取验证码</text>
+				</view>
+			</view>
+
+			<view class="agreement" @click="agreed = !agreed">
+				<view class="checkbox">{{ agreed ? '✓' : '' }}</view>
+				<text class="agreement-text">已阅读并同意用户协议与隐私政策</text>
+			</view>
+
+			<facetof-button label="登录" tone="gradient" :disabled="submitting" @press="submitPhoneLogin"></facetof-button>
+
+			<view class="divider">
+				<view class="divider-line"></view>
+				<text class="divider-text">其他登录方式</text>
+				<view class="divider-line"></view>
+			</view>
+
+			<view class="social-row">
+				<view class="social-button" @click="wechatLogin">
+					<text class="social-icon wechat">微</text>
+					<text class="social-label">微信登录</text>
+				</view>
+				<view class="social-button" @click="appleLogin">
+					<text class="social-icon apple">A</text>
+					<text class="social-label">Apple 登录</text>
+				</view>
+			</view>
+
+			<view class="guest-row" @click="continueAsGuest">
+				<text class="guest-text">暂不登录，先看看公开内容</text>
+			</view>
+		</view>
+
+		<view v-if="devTestEnabled" class="dev-card">
+			<view class="dev-title-row">
+				<text class="section-title">开发测试登录</text>
+				<status-pill label="仅开发环境" tone="warning"></status-pill>
+			</view>
+			<text class="dev-tip">用于验证身份、申请和权限状态，不代表真实登录或真实审核结果。</text>
+			<view class="test-grid">
+				<view class="test-button" @click="testLogin('normal')">
+					<text class="test-button-title">普通用户</text>
+					<text class="test-button-desc">无服务者申请</text>
+				</view>
+				<view class="test-button" @click="testLogin('pending')">
+					<text class="test-button-title">审核中</text>
+					<text class="test-button-desc">服务者申请待审核</text>
+				</view>
+				<view class="test-button" @click="testLogin('approved')">
+					<text class="test-button-title">审核通过</text>
+					<text class="test-button-desc">显示工作台入口</text>
+				</view>
+				<view class="test-button" @click="testLogin('rejected')">
+					<text class="test-button-title">审核拒绝</text>
+					<text class="test-button-desc">可修改后重新提交</text>
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import FacetofButton from '../../components/facetof-button.uvue'
+	import StatusPill from '../../components/status-pill.uvue'
+	import { loginWithPhone, loginWithTestAccount, requestAppleLogin, requestWechatLogin, sendSmsCode } from '../../services/service-container.uts'
+	import { finishAuthenticatedNavigation } from '../../router/route-guard.uts'
+
+	const phone = ref('')
+	const code = ref('')
+	const agreed = ref(false)
+	const submitting = ref(false)
+	const devTestEnabled = ref(process.env.NODE_ENV == 'development')
+
+	function onPhoneInput(event: InputEvent) {
+		phone.value = event.detail.value
+	}
+
+	function onCodeInput(event: InputEvent) {
+		code.value = event.detail.value
+	}
+
+	function showOutcome(ok: boolean, message: string) {
+		uni.showToast({
+			title: message,
+			position: 'bottom',
+			icon: ok ? 'success' : 'error'
+		})
+	}
+
+	function sendCode() {
+		const result = sendSmsCode(phone.value)
+		showOutcome(result.ok, result.message)
+	}
+
+	function submitPhoneLogin() {
+		if (!agreed.value) {
+			showOutcome(false, '请先同意用户协议与隐私政策')
+			return
+		}
+		submitting.value = true
+		const result = loginWithPhone(phone.value, code.value)
+		submitting.value = false
+		if (!result.ok) {
+			showOutcome(false, result.message)
+			return
+		}
+		finishAuthenticatedNavigation('登录成功')
+	}
+
+	function wechatLogin() {
+		const result = requestWechatLogin()
+		showOutcome(result.ok, result.message)
+	}
+
+	function appleLogin() {
+		const result = requestAppleLogin()
+		showOutcome(result.ok, result.message)
+	}
+
+	function continueAsGuest() {
+		uni.reLaunch({
+			url: '/pages/index/index'
+		})
+	}
+
+	function testLogin(kind: string) {
+		const result = loginWithTestAccount(kind)
+		if (!result.ok) {
+			showOutcome(false, result.message)
+			return
+		}
+		finishAuthenticatedNavigation('测试账号已就绪')
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		padding: 32px $facetof-space-page 40px;
+		background-color: $facetof-color-warm-background;
+	}
+
+	.hero {
+		align-items: center;
+		margin: 12px 0 28px;
+	}
+
+	.logo {
+		width: 72px;
+		height: 72px;
+	}
+
+	.brand {
+		margin-top: 10px;
+		font-size: 28px;
+		font-weight: 700;
+		color: $facetof-color-ink;
+	}
+
+	.slogan {
+		margin-top: 6px;
+		font-size: 14px;
+		color: $facetof-color-secondary-text;
+	}
+
+	.form-card,
+	.dev-card {
+		padding: $facetof-space-card;
+		background-color: $facetof-color-background;
+		border: 1px solid $facetof-color-border;
+		border-radius: $facetof-radius-card;
+	}
+
+	.dev-card {
+		margin-top: 16px;
+	}
+
+	.section-title {
+		font-size: 18px;
+		font-weight: 600;
+		color: $facetof-color-ink;
+	}
+
+	.input {
+		height: 48px;
+		margin-top: 14px;
+		padding: 0 14px;
+		font-size: 15px;
+		color: $facetof-color-ink;
+		background-color: $facetof-color-warm-background;
+		border: 1px solid $facetof-color-border;
+		border-radius: $facetof-radius-control;
+	}
+
+	.placeholder {
+		color: #B5AAA5;
+	}
+
+	.code-row {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.code-input {
+		flex: 1;
+	}
+
+	.code-button {
+		height: 48px;
+		margin-top: 14px;
+		margin-left: 10px;
+		padding: 0 14px;
+		align-items: center;
+		justify-content: center;
+		background-color: $facetof-color-warm-background;
+		border: 1px solid $facetof-color-border;
+		border-radius: $facetof-radius-control;
+	}
+
+	.code-button-text {
+		font-size: 13px;
+		color: $facetof-color-primary;
+	}
+
+	.agreement {
+		flex-direction: row;
+		align-items: center;
+		margin: 18px 0;
+	}
+
+	.checkbox {
+		width: 20px;
+		height: 20px;
+		align-items: center;
+		justify-content: center;
+		font-size: 13px;
+		color: #FFFFFF;
+		background-color: $facetof-color-primary;
+		border-radius: 6px;
+	}
+
+	.agreement-text {
+		margin-left: 8px;
+		font-size: 12px;
+		color: $facetof-color-secondary-text;
+	}
+
+	.divider {
+		flex-direction: row;
+		align-items: center;
+		margin: 22px 0 16px;
+	}
+
+	.divider-line {
+		flex: 1;
+		height: 1px;
+		background-color: $facetof-color-border;
+	}
+
+	.divider-text {
+		margin: 0 12px;
+		font-size: 12px;
+		color: $facetof-color-secondary-text;
+	}
+
+	.social-row {
+		flex-direction: row;
+	}
+
+	.social-button {
+		flex: 1;
+		height: 46px;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+		background-color: $facetof-color-warm-background;
+		border: 1px solid $facetof-color-border;
+		border-radius: $facetof-radius-control;
+	}
+
+	.social-button + .social-button {
+		margin-left: 10px;
+	}
+
+	.social-icon {
+		width: 24px;
+		height: 24px;
+		align-items: center;
+		justify-content: center;
+		font-size: 12px;
+		font-weight: 700;
+		color: #FFFFFF;
+		border-radius: 50%;
+	}
+
+	.wechat {
+		background-color: #10B981;
+	}
+
+	.apple {
+		background-color: $facetof-color-ink;
+	}
+
+	.social-label {
+		margin-left: 8px;
+		font-size: 13px;
+		color: $facetof-color-ink;
+	}
+
+	.guest-row {
+		margin-top: 18px;
+		align-items: center;
+	}
+
+	.guest-text {
+		font-size: 13px;
+		color: $facetof-color-secondary-text;
+	}
+
+	.dev-title-row {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.dev-tip {
+		margin-top: 8px;
+		font-size: 12px;
+		line-height: 18px;
+		color: $facetof-color-secondary-text;
+	}
+
+	.test-grid {
+		flex-direction: row;
+		flex-wrap: wrap;
+		margin-top: 12px;
+	}
+
+	.test-button {
+		width: 48%;
+		margin: 1% 1% 0 0;
+		padding: 12px;
+		background-color: $facetof-color-weak-background;
+		border: 1px solid $facetof-color-border;
+		border-radius: 12px;
+	}
+
+	.test-button-title {
+		font-size: 14px;
+		font-weight: 600;
+		color: $facetof-color-ink;
+	}
+
+	.test-button-desc {
+		margin-top: 4px;
+		font-size: 11px;
+		color: $facetof-color-secondary-text;
+	}
+</style>

@@ -1,0 +1,125 @@
+import { AuthUser, PendingIntent } from '../types/models.uts'
+
+type SessionState = {
+  loggedIn: boolean,
+  userId: string,
+  displayName: string,
+  identity: string,
+  applicationStatus: string,
+  providerPermission: boolean,
+  rejectionReason: string,
+  pendingAction: string,
+  pendingRoute: string,
+  pendingPayload: string
+}
+
+const SESSION_KEY = 'faceto.session.v1'
+
+export const sessionState = reactive({
+  loggedIn: false,
+  userId: '',
+  displayName: '',
+  identity: 'unset',
+  applicationStatus: 'none',
+  providerPermission: false,
+  rejectionReason: '',
+  pendingAction: '',
+  pendingRoute: '',
+  pendingPayload: ''
+} as SessionState)
+
+function persistSession() {
+  uni.setStorageSync(SESSION_KEY, JSON.stringify(sessionState))
+}
+
+function loadSession() {
+  const raw = uni.getStorageSync(SESSION_KEY)
+  if (typeof raw != 'string' || raw.length == 0) {
+    return
+  }
+  try {
+    const saved = JSON.parse(raw) as SessionState
+    sessionState.loggedIn = saved.loggedIn
+    sessionState.userId = saved.userId
+    sessionState.displayName = saved.displayName
+    sessionState.identity = saved.identity
+    sessionState.applicationStatus = saved.applicationStatus
+    sessionState.providerPermission = saved.providerPermission && saved.userId.startsWith('test-')
+    sessionState.rejectionReason = saved.rejectionReason
+    sessionState.pendingAction = saved.pendingAction
+    sessionState.pendingRoute = saved.pendingRoute
+    sessionState.pendingPayload = saved.pendingPayload
+  } catch (e) {
+    uni.removeStorageSync(SESSION_KEY)
+  }
+}
+
+loadSession()
+
+export function setLoginUser(user: AuthUser) {
+  sessionState.loggedIn = true
+  sessionState.userId = user.id
+  sessionState.displayName = user.displayName
+  sessionState.providerPermission = false
+  persistSession()
+}
+
+export function logout() {
+  sessionState.loggedIn = false
+  sessionState.userId = ''
+  sessionState.displayName = ''
+  sessionState.providerPermission = false
+  persistSession()
+}
+
+export function setIdentity(identity: string) {
+  sessionState.identity = identity
+  persistSession()
+}
+
+export function setApplicationStatus(status: string) {
+  sessionState.applicationStatus = status
+  if (status != 'approved') {
+    sessionState.providerPermission = false
+  }
+  persistSession()
+}
+
+export function setProviderPermission(enabled: boolean) {
+  sessionState.providerPermission = enabled
+  persistSession()
+}
+
+export function setRejectionReason(reason: string) {
+  sessionState.rejectionReason = reason
+  persistSession()
+}
+
+export function setPendingIntent(intent: PendingIntent) {
+  sessionState.pendingAction = intent.action
+  sessionState.pendingRoute = intent.route
+  sessionState.pendingPayload = intent.payload
+  persistSession()
+}
+
+export function clearPendingIntent() {
+  sessionState.pendingAction = ''
+  sessionState.pendingRoute = ''
+  sessionState.pendingPayload = ''
+  persistSession()
+}
+
+export function setApplicationForTest(kind: string) {
+  if (kind == 'normal') {
+    sessionState.identity = 'user'
+    sessionState.applicationStatus = 'none'
+    sessionState.rejectionReason = ''
+    sessionState.providerPermission = false
+  } else {
+    sessionState.identity = 'provider'
+    sessionState.applicationStatus = kind
+    sessionState.rejectionReason = kind == 'rejected' ? '个人简介信息不足，请补充服务经历后重新提交。' : ''
+    sessionState.providerPermission = kind == 'approved'
+  }
+  persistSession()
+}

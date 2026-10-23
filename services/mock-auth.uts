@@ -1,0 +1,68 @@
+import { ActionOutcome, AuthUser } from '../types/models.uts'
+import { setLoginUser, setApplicationForTest } from '../state/session-state.uts'
+import { seedTestApplication } from './mock-provider.uts'
+
+function phoneValid(phone: string): boolean {
+  return phone.length == 11 && phone.startsWith('1')
+}
+
+export function sendSmsCode(phone: string): ActionOutcome {
+  if (!phoneValid(phone)) {
+    return { ok: false, code: 'INVALID_PHONE', message: '请输入正确的手机号' }
+  }
+  return { ok: true, code: 'MOCK_SMS_SENT', message: '开发验证码为 123456' }
+}
+
+export function loginWithPhone(phone: string, code: string): ActionOutcome {
+  if (!phoneValid(phone)) {
+    return { ok: false, code: 'INVALID_PHONE', message: '请输入正确的手机号' }
+  }
+  if (code != '123456') {
+    return { ok: false, code: 'INVALID_SMS_CODE', message: '验证码错误，开发验证码为 123456' }
+  }
+  const user: AuthUser = {
+    id: 'mock-user-' + phone.slice(7),
+    displayName: 'FaceTo 用户'
+  }
+  setLoginUser(user)
+  return { ok: true, code: 'MOCK_LOGIN_SUCCESS', message: '登录成功' }
+}
+
+export function requestWechatLogin(): ActionOutcome {
+  return {
+    ok: false,
+    code: 'WECHAT_AUTH_NOT_CONFIGURED',
+    message: '微信登录需要完成平台配置和真实授权接入，当前不伪造成功'
+  }
+}
+
+export function requestAppleLogin(): ActionOutcome {
+  return {
+    ok: false,
+    code: 'APPLE_AUTH_NOT_CONFIGURED',
+    message: 'Apple 登录需要完成 iOS/平台配置和真实授权接入，当前不伪造成功'
+  }
+}
+
+export function loginWithTestAccount(kind: string): ActionOutcome {
+  if (kind != 'normal' && kind != 'pending' && kind != 'approved' && kind != 'rejected') {
+    return { ok: false, code: 'INVALID_TEST_ACCOUNT', message: '未知测试账号' }
+  }
+
+  let label = '测试普通用户'
+  if (kind == 'pending') {
+    label = '测试审核中'
+  } else if (kind == 'approved') {
+    label = '测试审核通过'
+  } else if (kind == 'rejected') {
+    label = '测试审核拒绝'
+  }
+
+  setLoginUser({
+    id: 'test-' + kind,
+    displayName: label
+  })
+  setApplicationForTest(kind)
+  seedTestApplication(kind)
+  return { ok: true, code: 'TEST_LOGIN_SUCCESS', message: '已切换测试账号：' + label }
+}

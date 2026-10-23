@@ -1,0 +1,66 @@
+import { HomeFeedItem } from '../types/models.uts'
+
+export function getHomeFeed(): Array<HomeFeedItem> {
+  return [
+    {
+      id: 'feed-001',
+      providerId: 'provider-001',
+      providerName: '林晓',
+      headline: '下班后一起打台球，轻松聊天',
+      description: '耐心教学，新手也能快速上手，公共场所见面。',
+      categoryName: '运动',
+      age: 26,
+      distance: '1.2km',
+      serviceName: '台球陪伴',
+      price: '¥88/小时',
+      online: true,
+      verified: true,
+      coverLabel: '台球陪伴',
+      coverImages: [
+        '/static/placeholders/provider-1.png',
+        '/static/placeholders/provider-2.png',
+        '/static/placeholders/provider-3.png'
+      ]
+    },
+    {
+      id: 'feed-002',
+      providerId: 'provider-002',
+      providerName: '阿橙',
+      headline: '咖啡店安静陪伴，聊聊近期生活',
+      description: '认真倾听，不暧昧，适合需要轻松交流的你。',
+      categoryName: '休闲',
+      age: 28,
+      distance: '2.4km',
+      serviceName: '咖啡陪伴',
+      price: '¥68/小时',
+      online: false,
+      verified: true,
+      coverLabel: '咖啡陪伴',
+      coverImages: [
+        '/static/placeholders/provider-2.png',
+        '/static/placeholders/provider-3.png',
+        '/static/placeholders/provider-1.png'
+      ]
+    },
+    {
+      id: 'feed-003',
+      providerId: 'provider-003',
+      providerName: '小满',
+      headline: '周末桌游搭子，气氛友好不尴尬',
+      description: '擅长组织桌游，帮助新朋友快速融入。',
+      categoryName: '娱乐',
+      age: 24,
+      distance: '3.1km',
+      serviceName: '桌游陪玩',
+      price: '¥78/小时',
+      online: true,
+      verified: true,
+      coverLabel: '桌游陪玩',
+      coverImages: [
+        '/static/placeholders/provider-3.png',
+        '/static/placeholders/provider-1.png',
+        '/static/placeholders/provider-2.png'
+      ]
+    }
+  ]
+}

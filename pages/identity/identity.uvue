@@ -1,0 +1,196 @@
+<template>
+	<view class="page">
+		<text class="eyebrow">完善你的使用身份</text>
+		<text class="title">你想以什么身份开始？</text>
+		<text class="description">身份选择后不可切换。选择服务者不代表已获得服务者权限，仍需提交资料并等待审核。</text>
+
+		<view
+			class="identity-card"
+			:class="selected == 'user' ? 'is-selected' : ''"
+			@click="selected = 'user'"
+		>
+			<view class="identity-icon user-icon">
+				<text class="identity-icon-text">U</text>
+			</view>
+			<view class="identity-copy">
+				<text class="identity-name">普通用户</text>
+				<text class="identity-desc">浏览服务、预约、聊天和收藏</text>
+			</view>
+			<view class="radio">{{ selected == 'user' ? '✓' : '' }}</view>
+		</view>
+
+		<view
+			class="identity-card"
+			:class="selected == 'provider' ? 'is-selected' : ''"
+			@click="selected = 'provider'"
+		>
+			<view class="identity-icon provider-icon">
+				<text class="identity-icon-text">P</text>
+			</view>
+			<view class="identity-copy">
+				<text class="identity-name">服务者</text>
+				<text class="identity-desc">提交申请，通过审核后使用工作台</text>
+			</view>
+			<view class="radio">{{ selected == 'provider' ? '✓' : '' }}</view>
+		</view>
+
+		<view class="notice">
+			<text class="notice-title">请确认</text>
+			<text class="notice-text">退出登录后仍会保留本次身份选择，但本地记录不能作为服务者权限凭证。</text>
+		</view>
+
+		<facetof-button
+			class="continue-button"
+			label="继续"
+			tone="gradient"
+			:disabled="selected == 'unset'"
+			@press="continueSelection"
+		></facetof-button>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import FacetofButton from '../../components/facetof-button.uvue'
+	import { sessionState, setIdentity } from '../../state/session-state.uts'
+	import { finishAuthenticatedNavigation, openProviderApply, HOME_ROUTE } from '../../router/route-guard.uts'
+
+	const selected = ref(sessionState.identity == 'unset' ? 'unset' : sessionState.identity)
+
+	function continueSelection() {
+		if (selected.value == 'unset') {
+			uni.showToast({
+				title: '请选择身份',
+				position: 'bottom',
+				icon: 'error'
+			})
+			return
+		}
+
+		setIdentity(selected.value)
+		if (selected.value == 'provider') {
+			openProviderApply()
+			return
+		}
+
+		finishAuthenticatedNavigation('已选择普通用户身份')
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		padding: 36px $facetof-space-page 40px;
+		background-color: $facetof-color-background;
+	}
+
+	.eyebrow {
+		font-size: 13px;
+		font-weight: 600;
+		color: $facetof-color-primary;
+	}
+
+	.title {
+		margin-top: 8px;
+		font-size: 26px;
+		font-weight: 700;
+		line-height: 36px;
+		color: $facetof-color-ink;
+	}
+
+	.description {
+		margin-top: 12px;
+		font-size: 14px;
+		line-height: 22px;
+		color: $facetof-color-secondary-text;
+	}
+
+	.identity-card {
+		flex-direction: row;
+		align-items: center;
+		margin-top: 18px;
+		padding: 18px;
+		background-color: $facetof-color-background;
+		border: 1px solid $facetof-color-border;
+		border-radius: $facetof-radius-card;
+	}
+
+	.is-selected {
+		border-color: $facetof-color-primary;
+		background-color: rgba(253, 90, 107, 0.05);
+	}
+
+	.identity-icon {
+		width: 48px;
+		height: 48px;
+		align-items: center;
+		justify-content: center;
+		border-radius: 16px;
+	}
+
+	.user-icon {
+		background-color: rgba(253, 90, 107, 0.14);
+	}
+
+	.provider-icon {
+		background-color: rgba(252, 174, 89, 0.18);
+	}
+
+	.identity-icon-text {
+		font-size: 18px;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.identity-copy {
+		flex: 1;
+		margin-left: 14px;
+	}
+
+	.identity-name {
+		font-size: 17px;
+		font-weight: 600;
+		color: $facetof-color-ink;
+	}
+
+	.identity-desc {
+		margin-top: 5px;
+		font-size: 12px;
+		color: $facetof-color-secondary-text;
+	}
+
+	.radio {
+		width: 24px;
+		height: 24px;
+		align-items: center;
+		justify-content: center;
+		font-size: 13px;
+		color: #FFFFFF;
+		background-color: $facetof-color-primary;
+		border: 1px solid $facetof-color-border;
+		border-radius: 50%;
+	}
+
+	.notice {
+		margin-top: 22px;
+		padding: 14px;
+		background-color: $facetof-color-warm-background;
+		border-radius: 12px;
+	}
+
+	.notice-title {
+		font-size: 13px;
+		font-weight: 600;
+		color: $facetof-color-ink;
+	}
+
+	.notice-text {
+		margin-top: 5px;
+		font-size: 12px;
+		line-height: 18px;
+		color: $facetof-color-secondary-text;
+	}
+
+	.continue-button {
+		margin-top: 28px;
+	}
+</style>

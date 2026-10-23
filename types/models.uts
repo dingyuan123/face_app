@@ -1,0 +1,60 @@
+export type ActionOutcome = {
+  ok: boolean,
+  code: string,
+  message: string
+}
+
+export type AuthUser = {
+  id: string,
+  displayName: string
+}
+
+export type ProviderApplicationDraft = {
+  avatarPath: string,
+  lifePhotoPath: string,
+  bio: string,
+  realName: string,
+  idCardNumber: string
+}
+
+export type ProviderApplicationRecord = {
+  id: string,
+  submittedAt: string,
+  status: string,
+  rejectionReason: string,
+  avatarAsset: string,
+  lifePhotoAsset: string,
+  bio: string,
+  realName: string,
+  idCardMasked: string
+}
+
+export type ProviderSubmitResult = {
+  ok: boolean,
+  code: string,
+  message: string,
+  record: ProviderApplicationRecord | null
+}
+
+export type HomeFeedItem = {
+  id: string,
+  providerId: string,
+  providerName: string,
+  headline: string,
+  description: string,
+  categoryName: string,
+  age: number,
+  distance: string,
+  serviceName: string,
+  price: string,
+  online: boolean,
+  verified: boolean,
+  coverLabel: string,
+  coverImages: string[]
+}
+
+export type PendingIntent = {
+  action: string,
+  route: string,
+  payload: string
+}
