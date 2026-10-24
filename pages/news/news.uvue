@@ -1,0 +1,318 @@
+<template>
+	<view class="page">
+		<view class="page-head">
+			<view>
+				<text class="page-title">资讯</text>
+				<text class="page-subtitle">发现同城热点与安心指南</text>
+			</view>
+			<view class="search-button" @click="showSearchTip">
+				<text class="search-icon">⌕</text>
+			</view>
+		</view>
+
+		<segment-tabs
+			:items="tabs"
+			:active="selectedTab"
+			variant="underline"
+			@change="changeTab"
+		></segment-tabs>
+
+		<scroll-view class="content-scroll" direction="vertical" :show-scrollbar="false">
+			<view class="content">
+				<view v-if="selectedTab == '推荐' && articles.length > 0" class="featured-card" @click="openArticle(articles[0].id)">
+					<image class="featured-image" :src="articles[0].coverImage" mode="aspectFill"></image>
+					<view class="featured-mask"></view>
+					<view class="featured-copy">
+						<status-pill label="今日推荐" tone="warning"></status-pill>
+						<text class="featured-title">{{ articles[0].title }}</text>
+						<text class="featured-meta">{{ articles[0].readCount }} 人已读 · {{ articles[0].publishedAt }}</text>
+					</view>
+				</view>
+
+				<view v-if="articles.length == 0" class="empty-state">
+					<text class="empty-title">暂时没有相关资讯</text>
+					<text class="empty-desc">换一个分类看看吧</text>
+				</view>
+
+				<view v-for="article in listArticles" :key="article.id" class="article-card" @click="openArticle(article.id)">
+					<view class="article-main">
+						<view class="article-head">
+							<view class="category-tag">
+								<text class="category-text">{{ article.category }}</text>
+							</view>
+							<text v-if="article.isVideo" class="video-label">视频</text>
+						</view>
+						<text class="article-title">{{ article.title }}</text>
+						<text class="article-summary">{{ article.summary }}</text>
+						<text class="article-meta">{{ article.readCount }} 人已读 · {{ article.publishedAt }}</text>
+					</view>
+					<image class="article-image" :src="article.coverImage" mode="aspectFill"></image>
+				</view>
+
+				<view class="bottom-space"></view>
+			</view>
+		</scroll-view>
+
+	</view>
+</template>
+
+<script setup lang="uts">
+		import StatusPill from '../../components/status-pill.uvue'
+	import { getNewsFeed } from '../../services/service-container.uts'
+	import type { NewsArticle } from '../../types/models.uts'
+
+	const tabs = ['推荐', '同城', '安全', '活动']
+	const selectedTab = ref('推荐')
+	const articles = ref<NewsArticle[]>([])
+
+	function refreshArticles() {
+		articles.value = getNewsFeed(selectedTab.value)
+	}
+
+	onShow(() => {
+		refreshArticles()
+	})
+
+	const listArticles = computed(() : Array<NewsArticle> => {
+		if (selectedTab.value == '推荐' && articles.value.length > 1) {
+			return articles.value.slice(1)
+		}
+		return articles.value
+	})
+
+	function changeTab(tab: string) {
+		selectedTab.value = tab
+		refreshArticles()
+	}
+
+	function showSearchTip() {
+		uni.showToast({
+			title: '资讯搜索将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function openArticle(id: string) {
+		uni.showToast({
+			title: '资讯详情页将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-head {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 18px $facetof-space-page 12px;
+		background-color: $facetof-color-background;
+	}
+
+	.page-title {
+		font-size: 25px;
+		font-weight: 700;
+		color: $facetof-color-ink;
+	}
+
+	.page-subtitle {
+		margin-top: 3px;
+		font-size: 11px;
+		color: $facetof-color-secondary-text;
+	}
+
+	.search-button {
+		width: 40px;
+		height: 40px;
+		align-items: center;
+		justify-content: center;
+		background-color: $facetof-color-warm-background;
+		border: 1px solid $facetof-color-border;
+		border-radius: 50%;
+	}
+
+	.search-icon {
+		font-size: 20px;
+		color: $facetof-color-ink;
+	}
+
+	.tab-row {
+		flex-direction: row;
+		padding: 4px $facetof-space-page 0;
+		background-color: $facetof-color-background;
+	}
+
+	.tab-item {
+		position: relative;
+		flex: 1;
+		height: 43px;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.tab-text {
+		font-size: 14px;
+		color: $facetof-color-secondary-text;
+	}
+
+	.tab-text-active {
+		font-weight: 700;
+		color: $facetof-color-ink;
+	}
+
+	.tab-indicator {
+		position: absolute;
+		bottom: 1px;
+		width: 24px;
+		height: 3px;
+		background-image: linear-gradient(to right, #FD5A6B, #FCAE59);
+		border-radius: 999px;
+	}
+
+	.content-scroll {
+		flex: 1;
+	}
+
+	.content {
+		padding: 12px $facetof-space-page 84px;
+	}
+
+	.featured-card {
+		position: relative;
+		height: 210px;
+		margin-bottom: 12px;
+		border-radius: $facetof-radius-card;
+		overflow: hidden;
+	}
+
+	.featured-image {
+		width: 100%;
+		height: 210px;
+	}
+
+	.featured-mask {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		height: 130px;
+		background-image: linear-gradient(to bottom, rgba(31, 26, 23, 0), rgba(31, 26, 23, 0.72));
+	}
+
+	.featured-copy {
+		position: absolute;
+		left: 15px;
+		right: 15px;
+		bottom: 14px;
+	}
+
+	.featured-title {
+		margin-top: 8px;
+		font-size: 18px;
+		font-weight: 700;
+		line-height: 25px;
+		color: #FFFFFF;
+	}
+
+	.featured-meta {
+		margin-top: 5px;
+		font-size: 10px;
+		color: rgba(255, 255, 255, 0.82);
+	}
+
+	.article-card {
+		flex-direction: row;
+		margin-bottom: 11px;
+		padding: 13px;
+		background-color: $facetof-color-background;
+		border: 1px solid $facetof-color-border;
+		border-radius: $facetof-radius-card;
+	}
+
+	.article-main {
+		flex: 1;
+		margin-right: 12px;
+	}
+
+	.article-head {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.category-tag {
+		padding: 3px 8px;
+		background-color: rgba(253, 90, 107, 0.1);
+		border-radius: 999px;
+	}
+
+	.category-text {
+		font-size: 10px;
+		color: $facetof-color-primary;
+	}
+
+	.video-label {
+		margin-left: 7px;
+		font-size: 10px;
+		color: $facetof-color-secondary-text;
+	}
+
+	.article-title {
+		margin-top: 8px;
+		font-size: 15px;
+		font-weight: 600;
+		line-height: 21px;
+		color: $facetof-color-ink;
+	}
+
+	.article-summary {
+		margin-top: 5px;
+		font-size: 11px;
+		line-height: 17px;
+		color: $facetof-color-secondary-text;
+	}
+
+	.article-meta {
+		margin-top: 8px;
+		font-size: 10px;
+		color: #A49893;
+	}
+
+	.article-image {
+		width: 108px;
+		height: 96px;
+		border-radius: 12px;
+	}
+
+	.empty-state {
+		padding: 44px 20px;
+		align-items: center;
+		background-color: $facetof-color-background;
+		border: 1px solid $facetof-color-border;
+		border-radius: $facetof-radius-card;
+	}
+
+	.empty-title {
+		font-size: 16px;
+		font-weight: 600;
+		color: $facetof-color-ink;
+	}
+
+	.empty-desc {
+		margin-top: 6px;
+		font-size: 12px;
+		color: $facetof-color-secondary-text;
+	}
+
+	.bottom-space {
+		height: 10px;
+	}
+</style>

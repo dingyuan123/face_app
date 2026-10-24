@@ -1,0 +1,705 @@
+<template>
+	<scroll-view class="page" direction="vertical" :show-scrollbar="false">
+		<view class="page-content">
+			<view class="search-header">
+				<view class="back-button" @click="goBack">
+					<image class="back-icon" src="/static/search/back.png" mode="aspectFit"></image>
+				</view>
+				<view class="search-box">
+					<image class="search-icon" src="/static/search/search.png" mode="aspectFit"></image>
+					<input
+						class="search-input"
+						:value="query"
+						confirm-type="search"
+						placeholder="搜索服务者、服务、动态或资讯"
+						placeholder-class="search-placeholder"
+						@input="onQueryInput"
+						@confirm="refreshResults"
+					/>
+				</view>
+				<view class="bell-button" @click="openMessages">
+					<image class="bell-icon" src="/static/search/bell.png" mode="aspectFit"></image>
+				</view>
+			</view>
+
+			<segment-tabs
+				:items="tabs"
+				:active="activeTab"
+				variant="underline"
+				@change="changeTab"
+			></segment-tabs>
+
+			<view class="summary-row">
+				<text class="summary-title">为你找到合适的玩伴</text>
+				<text class="summary-meta">泸州 · {{ results.length }} 条结果</text>
+			</view>
+
+			<segment-tabs
+				class="filter-tabs"
+				:items="filters"
+				:active="activeFilter"
+				variant="chip"
+				@change="changeFilter"
+			></segment-tabs>
+
+			<view v-if="results.length == 0" class="empty-state">
+				<text class="empty-title">没有找到相关内容</text>
+				<text class="empty-desc">试试更换关键词或筛选条件</text>
+			</view>
+
+			<view v-else class="result-list">
+				<view v-for="item in results" :key="item.id" class="result-card">
+					<view v-if="item.type == '服务者'" class="provider-result">
+						<view class="provider-head">
+							<image class="result-avatar" :src="item.avatar" mode="aspectFill"></image>
+							<view class="provider-main">
+								<view class="provider-name-row">
+									<text class="result-name">{{ item.providerName }}</text>
+									<view v-if="item.verified" class="verified-pill">
+										<text class="verified-text">✓ 实名认证</text>
+									</view>
+								</view>
+								<text class="result-meta">{{ item.subtitle }}</text>
+							</view>
+							<view class="price-block"><text class="price-text">{{ item.price }}</text></view>
+						</view>
+						<view class="result-divider"></view>
+						<text class="provider-service-title">{{ item.title }}</text>
+						<text class="result-description">{{ item.description }}</text>
+						<view class="tag-row centered">
+							<view v-for="tag in item.tags" :key="tag" class="tag-pill">
+								<text class="tag-text">{{ tag }}</text>
+							</view>
+						</view>
+						<view class="action-row">
+							<view class="action-button secondary" @click="handleSecondary(item)">
+								<text class="action-secondary-text">{{ item.secondaryAction }}</text>
+							</view>
+							<view class="action-button primary action-button-later" @click="handlePrimary(item)">
+								<text class="action-primary-text">{{ item.primaryAction }}</text>
+							</view>
+						</view>
+					</view>
+
+					<view v-else-if="item.type == '服务'" class="media-result">
+						<image class="media-cover" :src="item.coverImage" mode="aspectFill"></image>
+						<view class="media-main">
+							<view class="type-row">
+								<view class="type-pill">
+									<text class="type-text">服务</text>
+								</view>
+								<text class="result-meta">{{ item.meta }}</text>
+							</view>
+							<text class="media-title">{{ item.title }}</text>
+							<text class="result-description">{{ item.subtitle }}</text>
+							<view class="media-bottom">
+								<view class="tag-row media-tags">
+									<view v-for="tag in item.tags" :key="tag" class="tag-pill">
+										<text class="tag-text">{{ tag }}</text>
+									</view>
+								</view>
+								<view class="price-block compact-price">
+									<text class="price-text">{{ item.price }}</text>
+								</view>
+							</view>
+						</view>
+					</view>
+
+					<view v-else-if="item.type == '动态'" class="moment-result">
+						<view class="moment-head">
+							<image class="result-avatar result-avatar-small" :src="item.avatar" mode="aspectFill"></image>
+							<view class="moment-author">
+								<text class="result-name">{{ item.providerName }}</text>
+								<text class="result-meta">{{ item.subtitle }}</text>
+							</view>
+							<view class="type-pill">
+								<text class="type-text">动态</text>
+							</view>
+						</view>
+						<view class="moment-content">
+							<view class="moment-copy">
+								<text class="moment-title">{{ item.title }}</text>
+								<text class="result-description">{{ item.description }}</text>
+								<view class="tag-row">
+									<view v-for="tag in item.tags" :key="tag" class="tag-pill">
+										<text class="tag-text">{{ tag }}</text>
+									</view>
+								</view>
+							</view>
+							<image class="moment-cover" :src="item.coverImage" mode="aspectFill"></image>
+						</view>
+						<view class="text-action" @click="handlePrimary(item)">
+							<text class="text-action-text">{{ item.primaryAction }} ›</text>
+						</view>
+					</view>
+
+					<view v-else class="news-result">
+						<image class="news-cover" :src="item.coverImage" mode="aspectFill"></image>
+						<view class="news-main">
+							<view class="type-row">
+								<view class="type-pill news-type">
+									<text class="type-text">{{ item.meta }}</text>
+								</view>
+								<text class="result-meta">{{ item.subtitle }}</text>
+							</view>
+							<text class="media-title">{{ item.title }}</text>
+							<text class="result-description">{{ item.description }}</text>
+							<view class="text-action" @click="handlePrimary(item)">
+								<text class="text-action-text">{{ item.primaryAction }} ›</text>
+							</view>
+						</view>
+					</view>
+				</view>
+			</view>
+		</view>
+	</scroll-view>
+</template>
+
+<script setup lang="uts">
+	import SegmentTabs from '../../components/segment-tabs.uvue'
+	import { getSearchResults } from '../../services/service-container.uts'
+	import type { SearchResultItem } from '../../types/models.uts'
+
+	const tabs = ['全部', '服务者', '服务', '动态', '资讯']
+	const filters = ['综合排序', '距离最近', '实名认证', '筛选']
+	const activeTab = ref('全部')
+	const activeFilter = ref('综合排序')
+	const query = ref('')
+	const results = ref<SearchResultItem[]>([])
+
+	onLoad((options) => {
+		const value = options['query'] as string
+		if (value != null && value.length > 0) {
+			query.value = decodeURIComponent(value)
+		}
+		refreshResults()
+	})
+
+	function onQueryInput(event: InputEvent) {
+		query.value = event.detail.value
+	}
+
+	function refreshResults() {
+		results.value = getSearchResults(query.value, activeTab.value)
+	}
+
+	function changeTab(tab: string) {
+		activeTab.value = tab
+		refreshResults()
+	}
+
+	function changeFilter(filter: string) {
+		activeFilter.value = filter
+		if (filter == '筛选') {
+			uni.showToast({
+				title: '更多筛选面板将在后续阶段接入',
+				position: 'bottom',
+				icon: 'none'
+			})
+		}
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/search/search'
+				})
+			}
+		})
+	}
+
+	function openMessages() {
+		uni.navigateTo({
+			url: '/pages/messages/messages'
+		})
+	}
+
+	function handlePrimary(item: SearchResultItem) {
+		if (item.type == '服务者') {
+			openProviderDetail(item.id.replace('search-provider-', 'provider-'))
+			return
+		}
+		if (item.type == '服务') {
+			openServiceDetail('service-billiards-001')
+			return
+		}
+		if (item.type == '动态') {
+			openMomentDetail('moment-001')
+			return
+		}
+		uni.showToast({
+			title: '资讯详情将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function handleSecondary(item: SearchResultItem) {
+		if (item.type == '服务者') {
+			openProviderDetail(item.id.replace('search-provider-', 'provider-'))
+			return
+		}
+		uni.showToast({
+			title: item.secondaryAction + '将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function openProviderDetail(providerId: string) {
+		uni.navigateTo({
+			url: '/pages/provider/detail?providerId=' + encodeURIComponent(providerId)
+		})
+	}
+
+	function openServiceDetail(serviceId: string) {
+		uni.navigateTo({
+			url: '/pages/service/detail?serviceId=' + encodeURIComponent(serviceId)
+		})
+	}
+
+	function openMomentDetail(momentId: string) {
+		uni.navigateTo({
+			url: '/pages/moment/detail?momentId=' + encodeURIComponent(momentId)
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-content {
+		padding: 10px $facetof-space-page 32px;
+	}
+
+	.search-header {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.back-button,
+	.bell-button {
+		width: 46px;
+		height: 50px;
+		align-items: center;
+		justify-content: center;
+		background-color: rgba(255, 255, 255, 0.66);
+		border: 1px solid rgba(253, 90, 107, 0.1);
+		border-radius: 16px;
+	}
+
+	.back-icon {
+		width: 21px;
+		height: 21px;
+	}
+
+	.bell-icon {
+		width: 22px;
+		height: 22px;
+	}
+
+	.search-box {
+		flex: 1;
+		height: 50px;
+		flex-direction: row;
+		align-items: center;
+		margin: 0 9px;
+		padding: 0 13px;
+		background-color: rgba(255, 255, 255, 0.76);
+		border: 1px solid rgba(253, 90, 107, 0.1);
+		border-radius: 16px;
+	}
+
+	.search-icon {
+		width: 21px;
+		height: 21px;
+	}
+
+	.search-input {
+		flex: 1;
+		height: 48px;
+		margin-left: 8px;
+		font-size: 15px;
+		font-weight: 500;
+		color: $facetof-color-ink;
+	}
+
+	.search-placeholder {
+		font-size: 14px;
+		color: #B8ADA8;
+	}
+
+	.tab-scroll {
+		margin-top: 14px;
+	}
+
+	.tab-row {
+		flex-direction: row;
+	}
+
+	.tab-item {
+		position: relative;
+		width: 72px;
+		height: 46px;
+		align-items: center;
+		justify-content: center;
+		margin-right: 5px;
+	}
+
+	.tab-text {
+		font-size: 16px;
+		font-weight: 600;
+		color: #8A817E;
+	}
+
+	.tab-text-active {
+		color: $facetof-color-primary;
+	}
+
+	.tab-indicator {
+		position: absolute;
+		bottom: 2px;
+		width: 24px;
+		height: 3px;
+		background-color: $facetof-color-primary;
+		border-radius: 999px;
+	}
+
+	.summary-row {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		margin-top: 17px;
+	}
+
+	.summary-title {
+		font-size: 21px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.summary-meta {
+		font-size: 13px;
+		color: #9A8F8A;
+	}
+
+	.filter-scroll {
+		margin-top: 14px;
+	}
+
+	.filter-row {
+		flex-direction: row;
+	}
+
+	.filter-chip {
+		height: 34px;
+		padding: 0 13px;
+		align-items: center;
+		justify-content: center;
+		margin-right: 8px;
+		background-color: rgba(255, 255, 255, 0.72);
+		border: 1px solid rgba(253, 90, 107, 0.08);
+		border-radius: 999px;
+	}
+
+	.filter-chip-active {
+		background-color: #FFFFFF;
+		border-color: $facetof-color-primary;
+	}
+
+	.filter-text {
+		font-size: 13px;
+		font-weight: 600;
+		color: #30394A;
+	}
+
+	.filter-text-active {
+		color: $facetof-color-primary;
+	}
+
+	.result-list {
+		margin-top: 16px;
+	}
+
+	.result-card {
+		margin-bottom: 12px;
+		padding: 16px;
+		background-color: $facetof-color-background;
+		border: 1px solid rgba(253, 90, 107, 0.12);
+		border-radius: 18px;
+	}
+
+	.result-avatar {
+		width: 64px;
+		height: 64px;
+		border-radius: 50%;
+	}
+
+	.result-avatar-small {
+		width: 42px;
+		height: 42px;
+	}
+
+	.provider-head {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.provider-main {
+		flex: 1;
+		margin-left: 12px;
+	}
+
+	.provider-name-row,
+	.type-row,
+	.moment-head,
+	.media-bottom {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.result-name {
+		font-size: 18px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.verified-pill {
+		margin-left: 8px;
+		padding: 4px 8px;
+		background-color: #FFF0D7;
+		border-radius: 999px;
+	}
+
+	.verified-text {
+		font-size: 11px;
+		font-weight: 600;
+		color: #B87916;
+	}
+
+	.result-meta {
+		margin-top: 5px;
+		font-size: 12px;
+		color: #8D817B;
+	}
+
+	.price-block {
+		width: 76px;
+		flex-shrink: 0;
+		align-items: flex-end;
+		justify-content: center;
+	}
+
+	.compact-price {
+		margin-left: 8px;
+	}
+
+	.price-text {
+		font-size: 18px;
+		font-weight: 700;
+		text-align: right;
+		white-space: nowrap;
+		color: $facetof-color-primary;
+	}
+
+	.media-tags {
+		flex: 1;
+	}
+
+	.result-divider {
+		height: 1px;
+		margin: 15px 0;
+		background-color: #F1E2DC;
+	}
+
+	.provider-service-title {
+		text-align: center;
+		font-size: 19px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.result-description {
+		margin-top: 9px;
+		font-size: 14px;
+		line-height: 21px;
+		color: #7E7470;
+	}
+
+	.tag-row {
+		flex-direction: row;
+		flex-wrap: wrap;
+		margin-top: 11px;
+	}
+
+	.centered {
+		justify-content: center;
+	}
+
+	.tag-pill {
+		padding: 5px 10px;
+		margin: 0 5px 5px 0;
+		background-color: #FFF2EF;
+		border-radius: 999px;
+	}
+
+	.tag-text {
+		font-size: 12px;
+		font-weight: 600;
+		color: $facetof-color-primary;
+	}
+
+	.action-row {
+		flex-direction: row;
+		margin-top: 14px;
+	}
+
+	.action-button {
+		flex: 1;
+		height: 44px;
+		align-items: center;
+		justify-content: center;
+		border-radius: 13px;
+	}
+
+	.action-button-later {
+		margin-left: 10px;
+	}
+
+	.secondary {
+		border: 1px solid $facetof-color-primary;
+	}
+
+	.primary {
+		background-color: $facetof-color-primary;
+	}
+
+	.action-secondary-text {
+		font-size: 15px;
+		font-weight: 600;
+		color: $facetof-color-primary;
+	}
+
+	.action-primary-text {
+		font-size: 15px;
+		font-weight: 600;
+		color: #FFFFFF;
+	}
+
+	.media-result,
+	.news-result {
+		flex-direction: row;
+	}
+
+	.media-cover,
+	.news-cover {
+		width: 112px;
+		height: 112px;
+		border-radius: 15px;
+	}
+
+	.media-main,
+	.news-main {
+		flex: 1;
+		margin-left: 12px;
+	}
+
+	.type-pill {
+		padding: 4px 8px;
+		background-color: #FFF2EF;
+		border-radius: 999px;
+	}
+
+	.news-type {
+		background-color: #FFF0D7;
+	}
+
+	.type-text {
+		font-size: 11px;
+		font-weight: 600;
+		color: $facetof-color-primary;
+	}
+
+	.media-title {
+		margin-top: 8px;
+		font-size: 17px;
+		font-weight: 700;
+		line-height: 23px;
+		color: #253047;
+	}
+
+	.media-bottom {
+		justify-content: space-between;
+		margin-top: 10px;
+	}
+
+	.moment-head {
+		justify-content: space-between;
+	}
+
+	.moment-author {
+		flex: 1;
+		margin-left: 10px;
+	}
+
+	.moment-content {
+		flex-direction: row;
+		margin-top: 13px;
+	}
+
+	.moment-copy {
+		flex: 1;
+		margin-right: 11px;
+	}
+
+	.moment-title {
+		font-size: 16px;
+		font-weight: 600;
+		line-height: 23px;
+		color: #253047;
+	}
+
+	.moment-cover {
+		width: 112px;
+		height: 112px;
+		border-radius: 15px;
+	}
+
+	.text-action {
+		margin-top: 11px;
+	}
+
+	.text-action-text {
+		font-size: 13px;
+		font-weight: 600;
+		color: $facetof-color-primary;
+	}
+
+	.empty-state {
+		padding: 52px 20px;
+		align-items: center;
+		margin-top: 18px;
+		background-color: $facetof-color-background;
+		border: 1px solid rgba(253, 90, 107, 0.12);
+		border-radius: 18px;
+	}
+
+	.empty-title {
+		font-size: 17px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.empty-desc {
+		margin-top: 8px;
+		font-size: 13px;
+		color: #8D817B;
+	}
+</style>

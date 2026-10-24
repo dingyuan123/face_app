@@ -1,0 +1,408 @@
+<template>
+	<scroll-view class="page" direction="vertical" :show-scrollbar="false">
+		<view class="page-content">
+			<view class="nav-bar">
+				<view class="nav-button" @click="goBack">
+					<text class="nav-icon">‹</text>
+				</view>
+				<text class="nav-title">我的关注</text>
+				<view class="nav-placeholder"></view>
+			</view>
+
+			<view v-if="providers.length == 0" class="empty-state">
+				<image class="empty-image" src="/static/favorites/empty.png" mode="aspectFit"></image>
+				<text class="empty-title">还没有收藏的玩伴</text>
+				<text class="empty-desc">遇见感兴趣的服务者，点亮爱心收藏</text>
+				<text class="empty-desc">下次想约，随时在这里找到。</text>
+				<view class="discover-button" @click="goDiscover">
+					<text class="discover-text">去发现玩伴</text>
+				</view>
+			</view>
+
+			<view v-else class="following-content">
+				<view class="provider-head">
+					<text class="section-title">关注的服务者</text>
+					<text class="section-count">{{ providers.length }} 位</text>
+				</view>
+
+				<scroll-view class="provider-scroll" direction="horizontal" :show-scrollbar="false">
+					<view class="provider-row">
+						<view v-for="provider in providers" :key="provider.id" class="provider-item">
+							<view class="provider-avatar-wrap">
+								<image class="provider-avatar" :src="provider.avatar" mode="aspectFill"></image>
+								<view v-if="provider.online" class="online-dot"></view>
+							</view>
+							<text class="provider-name">{{ provider.name }}</text>
+							<text class="provider-label">{{ provider.serviceLabel }}</text>
+						</view>
+					</view>
+				</scroll-view>
+
+				<view class="moment-head">
+					<text class="moment-title">最新动态</text>
+					<view class="update-row">
+						<view class="update-dot"></view>
+						<text class="update-text">{{ moments.length }} 条更新</text>
+					</view>
+				</view>
+
+				<view class="moment-list">
+					<view v-for="moment in moments" :key="moment.id" class="moment-card" @click="openMoment(moment.id)">
+						<view class="moment-author-row">
+							<image class="moment-avatar" :src="moment.avatar" mode="aspectFill"></image>
+							<view class="moment-author-main">
+								<view class="moment-name-row">
+									<text class="moment-name">{{ moment.providerName }}</text>
+									<view v-if="moment.verified" class="verified-pill">
+										<text class="verified-text">◉ 实名认证</text>
+									</view>
+								</view>
+								<text class="moment-meta">{{ moment.publishedAt }} · {{ moment.categoryName }}</text>
+							</view>
+						</view>
+						<text class="moment-content">{{ moment.content }}</text>
+						<image class="moment-cover" :src="moment.coverImage" mode="aspectFill"></image>
+						<view class="moment-footer">
+							<view class="location-row">
+								<text class="location-icon">⌖</text>
+								<text class="location-text">{{ moment.location }}</text>
+							</view>
+							<text class="like-count">{{ moment.likeCount }} 人赞过</text>
+						</view>
+					</view>
+				</view>
+
+				<text class="end-tip">已看完最新动态，期待下次见面</text>
+				<text class="brand-footer">FaceTo · 见面聊，安心见</text>
+			</view>
+			<view class="bottom-space"></view>
+		</view>
+	</scroll-view>
+</template>
+
+<script setup lang="uts">
+	import { getFollowingMoments, getFollowingProviders } from '../../services/service-container.uts'
+	import type { FollowingMoment, FollowingProvider } from '../../types/models.uts'
+
+	const providers = ref<FollowingProvider[]>(getFollowingProviders())
+	const moments = ref<FollowingMoment[]>(getFollowingMoments())
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/profile/profile'
+				})
+			}
+		})
+	}
+
+	function goDiscover() {
+		uni.reLaunch({
+			url: '/pages/index/index'
+		})
+	}
+
+	function openMoment(id: string) {
+		uni.navigateTo({
+			url: '/pages/moment/detail?momentId=' + encodeURIComponent(id)
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-content {
+		padding-bottom: 32rpx;
+	}
+
+	.nav-bar {
+		height: 128rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32rpx;
+		background-color: #FFFFFF;
+	}
+
+	.nav-button,
+	.nav-placeholder {
+		width: 76rpx;
+		height: 76rpx;
+	}
+
+	.nav-button {
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 60rpx;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.following-content {
+		padding: 28rpx 36rpx 0;
+	}
+
+	.provider-head,
+	.moment-head {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.section-title,
+	.moment-title {
+		font-size: 32rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.section-count {
+		font-size: 24rpx;
+		color: #8D817B;
+	}
+
+	.provider-scroll {
+		width: 100%;
+		height: 190rpx;
+		margin-top: 18rpx;
+	}
+
+	.provider-row {
+		flex-direction: row;
+		flex-shrink: 0;
+		min-width: 520rpx;
+	}
+
+	.provider-item {
+		width: 150rpx;
+		align-items: center;
+		margin-right: 20rpx;
+	}
+
+	.provider-avatar-wrap {
+		position: relative;
+		width: 104rpx;
+		height: 104rpx;
+	}
+
+	.provider-avatar {
+		width: 104rpx;
+		height: 104rpx;
+		border-radius: 50%;
+	}
+
+	.online-dot {
+		position: absolute;
+		right: 2rpx;
+		top: 4rpx;
+		width: 16rpx;
+		height: 16rpx;
+		background-color: $facetof-color-primary;
+		border: 3rpx solid #FFFFFF;
+		border-radius: 50%;
+	}
+
+	.provider-name {
+		margin-top: 12rpx;
+		font-size: 28rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.provider-label {
+		margin-top: 5rpx;
+		font-size: 22rpx;
+		color: #8D817B;
+	}
+
+	.moment-head {
+		margin-top: 36rpx;
+	}
+
+	.update-row {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.update-dot {
+		width: 10rpx;
+		height: 10rpx;
+		margin-right: 8rpx;
+		background-color: $facetof-color-primary;
+		border-radius: 50%;
+	}
+
+	.update-text {
+		font-size: 22rpx;
+		color: $facetof-color-primary;
+	}
+
+	.moment-card {
+		margin-top: 24rpx;
+		padding: 24rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.moment-author-row {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.moment-avatar {
+		width: 72rpx;
+		height: 72rpx;
+		border-radius: 50%;
+	}
+
+	.moment-author-main {
+		flex: 1;
+		margin-left: 14rpx;
+	}
+
+	.moment-name-row {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.moment-name {
+		font-size: 28rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.verified-pill {
+		margin-left: 10rpx;
+		padding: 5rpx 10rpx;
+		background-color: #FFC768;
+		border-radius: 999rpx;
+	}
+
+	.verified-text {
+		font-size: 18rpx;
+		font-weight: 700;
+		color: #704713;
+	}
+
+	.moment-meta {
+		margin-top: 7rpx;
+		font-size: 20rpx;
+		color: #8D817B;
+	}
+
+	.moment-content {
+		margin-top: 20rpx;
+		font-size: 28rpx;
+		line-height: 42rpx;
+		color: #253047;
+	}
+
+	.moment-cover {
+		width: 100%;
+		height: 360rpx;
+		margin-top: 18rpx;
+		border-radius: 20rpx;
+	}
+
+	.moment-footer {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		margin-top: 18rpx;
+	}
+
+	.location-row {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.location-icon {
+		margin-right: 6rpx;
+		font-size: 26rpx;
+		color: #8D817B;
+	}
+
+	.location-text,
+	.like-count {
+		font-size: 22rpx;
+		color: #8D817B;
+	}
+
+	.end-tip {
+		margin-top: 28rpx;
+		text-align: center;
+		font-size: 24rpx;
+		color: #8D817B;
+	}
+
+	.brand-footer {
+		margin-top: 32rpx;
+		text-align: center;
+		font-size: 26rpx;
+		color: #253047;
+	}
+
+	.empty-state {
+		min-height: 900rpx;
+		padding: 80rpx 48rpx 40rpx;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.empty-image {
+		width: 380rpx;
+		height: 282rpx;
+	}
+
+	.empty-title {
+		margin-top: 34rpx;
+		font-size: 32rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.empty-desc {
+		margin-top: 12rpx;
+		font-size: 24rpx;
+		line-height: 36rpx;
+		text-align: center;
+		color: #8D817B;
+	}
+
+	.discover-button {
+		width: 360rpx;
+		height: 88rpx;
+		align-items: center;
+		justify-content: center;
+		margin-top: 30rpx;
+		background-color: $facetof-color-primary;
+		border-radius: 16rpx;
+	}
+
+	.discover-text {
+		font-size: 28rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.bottom-space {
+		height: 32rpx;
+	}
+</style>

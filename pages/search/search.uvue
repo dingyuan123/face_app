@@ -1,0 +1,409 @@
+<template>
+	<scroll-view class="page" direction="vertical" :show-scrollbar="false">
+		<view class="page-content">
+			<view class="search-header">
+				<view class="back-button" @click="goBack">
+					<image class="back-icon" src="/static/search/back.png" mode="aspectFit"></image>
+				</view>
+				<view class="search-box">
+					<image class="search-icon" src="/static/search/search.png" mode="aspectFit"></image>
+					<input
+						class="search-input"
+						:value="query"
+						confirm-type="search"
+						placeholder="搜一搜你想体验的陪伴"
+						placeholder-class="search-placeholder"
+						@input="onQueryInput"
+						@confirm="submitSearch"
+					/>
+					<view class="voice-button" @click="startVoiceSearch">
+						<image class="voice-icon" src="/static/search/microphone.png" mode="aspectFit"></image>
+					</view>
+				</view>
+			</view>
+
+			<view class="section history-section">
+				<view class="section-head">
+					<text class="section-title">搜索历史</text>
+					<view v-if="historyKeywords.length > 0" class="clear-button" @click="clearHistory">
+						<image class="clear-icon" src="/static/search/trash.png" mode="aspectFit"></image>
+					</view>
+				</view>
+
+				<view v-if="historyKeywords.length > 0" class="keyword-wrap">
+					<view
+						v-for="(keyword, index) in historyKeywords"
+						:key="keyword"
+						class="keyword-pill"
+						:class="index == 0 ? 'keyword-pill-light' : ''"
+						@click="chooseKeyword(keyword)"
+					>
+						<text class="keyword-text" :class="index == 0 ? 'keyword-text-light' : ''">{{ keyword }}</text>
+					</view>
+				</view>
+
+				<view v-else class="history-empty">
+					<text class="history-empty-text">暂无搜索历史</text>
+				</view>
+			</view>
+
+			<view class="hot-section">
+				<view class="hot-title-row">
+					<text class="hot-title">大家都在搜</text>
+					<image class="sparkle-icon" src="/static/search/sparkle.png" mode="aspectFit"></image>
+				</view>
+				<view class="keyword-wrap hot-keywords">
+					<view
+						v-for="keyword in hotKeywords"
+						:key="keyword"
+						class="keyword-pill keyword-pill-hot"
+						@click="chooseKeyword(keyword)"
+					>
+						<text class="keyword-text">{{ keyword }}</text>
+					</view>
+				</view>
+			</view>
+
+			<view class="discovery-card" @click="openDiscovery">
+				<view class="discovery-title-row">
+					<image class="location-icon" src="/static/search/location.png" mode="aspectFit"></image>
+					<text class="discovery-title">发现泸州附近的陪伴</text>
+				</view>
+				<text class="discovery-desc">从兴趣出发，找个合拍的玩伴</text>
+				<view class="safety-row">
+					<image class="shield-icon" src="/static/search/shield.png" mode="aspectFit"></image>
+					<text class="safety-text">实名认证 · 见面更安心</text>
+				</view>
+			</view>
+
+			<view class="brand-footer">
+				<image class="wordmark" src="/static/brand/facetof-wordmark.png" mode="aspectFit"></image>
+				<text class="slogan">见面聊，安心见</text>
+			</view>
+		</view>
+	</scroll-view>
+</template>
+
+<script setup lang="uts">
+	const query = ref('')
+	const historyKeywords = ref<string[]>([
+		'台球助教',
+		'咖啡陪伴',
+		'桌游陪玩',
+		'羽毛球搭子',
+		'周末徒步',
+		'看展搭子'
+	])
+	const hotKeywords = ['台球助教', '咖啡陪伴', '桌游陪玩', '城市漫步', '健身搭子']
+
+	function onQueryInput(event: InputEvent) {
+		query.value = event.detail.value
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/index/index'
+				})
+			}
+		})
+	}
+
+	function chooseKeyword(keyword: string) {
+		query.value = keyword
+		submitSearch()
+	}
+
+	function submitSearch() {
+		const value = query.value.trim()
+		if (value.length == 0) {
+			uni.showToast({
+				title: '请输入搜索内容',
+				position: 'bottom',
+				icon: 'none'
+			})
+			return
+		}
+		uni.navigateTo({
+			url: '/pages/search/results?query=' + encodeURIComponent(value)
+		})
+	}
+
+	function clearHistory() {
+		historyKeywords.value = []
+		uni.showToast({
+			title: '搜索历史已清空',
+			position: 'bottom',
+			icon: 'success'
+		})
+	}
+
+	function startVoiceSearch() {
+		uni.showToast({
+			title: '语音搜索需完成平台能力接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function openDiscovery() {
+		uni.showToast({
+			title: '附近陪伴入口将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		padding-top: var(--uni-safe-area-inset-top);
+		min-height: 0;
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-content {
+		min-height: 780px;
+		padding: 12px $facetof-space-page 34px;
+	}
+
+	.search-header {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.back-button {
+		width: 52px;
+		height: 52px;
+		align-items: center;
+		justify-content: center;
+		background-color: rgba(255, 255, 255, 0.62);
+		border: 1px solid rgba(253, 90, 107, 0.12);
+		border-radius: 16px;
+	}
+
+	.back-icon {
+		width: 24px;
+		height: 24px;
+	}
+
+	.search-box {
+		flex: 1;
+		height: 52px;
+		flex-direction: row;
+		align-items: center;
+		margin-left: 10px;
+		padding: 0 14px;
+		background-color: rgba(255, 255, 255, 0.78);
+		border: 1px solid rgba(253, 90, 107, 0.1);
+		border-radius: 18px;
+	}
+
+	.search-icon {
+		width: 22px;
+		height: 22px;
+	}
+
+	.search-input {
+		flex: 1;
+		height: 50px;
+		margin-left: 9px;
+		font-size: 16px;
+		font-weight: 500;
+		color: $facetof-color-ink;
+	}
+
+	.search-placeholder {
+		font-size: 15px;
+		color: #C2B8B3;
+	}
+
+	.voice-button {
+		width: 32px;
+		height: 42px;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.voice-icon {
+		width: 23px;
+		height: 23px;
+	}
+
+	.section {
+		margin-top: 28px;
+	}
+
+	.section-head {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.section-title {
+		font-size: 22px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.clear-button {
+		width: 32px;
+		height: 32px;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.clear-icon {
+		width: 23px;
+		height: 23px;
+	}
+
+	.keyword-wrap {
+		flex-direction: row;
+		flex-wrap: wrap;
+		margin-top: 17px;
+	}
+
+	.keyword-pill {
+		height: 44px;
+		padding: 0 18px;
+		align-items: center;
+		justify-content: center;
+		margin: 0 8px 12px 0;
+		background-color: #EFE7E3;
+		border: 1px solid rgba(253, 90, 107, 0.06);
+		border-radius: 999px;
+	}
+
+	.keyword-pill-light {
+		background-color: #FFFFFF;
+		border-color: #FFFFFF;
+	}
+
+	.keyword-text {
+		font-size: 16px;
+		font-weight: 600;
+		color: #263247;
+	}
+
+	.keyword-text-light {
+		color: #253047;
+	}
+
+	.history-empty {
+		height: 72px;
+		align-items: center;
+		justify-content: center;
+		margin-top: 14px;
+		background-color: rgba(255, 255, 255, 0.5);
+		border: 1px solid rgba(253, 90, 107, 0.1);
+		border-radius: 16px;
+	}
+
+	.history-empty-text {
+		font-size: 13px;
+		color: #9B8F89;
+	}
+
+	.hot-section {
+		margin-top: 18px;
+	}
+
+	.hot-title-row {
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.hot-title {
+		font-size: 23px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.sparkle-icon {
+		width: 20px;
+		height: 20px;
+		margin-left: 7px;
+	}
+
+	.hot-keywords {
+		justify-content: center;
+		margin-top: 18px;
+		padding: 0 6px;
+	}
+
+	.keyword-pill-hot {
+		margin: 0 7px 12px 7px;
+	}
+
+	.discovery-card {
+		margin-top: 28px;
+		padding: 25px 18px 24px;
+		align-items: center;
+		background-color: rgba(255, 255, 255, 0.68);
+		border: 1px solid rgba(253, 90, 107, 0.36);
+		border-radius: 18px;
+	}
+
+	.discovery-title-row {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.location-icon {
+		width: 22px;
+		height: 22px;
+		margin-right: 8px;
+	}
+
+	.discovery-title {
+		font-size: 20px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.discovery-desc {
+		margin-top: 12px;
+		font-size: 15px;
+		color: #8B817C;
+	}
+
+	.safety-row {
+		flex-direction: row;
+		align-items: center;
+		margin-top: 14px;
+	}
+
+	.shield-icon {
+		width: 18px;
+		height: 18px;
+		margin-right: 6px;
+	}
+
+	.safety-text {
+		font-size: 15px;
+		font-weight: 500;
+		color: #FF5266;
+	}
+
+	.brand-footer {
+		margin-top: 112px;
+		align-items: center;
+	}
+
+	.wordmark {
+		width: 158px;
+		height: 46px;
+	}
+
+	.slogan {
+		margin-top: 6px;
+		font-size: 15px;
+		font-weight: 500;
+		color: #253047;
+	}
+</style>

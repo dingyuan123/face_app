@@ -1,5 +1,5 @@
 <template>
-	<view class="page">
+	<scroll-view class="page" direction="vertical" :show-scrollbar="false">
 		<view class="hero">
 			<image class="logo" src="/static/logo.png" mode="aspectFit"></image>
 			<text class="brand">见面聊</text>
@@ -50,7 +50,7 @@
 					<text class="social-icon wechat">微</text>
 					<text class="social-label">微信登录</text>
 				</view>
-				<view class="social-button" @click="appleLogin">
+				<view class="social-button social-button-secondary" @click="appleLogin">
 					<text class="social-icon apple">A</text>
 					<text class="social-label">Apple 登录</text>
 				</view>
@@ -86,7 +86,7 @@
 				</view>
 			</view>
 		</view>
-	</view>
+	</scroll-view>
 </template>
 
 <script setup lang="uts">
@@ -308,7 +308,7 @@
 		border-radius: $facetof-radius-control;
 	}
 
-	.social-button + .social-button {
+	.social-button-secondary {
 		margin-left: 10px;
 	}
 

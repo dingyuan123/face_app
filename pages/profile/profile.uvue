@@ -1,0 +1,592 @@
+<template>
+	<view class="page">
+		<scroll-view class="page-scroll" direction="vertical" :show-scrollbar="false">
+			<view class="page-content">
+				<view class="profile-hero">
+					<view class="hero-top">
+						<text class="hero-title">我的</text>
+						<view class="settings-button" @click="showSettingTip">
+							<text class="settings-icon">⚙</text>
+						</view>
+					</view>
+
+					<view v-if="profile != null" class="profile-card">
+						<image class="profile-avatar" :src="profile.avatar" mode="aspectFill"></image>
+						<view class="profile-copy">
+							<text class="profile-name">{{ profile.displayName }}</text>
+							<text class="profile-meta">{{ profile.city }} · {{ profile.level }}</text>
+							<view class="identity-pill">
+								<text class="identity-pill-text">{{ identityLabel }}</text>
+							</view>
+						</view>
+						<view class="edit-button" @click="showEditTip">
+							<text class="edit-text">编辑资料</text>
+						</view>
+					</view>
+
+					<view v-else class="guest-card">
+						<view class="guest-avatar">
+							<text class="guest-avatar-text">Hi</text>
+						</view>
+						<view class="guest-copy">
+							<text class="guest-title">登录后管理你的资料</text>
+							<text class="guest-desc">查看订单、收藏、消息和服务者进度</text>
+						</view>
+						<view class="guest-login" @click="loginForProfile">
+							<text class="guest-login-text">登录</text>
+						</view>
+					</view>
+				</view>
+
+				<view v-if="profile != null" class="stats-card">
+					<view class="stat-item">
+						<text class="stat-value">{{ profile.orderCount }}</text>
+						<text class="stat-label">我的订单</text>
+					</view>
+					<view class="stat-line"></view>
+					<view class="stat-item">
+						<text class="stat-value">{{ profile.favoriteCount }}</text>
+						<text class="stat-label">我的收藏</text>
+					</view>
+					<view class="stat-line"></view>
+					<view class="stat-item">
+						<text class="stat-value">{{ profile.followingCount }}</text>
+						<text class="stat-label">我的关注</text>
+					</view>
+				</view>
+
+				<view v-if="sessionState.applicationStatus != 'none' && sessionState.identity == 'provider'" class="provider-card">
+					<view class="provider-card-head">
+						<text class="section-title">服务者中心</text>
+						<status-pill :label="applicationLabel" :tone="applicationTone"></status-pill>
+					</view>
+					<text v-if="sessionState.applicationStatus == 'pending'" class="provider-tip">资料已提交，平台正在审核。</text>
+					<text v-if="sessionState.applicationStatus == 'rejected'" class="provider-tip reject">审核未通过：{{ sessionState.rejectionReason }}</text>
+					<text v-if="sessionState.applicationStatus == 'approved'" class="provider-tip">审核已通过，可进入服务者工作台。</text>
+					<view class="provider-action" @click="openProviderCenter">
+						<text class="provider-action-text">{{ providerActionLabel }}</text>
+						<text class="entry-arrow">›</text>
+					</view>
+				</view>
+
+				<view class="section-block">
+					<text class="section-title">常用功能</text>
+					<view class="quick-grid">
+						<view v-for="item in quickItems" :key="item.name" class="quick-item" @click="openQuickItem(item.name)">
+							<view class="quick-icon" :class="item.tone">
+								<text class="quick-icon-text">{{ item.icon }}</text>
+							</view>
+							<text class="quick-name">{{ item.name }}</text>
+						</view>
+					</view>
+				</view>
+
+				<view class="section-block menu-block">
+					<text class="section-title">服务与设置</text>
+					<view class="menu-list">
+						<view v-for="(item, index) in menuItems" :key="item" :class="index == menuItems.length - 1 ? 'menu-item menu-item-last' : 'menu-item'" @click="openFeature(item)">
+							<text class="menu-name">{{ item }}</text>
+							<text class="entry-arrow">›</text>
+						</view>
+					</view>
+				</view>
+
+				<view v-if="profile != null" class="logout-card" @click="logoutFromProfile">
+					<text class="logout-text">退出登录</text>
+				</view>
+
+				<view class="bottom-space"></view>
+			</view>
+		</scroll-view>
+
+	</view>
+</template>
+
+<script setup lang="uts">
+		import StatusPill from '../../components/status-pill.uvue'
+	import { getApplicationHistory, getProfileSummary } from '../../services/service-container.uts'
+	import type { ProfileSummary } from '../../types/models.uts'
+	import { logout, sessionState } from '../../state/session-state.uts'
+	import { openLogin, openProviderApply, PROFILE_ROUTE, ORDER_LIST_ROUTE, FAVORITES_ROUTE, FOLLOWING_ROUTE, SETTINGS_ROUTE } from '../../router/route-guard.uts'
+
+	const profile = ref<ProfileSummary | null>(null)
+
+	type QuickItem = {
+		name: string,
+		icon: string,
+		tone: string
+	}
+
+	const quickItems: Array<QuickItem> = [
+		{ name: '我的订单', icon: '单', tone: 'tone-brand' },
+		{ name: '我的收藏', icon: '♡', tone: 'tone-warm' },
+		{ name: '我的关注', icon: '＋', tone: 'tone-brand' },
+		{ name: '钱包', icon: '¥', tone: 'tone-warm' },
+		{ name: '优惠券', icon: '券', tone: 'tone-brand' },
+		{ name: '会员中心', icon: 'V', tone: 'tone-warm' }
+	]
+
+	const menuItems = ['实名认证', '安全中心', '我的动态', '我的评价', '客服帮助', '关于我们']
+
+	onShow(() => {
+		profile.value = getProfileSummary()
+	})
+
+	const identityLabel = computed(() : string => {
+		if (sessionState.identity == 'provider') {
+			return '服务者身份'
+		}
+		if (sessionState.identity == 'user') {
+			return '普通用户'
+		}
+		return '未选择身份'
+	})
+
+	const applicationLabel = computed(() : string => {
+		if (sessionState.applicationStatus == 'approved') {
+			return '审核通过'
+		}
+		if (sessionState.applicationStatus == 'pending') {
+			return '审核中'
+		}
+		if (sessionState.applicationStatus == 'rejected') {
+			return '审核拒绝'
+		}
+		return '未申请'
+	})
+
+	const applicationTone = computed(() : string => {
+		if (sessionState.applicationStatus == 'approved') {
+			return 'success'
+		}
+		if (sessionState.applicationStatus == 'pending') {
+			return 'warning'
+		}
+		if (sessionState.applicationStatus == 'rejected') {
+			return 'danger'
+		}
+		return 'neutral'
+	})
+
+	const providerActionLabel = computed(() : string => {
+		if (sessionState.applicationStatus == 'approved') {
+			return '进入服务者工作台'
+		}
+		if (sessionState.applicationStatus == 'rejected') {
+			return '修改并重新提交'
+		}
+		if (sessionState.applicationStatus == 'pending') {
+			return '查看申请进度'
+		}
+		return '成为服务者'
+	})
+
+	function loginForProfile() {
+		openLogin('view-profile', PROFILE_ROUTE, '')
+	}
+
+	function showSettingTip() {
+		uni.navigateTo({
+			url: SETTINGS_ROUTE
+		})
+	}
+
+	function showEditTip() {
+		uni.showToast({
+			title: '编辑资料页将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function openQuickItem(name: string) {
+		if (name == '我的订单') {
+			uni.navigateTo({
+				url: ORDER_LIST_ROUTE
+			})
+			return
+		}
+		if (name == '我的收藏') {
+			uni.navigateTo({
+				url: FAVORITES_ROUTE
+			})
+			return
+		}
+		if (name == '我的关注') {
+			uni.navigateTo({
+				url: FOLLOWING_ROUTE
+			})
+			return
+		}
+		openFeature(name)
+	}
+
+	function openFeature(name: string) {
+		if (name == '我的订单') {
+			if (!sessionState.loggedIn) {
+				openLogin(name, PROFILE_ROUTE, '')
+				return
+			}
+			uni.navigateTo({
+				url: '/pages/order/list'
+			})
+			return
+		}
+		if (!sessionState.loggedIn && name != '关于我们' && name != '客服帮助') {
+			openLogin(name, PROFILE_ROUTE, '')
+			return
+		}
+		uni.showToast({
+			title: name + '将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function openProviderCenter() {
+		if (sessionState.applicationStatus == 'approved') {
+			uni.showToast({
+				title: '服务者工作台将在后续阶段接入',
+				position: 'bottom',
+				icon: 'none'
+			})
+			return
+		}
+		openProviderApply()
+	}
+
+	function logoutFromProfile() {
+		logout()
+		profile.value = null
+		uni.showToast({
+			title: '已退出登录，身份选择已保留',
+			position: 'bottom',
+			icon: 'success'
+		})
+	}
+
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-scroll {
+		flex: 1;
+		min-height: 0;
+	}
+
+	.page-content {
+		padding-bottom: 20px;
+	}
+
+	.profile-hero {
+		padding: 18px $facetof-space-page 26px;
+		background-image: linear-gradient(to bottom right, #FD5A6B 0%, #FD955E 52%, #FCAE59 100%);
+		border-radius: 0 0 26px 26px;
+	}
+
+	.hero-top {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.hero-title {
+		font-size: 25px;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.settings-button {
+		width: 38px;
+		height: 38px;
+		align-items: center;
+		justify-content: center;
+		background-color: rgba(255, 255, 255, 0.18);
+		border-radius: 50%;
+	}
+
+	.settings-icon {
+		font-size: 18px;
+		color: #FFFFFF;
+	}
+
+	.profile-card {
+		flex-direction: row;
+		align-items: center;
+		margin-top: 22px;
+	}
+
+	.profile-avatar {
+		width: 72px;
+		height: 72px;
+		border: 3px solid rgba(255, 255, 255, 0.72);
+		border-radius: 24px;
+	}
+
+	.profile-copy {
+		flex: 1;
+		margin-left: 13px;
+	}
+
+	.profile-name {
+		font-size: 21px;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.profile-meta {
+		margin-top: 5px;
+		font-size: 11px;
+		color: rgba(255, 255, 255, 0.86);
+	}
+
+	.identity-pill {
+		align-self: flex-start;
+		margin-top: 7px;
+		padding: 3px 8px;
+		background-color: rgba(255, 255, 255, 0.18);
+		border-radius: 999px;
+	}
+
+	.identity-pill-text {
+		font-size: 9px;
+		color: #FFFFFF;
+	}
+
+	.edit-button {
+		padding: 8px 11px;
+		background-color: rgba(255, 255, 255, 0.18);
+		border: 1px solid rgba(255, 255, 255, 0.28);
+		border-radius: 999px;
+	}
+
+	.edit-text {
+		font-size: 10px;
+		color: #FFFFFF;
+	}
+
+	.guest-card {
+		flex-direction: row;
+		align-items: center;
+		margin-top: 22px;
+	}
+
+	.guest-avatar {
+		width: 68px;
+		height: 68px;
+		align-items: center;
+		justify-content: center;
+		background-color: rgba(255, 255, 255, 0.2);
+		border-radius: 22px;
+	}
+
+	.guest-avatar-text {
+		font-size: 19px;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.guest-copy {
+		flex: 1;
+		margin-left: 12px;
+	}
+
+	.guest-title {
+		font-size: 18px;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.guest-desc {
+		margin-top: 5px;
+		font-size: 10px;
+		line-height: 15px;
+		color: rgba(255, 255, 255, 0.84);
+	}
+
+	.guest-login {
+		padding: 9px 15px;
+		background-color: #FFFFFF;
+		border-radius: 999px;
+	}
+
+	.guest-login-text {
+		font-size: 12px;
+		font-weight: 600;
+		color: $facetof-color-primary;
+	}
+
+	.stats-card {
+		flex-direction: row;
+		align-items: center;
+		margin: -14px $facetof-space-page 14px;
+		padding: 16px;
+		background-color: $facetof-color-background;
+		border: 1px solid $facetof-color-border;
+		border-radius: $facetof-radius-card;
+	}
+
+	.stat-item {
+		flex: 1;
+		align-items: center;
+	}
+
+	.stat-value {
+		font-size: 19px;
+		font-weight: 700;
+		color: $facetof-color-ink;
+	}
+
+	.stat-label {
+		margin-top: 4px;
+		font-size: 10px;
+		color: $facetof-color-secondary-text;
+	}
+
+	.stat-line {
+		width: 1px;
+		height: 28px;
+		background-color: $facetof-color-border;
+	}
+
+	.section-block,
+	.provider-card,
+	.logout-card {
+		margin: 0 $facetof-space-page 14px;
+		padding: $facetof-space-card;
+		background-color: $facetof-color-background;
+		border: 1px solid $facetof-color-border;
+		border-radius: $facetof-radius-card;
+	}
+
+	.section-title {
+		font-size: 17px;
+		font-weight: 700;
+		color: $facetof-color-ink;
+	}
+
+	.quick-grid {
+		flex-direction: row;
+		flex-wrap: wrap;
+		margin-top: 15px;
+	}
+
+	.quick-item {
+		width: 33.33%;
+		align-items: center;
+		margin-bottom: 17px;
+	}
+
+	.quick-icon {
+		width: 46px;
+		height: 46px;
+		align-items: center;
+		justify-content: center;
+		border-radius: 15px;
+	}
+
+	.tone-brand {
+		background-color: rgba(253, 90, 107, 0.12);
+	}
+
+	.tone-warm {
+		background-color: rgba(252, 174, 89, 0.18);
+	}
+
+	.quick-icon-text {
+		font-size: 16px;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.quick-name {
+		margin-top: 7px;
+		font-size: 11px;
+		color: $facetof-color-ink;
+	}
+
+	.menu-block {
+		padding-bottom: 4px;
+	}
+
+	.menu-list {
+		margin-top: 7px;
+	}
+
+	.menu-item {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		height: 48px;
+		border-bottom: 1px solid $facetof-color-border;
+	}
+
+	.menu-item-last {
+		border-bottom-width: 0;
+	}
+
+	.menu-name {
+		font-size: 13px;
+		color: $facetof-color-ink;
+	}
+
+	.entry-arrow {
+		font-size: 21px;
+		color: #B8ADA8;
+	}
+
+	.provider-card {
+		border-color: rgba(253, 90, 107, 0.22);
+	}
+
+	.provider-card-head {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.provider-tip {
+		margin-top: 10px;
+		font-size: 11px;
+		line-height: 17px;
+		color: $facetof-color-secondary-text;
+	}
+
+	.reject {
+		color: $facetof-color-danger;
+	}
+
+	.provider-action {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		margin-top: 12px;
+		padding: 12px;
+		background-color: $facetof-color-warm-background;
+		border-radius: 12px;
+	}
+
+	.provider-action-text {
+		font-size: 13px;
+		font-weight: 600;
+		color: $facetof-color-primary;
+	}
+
+	.logout-card {
+		align-items: center;
+	}
+
+	.logout-text {
+		font-size: 13px;
+		color: $facetof-color-danger;
+	}
+
+	.bottom-space {
+		height: 12px;
+	}
+</style>

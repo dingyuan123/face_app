@@ -1,0 +1,777 @@
+<template>
+	<view class="page">
+		<scroll-view class="page-scroll" direction="vertical" :show-scrollbar="false">
+		<view class="page-content">
+			<view class="nav-bar">
+				<view class="nav-button" @click="goBack">
+					<text class="nav-icon">‹</text>
+				</view>
+				<text class="nav-title">确认订单</text>
+				<view class="nav-button" @click="openService">
+					<text class="nav-icon">♧</text>
+				</view>
+			</view>
+
+			<view class="trust-banner">
+				<text class="trust-icon">♢</text>
+				<view class="trust-copy">
+					<text class="trust-title">见面聊，安心见</text>
+					<text class="trust-subtitle">FaceTo · 实名认证 · 平台担保交易</text>
+				</view>
+			</view>
+
+			<view class="section-card service-card">
+				<image class="service-image" :src="order.providerAvatar" mode="aspectFill"></image>
+				<view class="service-main">
+					<text class="service-title">{{ order.serviceTitle }}</text>
+					<text class="service-meta">{{ order.providerName }} · 泸州江阳区</text>
+					<view class="tag-row">
+						<view class="tag">
+							<text class="tag-text">◉ 实名认证</text>
+						</view>
+						<view class="tag">
+							<text class="tag-text">技能认证</text>
+						</view>
+					</view>
+				</view>
+				<view class="service-price">
+					<text class="price-value">¥80</text>
+					<text class="price-unit">/小时</text>
+				</view>
+				<view class="service-divider"></view>
+				<text class="service-detail">{{ order.format }} · {{ order.duration }}</text>
+			</view>
+
+			<view class="section-card">
+				<view class="section-head">
+					<text class="section-title">预约时间</text>
+					<text class="section-meta">2026年10月 ⛷</text>
+				</view>
+				<scroll-view class="date-scroll" direction="horizontal" :show-scrollbar="false">
+					<view class="date-row">
+						<view v-for="date in dates" :key="date.value" class="date-item" :class="selectedDate == date.value ? 'date-active' : ''" @click="selectedDate = date.value">
+							<text class="date-label" :class="selectedDate == date.value ? 'date-label-active' : ''">{{ date.label }}</text>
+							<text class="date-value" :class="selectedDate == date.value ? 'date-value-active' : ''">{{ date.value }}</text>
+						</view>
+					</view>
+				</scroll-view>
+				<view class="time-row" @click="chooseTime">
+					<text class="time-icon">◷</text>
+					<text class="time-value">{{ order.timeRange }}</text>
+					<text class="time-meta">共{{ order.duration }} 〉</text>
+				</view>
+				<text class="tip-text">请提前10分钟到店，和助教从容见面。</text>
+			</view>
+
+			<view class="section-card">
+				<view class="section-head">
+					<text class="section-title">见面地点</text>
+					<view class="map-link" @click="chooseLocation">
+						<text class="map-text">⌖ 地图选点 〉</text>
+					</view>
+				</view>
+				<text class="location-name">{{ order.locationName }}</text>
+				<text class="location-address">{{ order.locationAddress }}</text>
+				<view class="location-tag-row">
+					<view class="location-tag">
+						<text class="location-tag-text">♧ 公共经营场所</text>
+					</view>
+					<text class="location-tip">到店前台集合</text>
+				</view>
+				<view class="notice-row">
+					<text class="notice-icon">♢</text>
+					<text class="notice-text">{{ order.locationTip }}</text>
+				</view>
+			</view>
+
+			<view class="section-card">
+				<view class="section-head">
+					<text class="section-title">给助教留言</text>
+					<text class="optional">选填</text>
+				</view>
+				<textarea class="note-input" :value="note" maxlength="200" placeholder="我是台球新手，想先学习握杆、站姿和直线击球，谢谢！" placeholder-class="note-placeholder" @input="onNoteInput"></textarea>
+				<text class="note-count">{{ note.length }}/200</text>
+			</view>
+
+			<view class="section-card">
+				<text class="section-title">金额明细</text>
+				<view class="amount-row">
+					<text class="amount-label">服务价格（¥80 × 2小时）</text>
+					<text class="amount-value">¥160.00</text>
+				</view>
+				<view class="amount-row">
+					<text class="amount-label">平台服务费</text>
+					<text class="amount-value">¥8.00</text>
+				</view>
+				<view class="amount-divider"></view>
+				<view class="amount-row total-row">
+					<text class="total-label">应付总额</text>
+					<text class="total-value">¥168.00</text>
+				</view>
+				<text class="amount-note">已含球台费，无需到店另付。服务费含交易保障。</text>
+			</view>
+
+			<view class="section-card payment-card">
+				<text class="section-title">支付方式</text>
+				<view class="payment-option" :class="paymentMethod == '微信支付' ? 'payment-active' : ''" @click="paymentMethod = '微信支付'">
+					<view class="payment-icon wechat-icon">微</view>
+					<view class="payment-copy">
+						<text class="payment-name">微信支付</text>
+						<text class="payment-desc">推荐使用 · 安全快捷</text>
+					</view>
+					<view class="radio">{{ paymentMethod == '微信支付' ? '✓' : '' }}</view>
+				</view>
+				<view class="payment-option" :class="paymentMethod == '支付宝' ? 'payment-active' : ''" @click="paymentMethod = '支付宝'">
+					<view class="payment-icon alipay-icon">支</view>
+					<view class="payment-copy">
+						<text class="payment-name">支付宝</text>
+						<text class="payment-desc">支付宝安全支付</text>
+					</view>
+					<view class="radio">{{ paymentMethod == '支付宝' ? '✓' : '' }}</view>
+				</view>
+			</view>
+
+			<view class="agreement-row" @click="agreed = !agreed">
+				<view class="checkbox">{{ agreed ? '✓' : '' }}</view>
+				<text class="agreement-text">我已阅读并同意《用户服务协议》、《下单须知》及《取消与退款规则》</text>
+			</view>
+			<view class="bottom-space"></view>
+		</view>
+		</scroll-view>
+
+		<view class="submit-bar">
+			<view class="submit-total">
+				<text class="submit-total-label">合计（含服务费）</text>
+				<text class="submit-total-value">¥168.00</text>
+			</view>
+			<view class="submit-button" @click="submitPayment">
+				<text class="submit-lock">♧</text>
+				<text class="submit-text">确认支付</text>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { getOrderDraft, submitOrder } from '../../services/service-container.uts'
+	import type { OrderDraft } from '../../types/models.uts'
+
+	const order = ref<OrderDraft>(getOrderDraft('service-billiards-001'))
+	const selectedDate = ref('17')
+	const paymentMethod = ref('微信支付')
+	const agreed = ref(true)
+	const note = ref('')
+
+	const dates = [
+		{ label: '明天 周六', value: '17' },
+		{ label: '周日', value: '18' },
+		{ label: '周一', value: '19' },
+		{ label: '周二', value: '20' }
+	]
+
+	onLoad((options) => {
+		const serviceId = options['serviceId'] as string
+		order.value = getOrderDraft(serviceId != null && serviceId.length > 0 ? decodeURIComponent(serviceId) : 'service-billiards-001')
+	})
+
+	function onNoteInput(event: InputEvent) {
+		note.value = event.detail.value
+	}
+
+	function chooseTime() {
+		uni.showToast({
+			title: '时间段选择将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function chooseLocation() {
+		uni.showToast({
+			title: '地图选点将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function openService() {
+		uni.showToast({
+			title: '客服能力将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/service/detail'
+				})
+			}
+		})
+	}
+
+	function submitPayment() {
+		if (!agreed.value) {
+			uni.showToast({
+				title: '请先阅读并同意相关协议',
+				position: 'bottom',
+				icon: 'none'
+			})
+			return
+		}
+		const result = submitOrder(order.value.orderId, paymentMethod.value)
+		if (!result.ok) {
+			uni.navigateTo({
+				url: '/pages/payment/result?status=failed&orderId=' + encodeURIComponent(order.value.orderId)
+			})
+			return
+		}
+		uni.navigateTo({
+			url: '/pages/payment/result?status=success&orderId=' + encodeURIComponent(order.value.orderId) + '&method=' + encodeURIComponent(paymentMethod.value)
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-scroll {
+		flex: 1;
+		min-height: 0;
+	}
+
+	.page-content {
+		padding-bottom: 108px;
+	}
+
+	.nav-bar {
+		height: 58px;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 16px;
+		background-color: #FFFFFF;
+	}
+
+	.nav-button {
+		width: 38px;
+		height: 38px;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 28px;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 20px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.trust-banner {
+		flex-direction: row;
+		align-items: center;
+		margin: 12px 16px;
+		padding: 12px;
+		background-color: #FFF1F2;
+		border: 1px solid #FFD9DC;
+		border-radius: 12px;
+	}
+
+	.trust-icon {
+		font-size: 22px;
+		color: $facetof-color-primary;
+	}
+
+	.trust-copy {
+		margin-left: 10px;
+	}
+
+	.trust-title {
+		font-size: 15px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.trust-subtitle {
+		margin-top: 4px;
+		font-size: 11px;
+		color: #8D817B;
+	}
+
+	.section-card {
+		margin: 12px 16px 0;
+		padding: 18px;
+		background-color: #FFFFFF;
+		border: 1px solid #F5DED5;
+		border-radius: 17px;
+	}
+
+	.service-card {
+		padding: 14px;
+	}
+
+	.service-image {
+		width: 110px;
+		height: 110px;
+		border-radius: 14px;
+	}
+
+	.service-main {
+		position: absolute;
+		left: 142px;
+		right: 12px;
+		top: 22px;
+	}
+
+	.service-title {
+		font-size: 17px;
+		font-weight: 700;
+		line-height: 23px;
+		color: #253047;
+	}
+
+	.service-meta {
+		margin-top: 6px;
+		font-size: 12px;
+		color: #8D817B;
+	}
+
+	.tag-row {
+		flex-direction: row;
+		margin-top: 9px;
+	}
+
+	.tag {
+		padding: 5px 8px;
+		margin-right: 7px;
+		background-color: #FFF0D7;
+		border-radius: 999px;
+	}
+
+	.tag-text {
+		font-size: 10px;
+		font-weight: 700;
+		color: #B87916;
+	}
+
+	.service-price {
+		position: absolute;
+		right: 15px;
+		top: 83px;
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.price-value {
+		font-size: 22px;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.price-unit {
+		font-size: 11px;
+		color: #8D817B;
+	}
+
+	.service-divider {
+		margin: 14px 0 11px;
+		height: 1px;
+		background-color: #F1E2DC;
+	}
+
+	.service-detail {
+		font-size: 13px;
+		color: #7E7470;
+	}
+
+	.section-head {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.section-title {
+		font-size: 19px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.section-meta,
+	.optional {
+		font-size: 12px;
+		color: #8D817B;
+	}
+
+	.date-scroll {
+		width: 100%;
+		height: 92px;
+		margin-top: 14px;
+	}
+
+	.date-row {
+		flex-direction: row;
+		flex-shrink: 0;
+		min-width: 380px;
+	}
+
+	.date-item {
+		flex-shrink: 0;
+		width: 82px;
+		height: 84px;
+		align-items: center;
+		justify-content: center;
+		margin-right: 8px;
+		background-color: #FFF9F5;
+		border: 1px solid #F5DED5;
+		border-radius: 13px;
+	}
+
+	.date-active {
+		background-color: #FFF1F2;
+		border-color: $facetof-color-primary;
+	}
+
+	.date-label {
+		font-size: 11px;
+		color: #8D817B;
+	}
+
+	.date-label-active {
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.date-value {
+		margin-top: 8px;
+		font-size: 21px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.date-value-active {
+		color: $facetof-color-primary;
+	}
+
+	.time-row {
+		flex-direction: row;
+		align-items: center;
+		margin-top: 14px;
+		padding: 13px;
+		background-color: #FFF9F5;
+		border: 1px solid #F5DED5;
+		border-radius: 12px;
+	}
+
+	.time-icon {
+		margin-right: 7px;
+		font-size: 20px;
+		color: #B87916;
+	}
+
+	.time-value {
+		flex: 1;
+		font-size: 18px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.time-meta {
+		font-size: 11px;
+		color: #8D817B;
+	}
+
+	.tip-text {
+		margin-top: 11px;
+		font-size: 11px;
+		line-height: 17px;
+		color: #8D817B;
+	}
+
+	.map-link {
+		padding: 5px 8px;
+		background-color: #FFF2EF;
+		border-radius: 999px;
+	}
+
+	.map-text {
+		font-size: 11px;
+		font-weight: 600;
+		color: $facetof-color-primary;
+	}
+
+	.location-name {
+		margin-top: 13px;
+		font-size: 17px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.location-address {
+		margin-top: 7px;
+		font-size: 12px;
+		color: #8D817B;
+	}
+
+	.location-tag-row {
+		flex-direction: row;
+		align-items: center;
+		margin-top: 12px;
+	}
+
+	.location-tag {
+		padding: 5px 8px;
+		background-color: #FFF2EF;
+		border-radius: 999px;
+	}
+
+	.location-tag-text {
+		font-size: 11px;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.location-tip {
+		margin-left: 10px;
+		font-size: 12px;
+		color: #8D817B;
+	}
+
+	.notice-row {
+		flex-direction: row;
+		margin-top: 14px;
+		padding-top: 13px;
+		border-top: 1px solid #F5DED5;
+	}
+
+	.notice-icon {
+		margin-right: 7px;
+		font-size: 17px;
+		color: $facetof-color-primary;
+	}
+
+	.notice-text {
+		flex: 1;
+		font-size: 11px;
+		line-height: 17px;
+		color: #8D817B;
+	}
+
+	.note-input {
+		height: 100px;
+		margin-top: 12px;
+		padding: 12px;
+		font-size: 13px;
+		line-height: 19px;
+		color: #253047;
+		background-color: #FFF9F5;
+		border: 1px solid #F5DED5;
+		border-radius: 12px;
+	}
+
+	.note-placeholder {
+		color: #B8ADA8;
+	}
+
+	.note-count {
+		margin-top: 6px;
+		font-size: 10px;
+		text-align: right;
+		color: #A1958F;
+	}
+
+	.amount-row {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		margin-top: 13px;
+	}
+
+	.amount-label {
+		font-size: 13px;
+		color: #8D817B;
+	}
+
+	.amount-value {
+		font-size: 14px;
+		font-weight: 600;
+		color: #253047;
+	}
+
+	.amount-divider {
+		height: 1px;
+		margin: 15px 0 2px;
+		background-color: #F5DED5;
+	}
+
+	.total-label {
+		font-size: 15px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.total-value {
+		font-size: 26px;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.amount-note {
+		margin-top: 8px;
+		font-size: 10px;
+		line-height: 16px;
+		color: #A1958F;
+	}
+
+	.payment-option {
+		flex-direction: row;
+		align-items: center;
+		margin-top: 14px;
+		padding: 13px 0;
+		border-bottom: 1px solid #F5DED5;
+	}
+
+	.payment-option-last {
+		border-bottom-width: 0;
+	}
+
+	.payment-active {
+		border-color: #FFD9DC;
+	}
+
+	.payment-icon {
+		width: 42px;
+		height: 42px;
+		align-items: center;
+		justify-content: center;
+		border-radius: 11px;
+		font-size: 16px;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.wechat-icon {
+		background-color: #10B981;
+	}
+
+	.alipay-icon {
+		background-color: #1677FF;
+	}
+
+	.payment-copy {
+		flex: 1;
+		margin-left: 11px;
+	}
+
+	.payment-name {
+		font-size: 15px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.payment-desc {
+		margin-top: 4px;
+		font-size: 11px;
+		color: #8D817B;
+	}
+
+	.radio {
+		width: 24px;
+		height: 24px;
+		align-items: center;
+		justify-content: center;
+		font-size: 13px;
+		color: #FFFFFF;
+		background-color: $facetof-color-primary;
+		border: 1px solid #F5DED5;
+		border-radius: 50%;
+	}
+
+	.agreement-row {
+		flex-direction: row;
+		align-items: flex-start;
+		margin: 18px 16px 0;
+	}
+
+	.checkbox {
+		width: 20px;
+		height: 20px;
+		align-items: center;
+		justify-content: center;
+		font-size: 12px;
+		color: #FFFFFF;
+		background-color: $facetof-color-primary;
+		border-radius: 5px;
+	}
+
+	.agreement-text {
+		flex: 1;
+		margin-left: 8px;
+		font-size: 12px;
+		line-height: 19px;
+		color: $facetof-color-primary;
+	}
+
+	.submit-bar {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		height: 92px;
+		flex-direction: row;
+		align-items: center;
+		padding: 12px 18px;
+		padding-bottom: var(--uni-safe-area-inset-bottom);
+		background-color: #FFFFFF;
+		border-top: 1px solid #F5DED5;
+	}
+
+	.submit-total {
+		flex: 1;
+	}
+
+	.submit-total-label {
+		font-size: 11px;
+		color: #8D817B;
+	}
+
+	.submit-total-value {
+		margin-top: 3px;
+		font-size: 26px;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.submit-button {
+		width: 230px;
+		height: 52px;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+		background-color: $facetof-color-primary;
+		border-radius: 15px;
+	}
+
+	.submit-lock {
+		margin-right: 8px;
+		font-size: 17px;
+		color: #FFFFFF;
+	}
+
+	.submit-text {
+		font-size: 18px;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+</style>

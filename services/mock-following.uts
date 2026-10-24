@@ -1,0 +1,68 @@
+import { FollowingMoment, FollowingProvider } from '../types/models.uts'
+
+export function getFollowingProviders(): Array<FollowingProvider> {
+  return [
+    {
+      id: 'provider-001',
+      name: '阿哲',
+      avatar: '/static/following/avatar-zhe.png',
+      serviceLabel: '台球助教',
+      online: true
+    },
+    {
+      id: 'provider-002',
+      name: '小禾',
+      avatar: '/static/following/avatar-xiaohe.png',
+      serviceLabel: '咖啡陪伴',
+      online: true
+    },
+    {
+      id: 'provider-003',
+      name: '林川',
+      avatar: '/static/following/avatar-linchuan.png',
+      serviceLabel: '城市漫步',
+      online: true
+    }
+  ]
+}
+
+export function getFollowingMoments(): Array<FollowingMoment> {
+  return [
+    {
+      id: 'following-moment-001',
+      providerName: '阿哲',
+      avatar: '/static/following/avatar-zhe.png',
+      verified: true,
+      publishedAt: '今天 12:10',
+      categoryName: '台球助教',
+      content: '新手第一课，从握杆和站姿开始。\n周末来球馆，一起稳稳打进第一颗球！',
+      coverImage: '/static/following/moment-billiards.png',
+      location: '泸州 · 江阳区台球馆',
+      likeCount: 18
+    },
+    {
+      id: 'following-moment-002',
+      providerName: '小禾',
+      avatar: '/static/following/avatar-xiaohe.png',
+      verified: true,
+      publishedAt: '今天 10:35',
+      categoryName: '咖啡陪伴',
+      content: '今天的手冲是清爽的柑橘香。\n在街角咖啡馆，聊聊最近的小确幸。',
+      coverImage: '/static/following/moment-coffee.png',
+      location: '泸州 · 龙马潭区咖啡馆',
+      likeCount: 12
+    },
+    {
+      id: 'following-moment-003',
+      providerName: '林川',
+      avatar: '/static/following/avatar-linchuan.png',
+      verified: true,
+      publishedAt: '昨天 16:20',
+      categoryName: '城市漫步',
+      content: '沿着江边走进老城，发现一条树荫小路。\n下一次慢行，就从这里出发。',
+      coverImage: '/static/following/moment-city.png',
+      location: '泸州 · 江阳区滨江路',
+      likeCount: 26
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+import { ProfileSummary } from '../types/models.uts'
+import { sessionState } from '../state/session-state.uts'
+
+export function getProfileSummary(): ProfileSummary | null {
+  if (!sessionState.loggedIn) {
+    return null
+  }
+  return {
+    userId: sessionState.userId,
+    displayName: sessionState.displayName,
+    avatar: '/static/avatars/acheng.png',
+    city: '泸州',
+    level: '安心用户 Lv.2',
+    orderCount: 3,
+    favoriteCount: 12,
+    followingCount: 8
+  }
+}

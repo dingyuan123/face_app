@@ -6,6 +6,7 @@ export function getHomeFeed(): Array<HomeFeedItem> {
       id: 'feed-001',
       providerId: 'provider-001',
       providerName: '林晓',
+      providerAvatar: '/static/avatars/linxiao.png',
       headline: '下班后一起打台球，轻松聊天',
       description: '耐心教学，新手也能快速上手，公共场所见面。',
       categoryName: '运动',
@@ -17,15 +18,16 @@ export function getHomeFeed(): Array<HomeFeedItem> {
       verified: true,
       coverLabel: '台球陪伴',
       coverImages: [
-        '/static/placeholders/provider-1.png',
-        '/static/placeholders/provider-2.png',
-        '/static/placeholders/provider-3.png'
+        '/static/content/billiards.png',
+        '/static/content/badminton.png',
+        '/static/content/city.png'
       ]
     },
     {
       id: 'feed-002',
       providerId: 'provider-002',
       providerName: '阿橙',
+      providerAvatar: '/static/avatars/acheng.png',
       headline: '咖啡店安静陪伴，聊聊近期生活',
       description: '认真倾听，不暧昧，适合需要轻松交流的你。',
       categoryName: '休闲',
@@ -37,15 +39,16 @@ export function getHomeFeed(): Array<HomeFeedItem> {
       verified: true,
       coverLabel: '咖啡陪伴',
       coverImages: [
-        '/static/placeholders/provider-2.png',
-        '/static/placeholders/provider-3.png',
-        '/static/placeholders/provider-1.png'
+        '/static/content/coffee.png',
+        '/static/content/bookstore.png',
+        '/static/content/city.png'
       ]
     },
     {
       id: 'feed-003',
       providerId: 'provider-003',
       providerName: '小满',
+      providerAvatar: '/static/avatars/xiaoman.png',
       headline: '周末桌游搭子，气氛友好不尴尬',
       description: '擅长组织桌游，帮助新朋友快速融入。',
       categoryName: '娱乐',
@@ -57,9 +60,9 @@ export function getHomeFeed(): Array<HomeFeedItem> {
       verified: true,
       coverLabel: '桌游陪玩',
       coverImages: [
-        '/static/placeholders/provider-3.png',
-        '/static/placeholders/provider-1.png',
-        '/static/placeholders/provider-2.png'
+        '/static/content/boardgames.png',
+        '/static/content/city.png',
+        '/static/content/coffee.png'
       ]
     }
   ]

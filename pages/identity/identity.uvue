@@ -1,5 +1,5 @@
 <template>
-	<view class="page">
+	<scroll-view class="page" direction="vertical" :show-scrollbar="false">
 		<text class="eyebrow">完善你的使用身份</text>
 		<text class="title">你想以什么身份开始？</text>
 		<text class="description">身份选择后不可切换。选择服务者不代表已获得服务者权限，仍需提交资料并等待审核。</text>
@@ -46,7 +46,7 @@
 			:disabled="selected == 'unset'"
 			@press="continueSelection"
 		></facetof-button>
-	</view>
+	</scroll-view>
 </template>
 
 <script setup lang="uts">

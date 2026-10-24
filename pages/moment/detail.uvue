@@ -1,0 +1,542 @@
+<template>
+	<view class="page">
+		<swiper
+			class="moment-swiper"
+			:current="currentMoment"
+			:vertical="true"
+			:circular="false"
+			@change="onMomentChange"
+		>
+			<swiper-item v-for="(item, index) in moments" :key="item.id">
+				<view class="video-area">
+					<video
+						v-if="item.videoUrl.length > 0 && index == currentMoment"
+						class="video-cover"
+						:id="'moment-video-' + item.id"
+						:src="item.videoUrl"
+						:poster="item.coverImage"
+						:autoplay="true"
+						:controls="false"
+						:muted="muted"
+						:loop="true"
+						:show-play-btn="false"
+						:show-center-play-btn="false"
+						:show-fullscreen-btn="false"
+						:show-progress="false"
+						:enable-progress-gesture="false"
+						@click="togglePlay"
+						@play="onVideoPlay"
+					></video>
+					<image v-else class="video-cover" :src="item.coverImage" mode="aspectFill"></image>
+					<view class="video-shade"></view>
+					<view class="media-tap-layer" @click.stop="togglePlay"></view>
+
+					<view class="topbar">
+						<view class="circle-button" @click="goBack">
+							<text class="circle-icon">‹</text>
+						</view>
+						<text class="topbar-title">动态</text>
+						<view class="circle-button" @click="openMore">
+							<text class="circle-icon">···</text>
+						</view>
+					</view>
+
+					<view class="right-actions">
+						<view class="author-action" @click="followAuthor">
+							<image class="author-avatar" :src="item.avatar" mode="aspectFill"></image>
+							<view class="follow-dot">
+								<text class="follow-dot-text">＋</text>
+							</view>
+						</view>
+						<view class="action-item" @click="toggleLike">
+							<text class="action-symbol">{{ liked ? '♥' : '♡' }}</text>
+							<text class="action-count">{{ formatCount(item.likeCount) }}</text>
+						</view>
+						<view class="action-item" @click="openComments">
+							<text class="action-symbol">♧</text>
+							<text class="action-count">{{ item.commentCount }}</text>
+						</view>
+						<view class="action-item" @click="shareMoment">
+							<text class="action-symbol">↑</text>
+							<text class="action-count">分享</text>
+						</view>
+						<view class="action-item" @click="openService(item.serviceId)">
+							<text class="action-symbol">▤</text>
+							<text class="action-count">服务</text>
+						</view>
+						<view class="action-item sound" @click="toggleSound">
+							<text class="action-symbol">{{ muted ? '♩' : '♫' }}</text>
+							<text class="action-count">原声</text>
+						</view>
+					</view>
+
+					<view class="video-info">
+						<view class="author-line">
+							<text class="author-name">{{ item.providerName }}</text>
+							<view class="verified-tag">
+								<text class="verified-text">✓ 实名认证</text>
+							</view>
+						</view>
+						<text class="moment-title">{{ item.title }}</text>
+						<text class="moment-description">{{ item.description }}</text>
+						<text class="hashtags">#{{ item.hashtags.join(' #') }}</text>
+						<view class="location-row">
+							<text class="location-icon">⌖</text>
+							<text class="location-text">{{ item.location }}</text>
+						</view>
+
+						<view class="service-link" @click="openService(item.serviceId)">
+							<view class="service-link-main">
+								<text class="service-link-title">台球助教 · 新手体验</text>
+								<text class="service-link-meta">60 分钟 · 线下陪练</text>
+								<text class="service-link-price">¥68</text>
+							</view>
+							<view class="service-link-button">
+								<text class="service-link-button-text">查看服务</text>
+							</view>
+						</view>
+					</view>
+
+					<view class="sound-tip">
+						<text class="sound-tip-text">默认静音 · 点击开启声音</text>
+						<view class="sound-button" @click="toggleSound">
+							<text class="sound-button-text">{{ muted ? '⌁' : '♫' }}</text>
+						</view>
+					</view>
+				</view>
+			</swiper-item>
+		</swiper>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { getMomentFeed } from '../../services/service-container.uts'
+	import type { MomentDetail } from '../../types/models.uts'
+	import { requireAccount, MOMENT_DETAIL_ROUTE } from '../../router/route-guard.uts'
+
+	const moments = ref<MomentDetail[]>(getMomentFeed())
+	const currentMoment = ref(0)
+	const paused = ref(false)
+	const muted = ref(true)
+	const liked = ref(false)
+	const videoContexts = new Map<string, VideoContext>()
+
+	function onMomentChange(event: any) {
+		const previous = currentMoment.value
+		releaseVideo(previous)
+		currentMoment.value = event.detail.current
+		liked.value = false
+		paused.value = false
+	}
+
+	function formatCount(count: number): string {
+		if (count >= 10000) {
+			return (count / 10000).toFixed(1) + 'W'
+		}
+		return count.toString()
+	}
+
+	function currentId(): string {
+		if (currentMoment.value < moments.value.length) {
+			return moments.value[currentMoment.value].id
+		}
+		return ''
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/moments/moments'
+				})
+			}
+		})
+	}
+
+	function releaseVideo(index: number) {
+		if (index < 0 || index >= moments.value.length) {
+			return
+		}
+		const item = moments.value[index]
+		if (item.videoUrl.length == 0) {
+			return
+		}
+		const id = 'moment-video-' + item.id
+		const context = videoContexts.get(id)
+		if (context != null) {
+			context.stop()
+			videoContexts.delete(id)
+		}
+	}
+
+	function getVideoContext(index: number): VideoContext {
+		const id = 'moment-video-' + moments.value[index].id
+		let context = videoContexts.get(id)
+		if (context == null) {
+			context = uni.createVideoContext(id) as VideoContext
+			videoContexts.set(id, context)
+		}
+		return context
+	}
+
+	function onVideoPlay() {
+		paused.value = false
+	}
+
+	function togglePlay() {
+		const item = moments.value[currentMoment.value]
+		if (item.videoUrl.length > 0) {
+			const context = getVideoContext(currentMoment.value)
+			if (paused.value) {
+				context.play()
+				paused.value = false
+			} else {
+				context.pause()
+				paused.value = true
+			}
+			return
+		}
+		paused.value = !paused.value
+	}
+
+	function toggleSound() {
+		muted.value = !muted.value
+		uni.showToast({
+			title: muted.value ? '已静音' : '声音已开启',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function followAuthor() {
+		if (!requireAccount('follow-moment-author', MOMENT_DETAIL_ROUTE, currentId())) {
+			return
+		}
+		uni.showToast({
+			title: '已关注（开发 Mock）',
+			position: 'bottom',
+			icon: 'success'
+		})
+	}
+
+	function toggleLike() {
+		if (!requireAccount('like-moment', MOMENT_DETAIL_ROUTE, currentId())) {
+			return
+		}
+		liked.value = !liked.value
+		uni.showToast({
+			title: liked.value ? '已点赞' : '已取消点赞',
+			position: 'bottom',
+			icon: 'success'
+		})
+	}
+
+	function openComments() {
+		uni.showToast({
+			title: '评论区将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function shareMoment() {
+		uni.showToast({
+			title: '分享能力将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function openMore() {
+		uni.showToast({
+			title: '更多操作将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function openService(id: string) {
+		uni.navigateTo({
+			url: '/pages/service/detail?serviceId=' + encodeURIComponent(id)
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: #101B21;
+	}
+
+	.moment-swiper {
+		flex: 1;
+		min-height: 0;
+	}
+
+	.video-area {
+		position: relative;
+		z-index: 1;
+		flex: 1;
+		height: 100%;
+		overflow: hidden;
+		background-color: #102A31;
+	}
+
+	.video-cover {
+		width: 100%;
+		height: 100%;
+	}
+
+	.media-tap-layer {
+		z-index: 20;
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: 0;
+		bottom: 0;
+	}
+
+	.video-shade {
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: 0;
+		bottom: 0;
+		background-color: rgba(16, 27, 33, 0.18);
+	}
+
+	.topbar {
+		z-index: 30;
+		position: absolute;
+		left: 16px;
+		right: 16px;
+		top: 14px;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.circle-button {
+		width: 42px;
+		height: 42px;
+		align-items: center;
+		justify-content: center;
+		background-color: rgba(31, 26, 23, 0.62);
+		border-radius: 50%;
+	}
+
+	.circle-icon {
+		font-size: 27px;
+		line-height: 27px;
+		color: #FFFFFF;
+	}
+
+	.topbar-title {
+		font-size: 19px;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.right-actions {
+		z-index: 30;
+		position: absolute;
+		right: 16px;
+		bottom: 180px;
+		align-items: center;
+	}
+
+	.author-action {
+		position: relative;
+		margin-bottom: 18px;
+	}
+
+	.author-avatar {
+		width: 58px;
+		height: 58px;
+		border: 3px solid #FFFFFF;
+		border-radius: 50%;
+	}
+
+	.follow-dot {
+		position: absolute;
+		left: 19px;
+		bottom: -9px;
+		width: 23px;
+		height: 23px;
+		align-items: center;
+		justify-content: center;
+		background-color: #FD5A6B;
+		border: 2px solid #FFFFFF;
+		border-radius: 50%;
+	}
+
+	.follow-dot-text {
+		font-size: 16px;
+		line-height: 16px;
+		color: #FFFFFF;
+	}
+
+	.action-item {
+		margin-top: 15px;
+		align-items: center;
+	}
+
+	.action-symbol {
+		font-size: 32px;
+		line-height: 34px;
+		color: #FFFFFF;
+	}
+
+	.action-count {
+		margin-top: 3px;
+		font-size: 11px;
+		color: #FFFFFF;
+	}
+
+	.video-info {
+		z-index: 30;
+		position: absolute;
+		left: 18px;
+		right: 88px;
+		bottom: 74px;
+	}
+
+	.author-line {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.author-name {
+		font-size: 19px;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.verified-tag {
+		margin-left: 10px;
+		padding: 5px 9px;
+		background-color: #FFC768;
+		border-radius: 999px;
+	}
+
+	.verified-text {
+		font-size: 11px;
+		font-weight: 700;
+		color: #704713;
+	}
+
+	.moment-title {
+		margin-top: 10px;
+		font-size: 18px;
+		font-weight: 700;
+		line-height: 25px;
+		color: #FFFFFF;
+	}
+
+	.moment-description {
+		margin-top: 6px;
+		font-size: 13px;
+		line-height: 19px;
+		color: rgba(255, 255, 255, 0.82);
+	}
+
+	.hashtags {
+		margin-top: 7px;
+		font-size: 13px;
+		color: #FFFFFF;
+	}
+
+	.location-row {
+		flex-direction: row;
+		align-items: center;
+		margin-top: 9px;
+	}
+
+	.location-icon {
+		margin-right: 5px;
+		font-size: 15px;
+		color: #FD5A6B;
+	}
+
+	.location-text {
+		font-size: 11px;
+		color: rgba(255, 255, 255, 0.86);
+	}
+
+	.service-link {
+		flex-direction: row;
+		align-items: center;
+		margin-top: 18px;
+		padding: 13px;
+		background-color: rgba(8, 17, 21, 0.88);
+		border: 1px solid rgba(255, 255, 255, 0.12);
+		border-radius: 16px;
+	}
+
+	.service-link-main {
+		flex: 1;
+	}
+
+	.service-link-title {
+		font-size: 15px;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.service-link-meta {
+		margin-top: 5px;
+		font-size: 11px;
+		color: rgba(255, 255, 255, 0.72);
+	}
+
+	.service-link-price {
+		margin-top: 6px;
+		font-size: 16px;
+		font-weight: 700;
+		color: #FD5A6B;
+	}
+
+	.service-link-button {
+		padding: 11px 13px;
+		background-color: #FD5A6B;
+		border-radius: 11px;
+	}
+
+	.service-link-button-text {
+		font-size: 13px;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.sound-tip {
+		z-index: 30;
+		position: absolute;
+		right: 18px;
+		bottom: 18px;
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.sound-tip-text {
+		margin-right: 8px;
+		font-size: 10px;
+		color: rgba(255, 255, 255, 0.82);
+	}
+
+	.sound-button {
+		width: 38px;
+		height: 38px;
+		align-items: center;
+		justify-content: center;
+		background-color: rgba(31, 26, 23, 0.62);
+		border-radius: 50%;
+	}
+
+	.sound-button-text {
+		font-size: 17px;
+		color: #FFFFFF;
+	}
+</style>

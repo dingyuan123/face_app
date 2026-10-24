@@ -1,0 +1,379 @@
+<template>
+	<scroll-view class="page" direction="vertical" :show-scrollbar="false">
+		<view class="page-content">
+			<view class="nav-bar">
+				<view class="nav-button" @click="goBack">
+					<text class="nav-icon">‹</text>
+				</view>
+				<text class="nav-title">我的收藏</text>
+				<view class="nav-placeholder"></view>
+			</view>
+
+			<segment-tabs
+				:items="tabs"
+				:active="selectedTab"
+				variant="underline"
+				@change="changeTab"
+			></segment-tabs>
+
+			<view class="safety-banner">
+				<text class="safety-icon">♢</text>
+				<text class="safety-text">安心见面，请选择公共经营场所</text>
+			</view>
+
+			<view v-if="items.length == 0" class="empty-state">
+				<image class="empty-image" src="/static/favorites/empty.png" mode="aspectFit"></image>
+				<text class="empty-title">还没有收藏的玩伴</text>
+				<text class="empty-desc">遇见感兴趣的服务者，点亮爱心收藏</text>
+				<text class="empty-desc">下次想约，随时在这里找到。</text>
+				<view class="discover-button" @click="goDiscover">
+					<text class="discover-text">去发现玩伴</text>
+				</view>
+			</view>
+
+			<view v-else class="favorite-content">
+				<view class="section-head">
+					<text class="section-title">收藏的服务者</text>
+					<text class="section-count">{{ items.length }} 位</text>
+				</view>
+
+				<view class="favorite-list">
+					<view v-for="item in items" :key="item.id" class="favorite-card">
+						<view class="favorite-head">
+							<image class="avatar" :src="item.avatar" mode="aspectFill"></image>
+							<view class="provider-main">
+								<view class="provider-name-row">
+									<text class="provider-name">{{ item.providerName }}</text>
+									<view v-if="item.verified" class="verified-pill">
+										<text class="verified-text">◉ 实名认证</text>
+									</view>
+								</view>
+								<text class="provider-meta">{{ item.city }} · {{ item.category }}</text>
+							</view>
+							<image class="favorite-icon" src="/static/search/heart-filled.png" mode="aspectFit" @click="removeFavorite(item.id)"></image>
+						</view>
+						<text class="service-title">{{ item.serviceTitle }}</text>
+						<view class="favorite-bottom">
+							<view class="price-row">
+								<text class="price-value">{{ item.price.split('/')[0] }}</text>
+								<text class="price-unit">/{{ item.price.split('/')[1] }}</text>
+								<text v-if="item.duration.length > 0" class="duration-text"> · {{ item.duration }}</text>
+							</view>
+							<view class="distance-row">
+								<text class="distance-icon">⌖</text>
+								<text class="distance-text">{{ item.distance }}</text>
+							</view>
+						</view>
+					</view>
+				</view>
+			</view>
+
+			<text v-if="items.length > 0" class="footer-tip">喜欢的玩伴，都在这里</text>
+			<text class="brand-footer">FaceTo · 见面聊，安心见</text>
+			<view class="bottom-space"></view>
+		</view>
+	</scroll-view>
+</template>
+
+<script setup lang="uts">
+	import SegmentTabs from '../../components/segment-tabs.uvue'
+	import { getFavoriteItems } from '../../services/service-container.uts'
+	import type { FavoriteItem } from '../../types/models.uts'
+
+	const tabs = ['全部', '运动', '娱乐', '休闲']
+	const selectedTab = ref('全部')
+	const items = ref<FavoriteItem[]>(getFavoriteItems('全部'))
+
+	function changeTab(tab: string) {
+		selectedTab.value = tab
+		items.value = getFavoriteItems(tab)
+	}
+
+	function removeFavorite(id: string) {
+		const next: Array<FavoriteItem> = []
+		for (let i = 0; i < items.value.length; i++) {
+			if (items.value[i].id != id) {
+				next.push(items.value[i])
+			}
+		}
+		items.value = next
+		uni.showToast({
+			title: '已取消收藏',
+			position: 'bottom',
+			icon: 'success'
+		})
+	}
+
+	function goDiscover() {
+		uni.reLaunch({
+			url: '/pages/index/index'
+		})
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/profile/profile'
+				})
+			}
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-content {
+		padding-bottom: 40rpx;
+	}
+
+	.nav-bar {
+		height: 128rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32rpx;
+		background-color: #FFFFFF;
+	}
+
+	.nav-button,
+	.nav-placeholder {
+		width: 76rpx;
+		height: 76rpx;
+	}
+
+	.nav-button {
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 60rpx;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.safety-banner {
+		flex-direction: row;
+		align-items: center;
+		padding: 30rpx 48rpx;
+		background-color: #FFF1F2;
+	}
+
+	.safety-icon {
+		margin-right: 20rpx;
+		font-size: 42rpx;
+		color: $facetof-color-primary;
+	}
+
+	.safety-text {
+		font-size: 28rpx;
+		font-weight: 600;
+		color: $facetof-color-primary;
+	}
+
+	.favorite-content {
+		padding: 36rpx 48rpx 0;
+	}
+
+	.section-head {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.section-title {
+		font-size: 32rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.section-count {
+		font-size: 24rpx;
+		color: #8D817B;
+	}
+
+	.favorite-card {
+		margin-top: 32rpx;
+		padding: 36rpx;
+		background-color: #FFFFFF;
+		border: 2rpx solid #F5DED5;
+		border-radius: 44rpx;
+	}
+
+	.favorite-head {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.avatar {
+		width: 164rpx;
+		height: 164rpx;
+		border-radius: 50%;
+	}
+
+	.provider-main {
+		flex: 1;
+		margin-left: 26rpx;
+	}
+
+	.provider-name-row {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.provider-name {
+		font-size: 38rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.verified-pill {
+		margin-left: 16rpx;
+		padding: 10rpx 16rpx;
+		background-color: #FFC768;
+		border-radius: 1998rpx;
+	}
+
+	.verified-text {
+		font-size: 20rpx;
+		font-weight: 700;
+		color: #704713;
+	}
+
+	.provider-meta {
+		margin-top: 16rpx;
+		font-size: 26rpx;
+		color: #8D817B;
+	}
+
+	.favorite-icon {
+		width: 64rpx;
+		height: 64rpx;
+		margin-left: 16rpx;
+	}
+
+	.service-title {
+		margin-top: 44rpx;
+		font-size: 38rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.favorite-bottom {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		margin-top: 40rpx;
+	}
+
+	.price-row {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.price-value {
+		font-size: 56rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.price-unit {
+		font-size: 26rpx;
+		color: #8D817B;
+	}
+
+	.duration-text {
+		font-size: 26rpx;
+		color: #8D817B;
+	}
+
+	.distance-row {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.distance-icon {
+		margin-right: 10rpx;
+		font-size: 36rpx;
+		color: #8D817B;
+	}
+
+	.distance-text {
+		font-size: 26rpx;
+		color: #8D817B;
+	}
+
+	.empty-state {
+		min-height: 900rpx;
+		padding: 80rpx 48rpx 40rpx;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.empty-image {
+		width: 380rpx;
+		height: 282rpx;
+	}
+
+	.empty-title {
+		margin-top: 34rpx;
+		font-size: 32rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.empty-desc {
+		margin-top: 12rpx;
+		font-size: 24rpx;
+		line-height: 36rpx;
+		text-align: center;
+		color: #8D817B;
+	}
+
+	.discover-button {
+		width: 360rpx;
+		height: 88rpx;
+		align-items: center;
+		justify-content: center;
+		margin-top: 30rpx;
+		background-color: $facetof-color-primary;
+		border-radius: 16rpx;
+	}
+
+	.discover-text {
+		font-size: 28rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.footer-tip {
+		margin-top: 48rpx;
+		text-align: center;
+		font-size: 26rpx;
+		color: #8D817B;
+	}
+
+	.brand-footer {
+		margin-top: 56rpx;
+		text-align: center;
+		font-size: 26rpx;
+		color: #253047;
+	}
+
+	.bottom-space {
+		height: 40rpx;
+	}
+</style>

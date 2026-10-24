@@ -1,0 +1,76 @@
+import { SearchResultItem } from '../types/models.uts'
+
+export function getSearchResults(query: string, tab: string): Array<SearchResultItem> {
+  const keyword = query.trim().length > 0 ? query.trim() : '台球助教'
+  const all: Array<SearchResultItem> = [
+    {
+      id: 'search-provider-001',
+      type: '服务者',
+      title: '台球助教 · 新手教学',
+      subtitle: '27 岁 · 距你 1.2km · 已服务 126 次',
+      description: '手把手教姿势与基础技巧，轻松上手不尴尬。',
+      coverImage: '',
+      avatar: '/static/avatars/linxiao.png',
+      providerName: '明仔教练',
+      verified: true,
+      meta: '实名认证',
+      price: '¥68/小时',
+      tags: ['技能教学', '友好新手', '★ 4.9 分'],
+      primaryAction: '聊一聊',
+      secondaryAction: '立即预约'
+    },
+    {
+      id: 'search-service-001',
+      type: '服务',
+      title: '咖啡陪伴 · 城市轻社交',
+      subtitle: '60 分钟 · 可选咖啡馆见面',
+      description: '聊天、看书或分享兴趣，节奏自在。',
+      coverImage: '/static/content/coffee.png',
+      avatar: '',
+      providerName: '',
+      verified: false,
+      meta: '平台保障',
+      price: '¥55/小时',
+      tags: ['平台保障', '可预约'],
+      primaryAction: '查看详情',
+      secondaryAction: '立即预约'
+    },
+    {
+      id: 'search-moment-001',
+      type: '动态',
+      title: '周末想约几位朋友一起玩桌游，新手也欢迎！',
+      subtitle: '2 小时前 · 泸州江阳区',
+      description: '轻松认识新朋友，公共场所见面。',
+      coverImage: '/static/content/boardgames.png',
+      avatar: '/static/avatars/xiaoman.png',
+      providerName: '小宇同学',
+      verified: false,
+      meta: '动态',
+      price: '',
+      tags: ['桌游搭子', '周末活动'],
+      primaryAction: '查看动态',
+      secondaryAction: ''
+    },
+    {
+      id: 'search-news-001',
+      type: '资讯',
+      title: '第一次见面，怎样更安心？',
+      subtitle: '安全指南 · 2.3k 人已读',
+      description: '实名认证、公共场所见面与平台内沟通指南。',
+      coverImage: '/static/content/bookstore.png',
+      avatar: '',
+      providerName: '',
+      verified: false,
+      meta: '安全资讯',
+      price: '',
+      tags: ['安全资讯'],
+      primaryAction: '查看资讯',
+      secondaryAction: ''
+    }
+  ]
+
+  if (tab == '全部') {
+    return all
+  }
+  return all.filter((item: SearchResultItem) : boolean => item.type == tab)
+}

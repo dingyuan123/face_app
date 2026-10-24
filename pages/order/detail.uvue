@@ -1,0 +1,625 @@
+<template>
+	<view class="page">
+		<scroll-view class="page-scroll" direction="vertical" :show-scrollbar="false">
+			<view class="page-content">
+				<view class="nav-bar">
+					<view class="nav-button" @click="goBack">
+						<text class="nav-icon">‹</text>
+					</view>
+					<text class="nav-title">订单详情</text>
+					<view class="nav-placeholder"></view>
+				</view>
+
+				<view class="status-banner">
+					<image class="status-icon" :src="statusIcon(order.status)" mode="aspectFit"></image>
+					<view class="status-copy">
+						<text class="status-title">{{ order.status }}</text>
+						<text class="status-desc">{{ order.statusDescription }}</text>
+					</view>
+				</view>
+
+				<view class="section-card service-section">
+					<text class="section-label">预约服务</text>
+					<view class="service-row">
+						<image class="service-image" src="/static/content/billiards.png" mode="aspectFill"></image>
+						<view class="service-main">
+							<text class="service-title">{{ order.serviceTitle }}</text>
+							<text class="service-meta">{{ order.serviceLocation }}</text>
+							<text class="service-meta">{{ order.serviceDuration }}</text>
+						</view>
+						<text class="service-price">{{ order.servicePrice }}</text>
+					</view>
+				</view>
+
+				<view class="section-card">
+					<text class="section-title">预约信息</text>
+					<view class="info-row">
+						<text class="info-icon">◷</text>
+						<view class="info-copy">
+							<text class="info-title">{{ order.appointmentDate }}</text>
+							<text class="info-desc">{{ order.appointmentTime }}</text>
+						</view>
+					</view>
+					<view class="info-row">
+						<text class="info-icon">⌖</text>
+						<view class="info-copy">
+							<text class="info-title">{{ order.locationName }}</text>
+							<text class="info-desc">{{ order.locationAddress }}</text>
+						</view>
+						<view class="location-link" @click="openLocation">
+							<text class="location-link-text">查看位置 〉</text>
+						</view>
+					</view>
+				</view>
+
+				<view class="section-card people-card">
+					<text class="section-title">见面双方</text>
+					<view class="person-row">
+						<view class="person-avatar provider-avatar">
+							<text class="person-avatar-text">哲</text>
+						</view>
+						<view class="person-copy">
+							<view class="person-name-row">
+								<text class="person-name">服务者 · {{ order.providerName }}</text>
+								<view class="verified-pill">
+									<text class="verified-text">✓ 已认证</text>
+								</view>
+							</view>
+							<text class="person-desc">{{ order.providerRating }}</text>
+						</view>
+						<view class="contact-button" @click="contactProvider">
+							<text class="contact-text">联系</text>
+						</view>
+					</view>
+					<view class="people-divider"></view>
+					<view class="person-row">
+						<view class="person-avatar customer-avatar">
+							<text class="person-avatar-text">我</text>
+						</view>
+						<view class="person-copy">
+							<text class="person-name">预约用户 · {{ order.customerName }}</text>
+							<text class="person-desc">手机号 {{ order.customerPhone }}</text>
+						</view>
+						<view class="contact-button" @click="contactCustomer">
+							<text class="contact-text">联系</text>
+						</view>
+					</view>
+				</view>
+
+				<view class="section-card">
+					<text class="section-title">金额明细</text>
+					<view class="amount-row">
+						<text class="amount-label">服务费用</text>
+						<text class="amount-value">¥68.00</text>
+					</view>
+					<view class="amount-row">
+						<text class="amount-label">平台服务费</text>
+						<text class="amount-value">{{ order.platformFee }}</text>
+					</view>
+					<view class="amount-divider"></view>
+					<view class="amount-row total-row">
+						<text class="total-label">实付金额</text>
+						<text class="total-value">{{ order.totalAmount }}</text>
+					</view>
+				</view>
+
+				<view class="section-card">
+					<text class="section-title">订单进度</text>
+					<view class="timeline">
+						<view v-for="(item, index) in order.timeline" :key="item.title" class="timeline-item">
+							<view class="timeline-marker-wrap">
+								<view class="timeline-marker" :class="timelineClass(item.state)"></view>
+								<view v-if="index < order.timeline.length - 1" class="timeline-line"></view>
+							</view>
+							<view class="timeline-copy">
+								<text class="timeline-title">{{ item.title }}</text>
+								<text class="timeline-desc">{{ item.description }}</text>
+								<text v-if="item.time.length > 0" class="timeline-time">{{ item.time }}</text>
+							</view>
+						</view>
+					</view>
+				</view>
+
+				<view class="bottom-space"></view>
+			</view>
+		</scroll-view>
+
+		<view class="bottom-bar">
+			<view class="rule-button" @click="openRules">
+				<text class="rule-text">订单规则</text>
+			</view>
+			<view class="contact-button-large" @click="contactProvider">
+				<text class="contact-large-text">联系对方</text>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { getOrderDetail } from '../../services/service-container.uts'
+	import type { OrderDetail } from '../../types/models.uts'
+
+	const order = ref<OrderDetail>(getOrderDetail('order-002'))
+
+	onLoad((options) => {
+		const id = options['orderId'] as string
+		order.value = getOrderDetail(id != null && id.length > 0 ? decodeURIComponent(id) : 'order-002')
+	})
+
+	function statusIcon(status: string): string {
+		if (status == '已完成') {
+			return '/static/order/status-completed.png'
+		}
+		if (status == '进行中' || status == '待履约') {
+			return '/static/order/status-progress.png'
+		}
+		if (status == '待支付') {
+			return '/static/order/status-pending.png'
+		}
+		if (status == '已取消') {
+			return '/static/order/status-cancelled.png'
+		}
+		return '/static/order/status-accepted.png'
+	}
+
+	function timelineClass(state: string): string {
+		if (state == 'done') {
+			return 'marker-done'
+		}
+		if (state == 'current') {
+			return 'marker-current'
+		}
+		return 'marker-future'
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/order/list'
+				})
+			}
+		})
+	}
+
+	function openLocation() {
+		uni.showToast({
+			title: '地图查看将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function contactProvider() {
+		uni.showToast({
+			title: '联系服务者将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function contactCustomer() {
+		uni.showToast({
+			title: '联系用户将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function openRules() {
+		uni.showToast({
+			title: '订单规则将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-scroll {
+		flex: 1;
+		min-height: 0;
+	}
+
+	.page-content {
+		padding-bottom: 102px;
+	}
+
+	.nav-bar {
+		height: 64px;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 16px;
+		background-color: #FFFFFF;
+	}
+
+	.nav-button,
+	.nav-placeholder {
+		width: 38px;
+		height: 38px;
+	}
+
+	.nav-button {
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 30px;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 20px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.status-banner {
+		flex-direction: row;
+		align-items: center;
+		margin: 18px 24px;
+		padding: 18px;
+		background-color: #FFF1F2;
+		border: 1px solid #FFD9DC;
+		border-radius: 18px;
+	}
+
+	.status-icon {
+		width: 64px;
+		height: 64px;
+	}
+
+	.status-copy {
+		flex: 1;
+		margin-left: 14px;
+	}
+
+	.status-title {
+		font-size: 22px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.status-desc {
+		margin-top: 7px;
+		font-size: 12px;
+		color: #8D817B;
+	}
+
+	.section-card {
+		margin: 12px 18px 0;
+		padding: 18px;
+		background-color: #FFFFFF;
+		border: 1px solid #F5DED5;
+		border-radius: 18px;
+	}
+
+	.section-label {
+		font-size: 14px;
+		color: #8D817B;
+	}
+
+	.section-title {
+		font-size: 17px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.service-row {
+		flex-direction: row;
+		align-items: center;
+		margin-top: 16px;
+	}
+
+	.service-image {
+		width: 112px;
+		height: 112px;
+		border-radius: 15px;
+	}
+
+	.service-main {
+		flex: 1;
+		margin-left: 14px;
+	}
+
+	.service-title {
+		font-size: 16px;
+		font-weight: 700;
+		line-height: 24px;
+		color: #253047;
+	}
+
+	.service-meta {
+		margin-top: 6px;
+		font-size: 12px;
+		color: #8D817B;
+	}
+
+	.service-price {
+		font-size: 20px;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.info-row {
+		flex-direction: row;
+		align-items: flex-start;
+		margin-top: 17px;
+	}
+
+	.info-icon {
+		width: 28px;
+		font-size: 21px;
+		color: #B87916;
+	}
+
+	.info-copy {
+		flex: 1;
+	}
+
+	.info-title {
+		font-size: 15px;
+		font-weight: 600;
+		line-height: 22px;
+		color: #253047;
+	}
+
+	.info-desc {
+		margin-top: 4px;
+		font-size: 11px;
+		line-height: 18px;
+		color: #8D817B;
+	}
+
+	.location-link {
+		margin-left: 8px;
+	}
+
+	.location-link-text {
+		font-size: 13px;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.person-row {
+		flex-direction: row;
+		align-items: center;
+		margin-top: 17px;
+	}
+
+	.person-avatar {
+		width: 58px;
+		height: 58px;
+		align-items: center;
+		justify-content: center;
+		border-radius: 50%;
+	}
+
+	.provider-avatar {
+		background-color: #FFF1F2;
+	}
+
+	.customer-avatar {
+		background-color: #FFF0E8;
+	}
+
+	.person-avatar-text {
+		font-size: 20px;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.person-copy {
+		flex: 1;
+		margin-left: 12px;
+	}
+
+	.person-name-row {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.person-name {
+		font-size: 14px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.verified-pill {
+		margin-left: 7px;
+		padding: 3px 6px;
+		background-color: #FFF0D7;
+		border-radius: 999px;
+	}
+
+	.verified-text {
+		font-size: 10px;
+		font-weight: 700;
+		color: #B87916;
+	}
+
+	.person-desc {
+		margin-top: 5px;
+		font-size: 11px;
+		color: #8D817B;
+	}
+
+	.contact-button {
+		margin-left: 8px;
+	}
+
+	.contact-text {
+		font-size: 13px;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.people-divider {
+		height: 1px;
+		margin-top: 16px;
+		background-color: #F1E2DC;
+	}
+
+	.amount-row {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		margin-top: 15px;
+	}
+
+	.amount-label {
+		font-size: 13px;
+		color: #8D817B;
+	}
+
+	.amount-value {
+		font-size: 14px;
+		font-weight: 600;
+		color: #253047;
+	}
+
+	.amount-divider {
+		height: 1px;
+		margin: 17px 0 3px;
+		background-color: #F5DED5;
+	}
+
+	.total-label {
+		font-size: 15px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.total-value {
+		font-size: 24px;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.timeline {
+		margin-top: 17px;
+	}
+
+	.timeline-item {
+		flex-direction: row;
+		min-height: 62px;
+	}
+
+	.timeline-marker-wrap {
+		width: 28px;
+		align-items: center;
+	}
+
+	.timeline-marker {
+		width: 15px;
+		height: 15px;
+		margin-top: 3px;
+		border: 3px solid #B8ADA8;
+		border-radius: 50%;
+	}
+
+	.marker-done {
+		background-color: #10B981;
+		border-color: #10B981;
+	}
+
+	.marker-current {
+		border-color: #FCAE59;
+		background-color: #FFFFFF;
+	}
+
+	.marker-future {
+		border-color: #B8ADA8;
+		background-color: #FFFFFF;
+	}
+
+	.timeline-line {
+		width: 2px;
+		height: 43px;
+		margin-top: 5px;
+		background-color: #E8D9D2;
+	}
+
+	.timeline-copy {
+		flex: 1;
+		margin-left: 8px;
+	}
+
+	.timeline-title {
+		font-size: 14px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.timeline-desc {
+		margin-top: 4px;
+		font-size: 11px;
+		color: #8D817B;
+	}
+
+	.timeline-time {
+		margin-top: 4px;
+		font-size: 11px;
+		color: #A1958F;
+	}
+
+	.bottom-bar {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		height: 76px;
+		flex-direction: row;
+		align-items: center;
+		padding: 12px 18px;
+		padding-bottom: var(--uni-safe-area-inset-bottom);
+		background-color: #FFFFFF;
+		border-top: 1px solid #F5DED5;
+	}
+
+	.rule-button {
+		width: 150px;
+		height: 48px;
+		align-items: center;
+		justify-content: center;
+		margin-right: 12px;
+		background-color: #FFFFFF;
+		border: 1px solid #F1B8BE;
+		border-radius: 15px;
+	}
+
+	.rule-text {
+		font-size: 15px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.contact-button-large {
+		flex: 1;
+		height: 48px;
+		align-items: center;
+		justify-content: center;
+		background-color: $facetof-color-primary;
+		border-radius: 15px;
+	}
+
+	.contact-large-text {
+		font-size: 16px;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.bottom-space {
+		height: 10px;
+	}
+</style>

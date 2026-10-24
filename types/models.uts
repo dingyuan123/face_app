@@ -40,6 +40,7 @@ export type HomeFeedItem = {
   id: string,
   providerId: string,
   providerName: string,
+  providerAvatar: string,
   headline: string,
   description: string,
   categoryName: string,
@@ -57,4 +58,262 @@ export type PendingIntent = {
   action: string,
   route: string,
   payload: string
+}
+
+export type MomentsPost = {
+  id: string,
+  providerId: string,
+  providerName: string,
+  avatar: string,
+  title: string,
+  coverImage: string,
+  likeCount: number,
+  commentCount: number,
+  verified: boolean
+}
+
+export type NewsArticle = {
+  id: string,
+  title: string,
+  summary: string,
+  category: string,
+  coverImage: string,
+  readCount: number,
+  publishedAt: string,
+  isVideo: boolean
+}
+
+export type MessageThread = {
+  id: string,
+  type: string,
+  name: string,
+  avatar: string,
+  preview: string,
+  time: string,
+  unreadCount: number,
+  orderStatus: string
+}
+
+export type ProfileSummary = {
+  userId: string,
+  displayName: string,
+  avatar: string,
+  city: string,
+  level: string,
+  orderCount: number,
+  favoriteCount: number,
+  followingCount: number
+}
+
+export type SearchResultItem = {
+  id: string,
+  type: string,
+  title: string,
+  subtitle: string,
+  description: string,
+  coverImage: string,
+  avatar: string,
+  providerName: string,
+  verified: boolean,
+  meta: string,
+  price: string,
+  tags: string[],
+  primaryAction: string,
+  secondaryAction: string
+}
+
+export type ReviewItem = {
+  id: string,
+  reviewerName: string,
+  reviewerAvatar: string,
+  rating: number,
+  content: string,
+  createdAt: string
+}
+
+export type ProviderServiceItem = {
+  id: string,
+  title: string,
+  tag: string,
+  duration: string,
+  format: string,
+  soldCount: number,
+  price: string,
+  coverImage: string,
+  description: string,
+  contentLines: string[],
+  locationType: string,
+  locationText: string,
+  rating: number,
+  reviewCount: number,
+  reviews: ReviewItem[]
+}
+
+export type ProviderMomentItem = {
+  id: string,
+  title: string,
+  description: string,
+  coverImage: string,
+  likeCount: number,
+  commentCount: number,
+  publishedAt: string,
+  location: string,
+  tags: string[]
+}
+
+export type ProviderDetail = {
+  id: string,
+  providerName: string,
+  avatar: string,
+  themeTitle: string,
+  subtitle: string,
+  bio: string,
+  age: number,
+  city: string,
+  distance: string,
+  verified: boolean,
+  galleryImages: string[],
+  momentCount: number,
+  serviceCount: number,
+  services: ProviderServiceItem[],
+  moments: ProviderMomentItem[]
+}
+
+export type ServiceDetail = {
+  id: string,
+  providerId: string,
+  providerName: string,
+  providerAvatar: string,
+  title: string,
+  subtitle: string,
+  coverImage: string,
+  galleryImages: string[],
+  tag: string,
+  duration: string,
+  format: string,
+  price: string,
+  priceUnit: string,
+  contentLines: string[],
+  locationType: string,
+  locationText: string,
+  rating: number,
+  reviewCount: number,
+  reviews: ReviewItem[]
+}
+
+export type MomentDetail = {
+  id: string,
+  providerId: string,
+  providerName: string,
+  avatar: string,
+  title: string,
+  description: string,
+  coverImage: string,
+  videoUrl: string,
+  hashtags: string[],
+  location: string,
+  likeCount: number,
+  commentCount: number,
+  serviceId: string
+}
+
+export type OrderDraft = {
+  orderId: string,
+  serviceId: string,
+  providerId: string,
+  providerName: string,
+  providerAvatar: string,
+  serviceTitle: string,
+  duration: string,
+  format: string,
+  dateLabel: string,
+  dateValue: string,
+  timeRange: string,
+  locationName: string,
+  locationAddress: string,
+  locationTip: string,
+  note: string,
+  servicePrice: number,
+  platformFee: number,
+  totalAmount: number,
+  paymentMethod: string
+}
+
+export type OrderListItem = {
+  id: string,
+  title: string,
+  providerName: string,
+  avatar: string,
+  verified: boolean,
+  status: string,
+  time: string,
+  location: string,
+  amountLabel: string,
+  amount: string,
+  actionLabel: string
+}
+
+export type OrderTimelineItem = {
+  title: string,
+  description: string,
+  time: string,
+  state: string
+}
+
+export type OrderDetail = {
+  id: string,
+  status: string,
+  statusDescription: string,
+  serviceTitle: string,
+  serviceLocation: string,
+  serviceDuration: string,
+  servicePrice: string,
+  appointmentDate: string,
+  appointmentTime: string,
+  locationName: string,
+  locationAddress: string,
+  providerName: string,
+  providerAvatar: string,
+  providerRating: string,
+  providerCompleted: string,
+  customerName: string,
+  customerPhone: string,
+  platformFee: string,
+  totalAmount: string,
+  timeline: OrderTimelineItem[]
+}
+
+export type FavoriteItem = {
+  id: string,
+  providerId: string,
+  providerName: string,
+  avatar: string,
+  verified: boolean,
+  city: string,
+  category: string,
+  serviceTitle: string,
+  price: string,
+  duration: string,
+  distance: string
+}
+
+export type FollowingProvider = {
+  id: string,
+  name: string,
+  avatar: string,
+  serviceLabel: string,
+  online: boolean
+}
+
+export type FollowingMoment = {
+  id: string,
+  providerName: string,
+  avatar: string,
+  verified: boolean,
+  publishedAt: string,
+  categoryName: string,
+  content: string,
+  coverImage: string,
+  location: string,
+  likeCount: number
 }

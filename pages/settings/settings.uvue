@@ -1,0 +1,368 @@
+<template>
+	<scroll-view class="page" direction="vertical" :show-scrollbar="false">
+		<view class="page-content">
+			<view class="nav-bar">
+				<view class="nav-button" @click="goBack">
+					<text class="nav-icon">‹</text>
+				</view>
+				<text class="nav-title">设置</text>
+				<view class="nav-placeholder"></view>
+			</view>
+
+			<view class="section">
+				<text class="section-label">账号与安全</text>
+				<view class="setting-card">
+					<view class="setting-row">
+						<view class="setting-icon">
+							<image class="setting-icon-image" src="/static/settings/icon-phone.png" mode="aspectFit"></image>
+						</view>
+						<text class="setting-name">手机号</text>
+						<text class="setting-arrow">›</text>
+					</view>
+					<view class="setting-divider"></view>
+					<view class="setting-row">
+						<view class="setting-icon">
+							<image class="setting-icon-image" src="/static/settings/icon-password.png" mode="aspectFit"></image>
+						</view>
+						<text class="setting-name">登录密码</text>
+						<text class="setting-arrow">›</text>
+					</view>
+				</view>
+			</view>
+
+			<view class="section">
+				<text class="section-label">隐私设置</text>
+				<view class="setting-card">
+					<view class="setting-row">
+						<view class="setting-icon">
+							<image class="setting-icon-image" src="/static/settings/icon-visibility.png" mode="aspectFit"></image>
+						</view>
+						<text class="setting-name">个人资料可见范围</text>
+						<text class="setting-value">所有人</text>
+						<text class="setting-arrow">›</text>
+					</view>
+					<view class="setting-divider"></view>
+					<view class="setting-row">
+						<view class="setting-icon">
+							<image class="setting-icon-image" src="/static/settings/icon-blacklist.png" mode="aspectFit"></image>
+						</view>
+						<text class="setting-name">黑名单</text>
+						<text class="setting-arrow">›</text>
+					</view>
+				</view>
+			</view>
+
+			<view class="section">
+				<text class="section-label">通知设置</text>
+				<view class="setting-card">
+					<view class="setting-row">
+						<view class="setting-icon">
+							<image class="setting-icon-image" src="/static/settings/icon-order-notice.png" mode="aspectFit"></image>
+						</view>
+						<text class="setting-name">订单通知</text>
+						<view class="switch" :class="orderNotice ? 'switch-on' : ''" @click="orderNotice = !orderNotice">
+							<view class="switch-thumb" :class="orderNotice ? 'switch-thumb-on' : ''"></view>
+						</view>
+					</view>
+					<view class="setting-divider"></view>
+					<view class="setting-row">
+						<view class="setting-icon">
+							<image class="setting-icon-image" src="/static/settings/icon-interaction-notice.png" mode="aspectFit"></image>
+						</view>
+						<text class="setting-name">互动通知</text>
+						<view class="switch" :class="interactionNotice ? 'switch-on' : ''" @click="interactionNotice = !interactionNotice">
+							<view class="switch-thumb" :class="interactionNotice ? 'switch-thumb-on' : ''"></view>
+						</view>
+					</view>
+				</view>
+			</view>
+
+			<view class="section">
+				<text class="section-label">通用设置</text>
+				<view class="setting-card">
+					<view class="setting-row">
+						<view class="setting-icon">
+							<image class="setting-icon-image" src="/static/settings/icon-autoplay.png" mode="aspectFit"></image>
+						</view>
+						<view class="setting-copy">
+							<text class="setting-name">自动播放</text>
+							<text class="setting-desc">仅在 Wi-Fi 下播放视频</text>
+						</view>
+						<view class="switch" :class="autoplay ? 'switch-on' : ''" @click="autoplay = !autoplay">
+							<view class="switch-thumb" :class="autoplay ? 'switch-thumb-on' : ''"></view>
+						</view>
+					</view>
+					<view class="setting-divider"></view>
+					<view class="setting-row" @click="clearCache">
+						<view class="setting-icon">
+							<image class="setting-icon-image" src="/static/settings/icon-clear-cache.png" mode="aspectFit"></image>
+						</view>
+						<text class="setting-name">清除缓存</text>
+						<text class="setting-value">128.6 MB</text>
+						<text class="setting-arrow">›</text>
+					</view>
+					<view class="setting-divider"></view>
+					<view class="setting-row" @click="chooseLanguage">
+						<view class="setting-icon">
+							<image class="setting-icon-image" src="/static/settings/icon-language.png" mode="aspectFit"></image>
+						</view>
+						<text class="setting-name">语言</text>
+						<text class="setting-value">简体中文</text>
+						<text class="setting-arrow">›</text>
+					</view>
+				</view>
+			</view>
+
+			<view class="section">
+				<text class="section-label">关于我们</text>
+				<view class="setting-card">
+					<view class="setting-row" @click="openAbout('产品介绍')">
+						<view class="setting-icon">
+							<image class="setting-icon-image" src="/static/settings/icon-product.png" mode="aspectFit"></image>
+						</view>
+						<text class="setting-name">产品介绍</text>
+						<text class="setting-arrow">›</text>
+					</view>
+					<view class="setting-divider"></view>
+					<view class="setting-row" @click="openAbout('用户协议')">
+						<view class="setting-icon">
+							<image class="setting-icon-image" src="/static/settings/icon-agreement.png" mode="aspectFit"></image>
+						</view>
+						<text class="setting-name">用户协议</text>
+						<text class="setting-arrow">›</text>
+					</view>
+					<view class="setting-divider"></view>
+					<view class="setting-row" @click="openAbout('隐私政策')">
+						<view class="setting-icon">
+							<image class="setting-icon-image" src="/static/settings/icon-privacy.png" mode="aspectFit"></image>
+						</view>
+						<text class="setting-name">隐私政策</text>
+						<text class="setting-arrow">›</text>
+					</view>
+				</view>
+			</view>
+
+			<view class="logout-button" @click="logout">
+				<text class="logout-text">退出登录</text>
+			</view>
+
+			<text class="brand-footer">FaceTo · 见面聊，安心见</text>
+			<view class="bottom-space"></view>
+		</view>
+	</scroll-view>
+</template>
+
+<script setup lang="uts">
+	import { logout as logoutSession } from '../../state/session-state.uts'
+
+	const orderNotice = ref(true)
+	const interactionNotice = ref(false)
+	const autoplay = ref(true)
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/profile/profile'
+				})
+			}
+		})
+	}
+
+	function clearCache() {
+		uni.showToast({
+			title: '缓存已清理（开发 Mock）',
+			position: 'bottom',
+			icon: 'success'
+		})
+	}
+
+	function chooseLanguage() {
+		uni.showToast({
+			title: '语言选择将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function openAbout(name: string) {
+		uni.showToast({
+			title: name + '将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function logout() {
+		logoutSession()
+		uni.reLaunch({
+			url: '/pages/login/login'
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-content {
+		padding-bottom: 32rpx;
+	}
+
+	.nav-bar {
+		height: 128rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32rpx;
+		background-color: #FFF9F5;
+	}
+
+	.nav-button,
+	.nav-placeholder {
+		width: 76rpx;
+		height: 76rpx;
+	}
+
+	.nav-button {
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 60rpx;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.section {
+		margin: 28rpx 32rpx 0;
+	}
+
+	.section-label {
+		font-size: 28rpx;
+		color: #8D817B;
+	}
+
+	.setting-card {
+		margin-top: 18rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+		overflow: hidden;
+	}
+
+	.setting-row {
+		height: 112rpx;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 28rpx;
+	}
+
+	.setting-icon {
+		width: 52rpx;
+		align-items: center;
+		justify-content: center;
+		margin-right: 18rpx;
+	}
+
+	.setting-icon-image {
+		width: 42rpx;
+		height: 42rpx;
+	}
+
+	.setting-copy {
+		flex: 1;
+	}
+
+	.setting-name {
+		flex: 1;
+		font-size: 32rpx;
+		font-weight: 600;
+		color: #253047;
+	}
+
+	.setting-desc {
+		margin-top: 5rpx;
+		font-size: 22rpx;
+		color: #8D817B;
+	}
+
+	.setting-value {
+		font-size: 26rpx;
+		color: #8D817B;
+	}
+
+	.setting-arrow {
+		margin-left: 16rpx;
+		font-size: 36rpx;
+		color: #8D817B;
+	}
+
+	.setting-divider {
+		height: 1rpx;
+		margin-left: 98rpx;
+		background-color: #F5DED5;
+	}
+
+	.switch {
+		width: 82rpx;
+		height: 48rpx;
+		justify-content: center;
+		padding: 5rpx;
+		background-color: #E8D9D2;
+		border-radius: 999rpx;
+	}
+
+	.switch-on {
+		background-color: $facetof-color-primary;
+	}
+
+	.switch-thumb {
+		width: 38rpx;
+		height: 38rpx;
+		background-color: #FFFFFF;
+		border-radius: 50%;
+	}
+
+	.switch-thumb-on {
+		margin-left: 34rpx;
+	}
+
+	.logout-button {
+		height: 96rpx;
+		align-items: center;
+		justify-content: center;
+		margin: 34rpx 32rpx 0;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 20rpx;
+	}
+
+	.logout-text {
+		font-size: 32rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.brand-footer {
+		margin-top: 32rpx;
+		text-align: center;
+		font-size: 24rpx;
+		color: #253047;
+	}
+
+	.bottom-space {
+		height: 32rpx;
+	}
+</style>

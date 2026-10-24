@@ -1,0 +1,113 @@
+<template>
+	<scroll-view class="segment-scroll" direction="horizontal" :show-scrollbar="false">
+		<view class="segment-row" :class="'variant-' + variant">
+			<view
+				v-for="item in items"
+				:key="item"
+				class="segment-item"
+				:class="['segment-item-' + variant, active == item ? 'segment-item-' + variant + '-active' : '']"
+				@click="selectSegment(item)"
+			>
+				<text class="segment-label" :class="['segment-label-' + variant, active == item ? 'segment-label-active' : '']">{{ item }}</text>
+				<view v-if="variant == 'underline' && active == item" class="segment-indicator"></view>
+			</view>
+		</view>
+	</scroll-view>
+</template>
+
+<script setup lang="uts">
+	const props = defineProps({
+		items: {
+			type: Array,
+			default: () => []
+		},
+		active: {
+			type: String,
+			default: ''
+		},
+		variant: {
+			type: String,
+			default: 'underline'
+		}
+	})
+
+	const emit = defineEmits(['change'])
+
+	function selectSegment(item: any) {
+		emit('change', item)
+	}
+</script>
+
+<style>
+	.segment-scroll {
+		width: 100%;
+	}
+
+	.segment-row {
+		flex-direction: row;
+		flex-shrink: 0;
+	}
+
+	.segment-item {
+		position: relative;
+		flex-shrink: 0;
+		height: 43px;
+		min-width: 68px;
+		align-items: center;
+		justify-content: center;
+		margin-right: 5px;
+	}
+
+	.segment-item-pill {
+		height: 36px;
+		min-width: 0;
+		padding: 0 15px;
+		background-color: #FFFFFF;
+		border: 1px solid #F5DED5;
+		border-radius: 999px;
+	}
+
+	.segment-item-chip {
+		height: 34px;
+		min-width: 74px;
+		padding: 0 13px;
+		background-color: #FFFFFF;
+		border: 1px solid #F5DED5;
+		border-radius: 999px;
+	}
+
+	.segment-label {
+		font-size: 15px;
+		font-weight: 600;
+		color: #756B66;
+		white-space: nowrap;
+	}
+
+	.segment-label-pill,
+	.segment-label-chip {
+		font-size: 13px;
+	}
+
+	.segment-label-active {
+		color: #FD5A6B;
+	}
+
+	.segment-indicator {
+		position: absolute;
+		bottom: 1px;
+		width: 24px;
+		height: 3px;
+		background-color: #FD5A6B;
+		border-radius: 999px;
+	}
+
+	.segment-item-pill-active {
+		background-color: #FFFFFF;
+		border-color: #FD5A6B;
+	}
+
+	.segment-item-chip-active {
+		background-color: #FFFFFF;
+		border-color: #FD5A6B;
+	}
+</style>

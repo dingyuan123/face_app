@@ -1,0 +1,231 @@
+import {
+  MomentDetail,
+  ProviderDetail,
+  ProviderMomentItem,
+  ProviderServiceItem,
+  ReviewItem,
+  ServiceDetail
+} from '../types/models.uts'
+
+const reviews: Array<ReviewItem> = [
+  {
+    id: 'review-001',
+    reviewerName: '陈同学',
+    reviewerAvatar: '/static/avatars/zhixia.png',
+    rating: 5,
+    content: '讲解很耐心，第一次打台球也能很快上手。',
+    createdAt: '2 天前'
+  },
+  {
+    id: 'review-002',
+    reviewerName: '小禾',
+    reviewerAvatar: '/static/avatars/qinghe.png',
+    rating: 4.9,
+    content: '节奏轻松，地点也很方便，整体体验不错。',
+    createdAt: '1 周前'
+  }
+]
+
+function serviceBilliards(): ProviderServiceItem {
+  return {
+    id: 'service-billiards-001',
+    title: '台球助教 · 新手体验',
+    tag: '新手友好',
+    duration: '60 分钟',
+    format: '线下陪练',
+    soldCount: 128,
+    price: '¥68/小时',
+    coverImage: '/static/content/billiards.png',
+    description: '手把手教姿势与基础技巧，轻松上手不尴尬。',
+    contentLines: [
+      '基础规则讲解与握杆姿势指导',
+      '根据水平安排练习，耐心陪练',
+      '费用透明，按预约时长服务'
+    ],
+    locationType: '仅限公共场所',
+    locationText: '咖啡馆、商场或正规台球俱乐部',
+    rating: 4.9,
+    reviewCount: 86,
+    reviews: reviews
+  }
+}
+
+function serviceCoffee(): ProviderServiceItem {
+  return {
+    id: 'service-coffee-001',
+    title: '咖啡陪伴 · 轻松聊天',
+    tag: '安心社交',
+    duration: '60 分钟',
+    format: '咖啡馆见面',
+    soldCount: 86,
+    price: '¥55/小时',
+    coverImage: '/static/content/coffee.png',
+    description: '聊天、看书或分享兴趣，节奏自在。',
+    contentLines: [
+      '提前确认公共场所和见面时间',
+      '根据你的兴趣安排轻松话题',
+      '全程保持友好、安心的交流节奏'
+    ],
+    locationType: '仅限公共场所',
+    locationText: '咖啡馆、书店或商场休息区',
+    rating: 4.8,
+    reviewCount: 54,
+    reviews: reviews
+  }
+}
+
+function serviceBoardGames(): ProviderServiceItem {
+  return {
+    id: 'service-boardgames-001',
+    title: '桌游陪玩 · 欢乐组局',
+    tag: '周末活动',
+    duration: '120 分钟',
+    format: '桌游店见面',
+    soldCount: 67,
+    price: '¥45/小时',
+    coverImage: '/static/content/boardgames.png',
+    description: '适合朋友组局，也欢迎新手加入。',
+    contentLines: [
+      '根据人数推荐合适的桌游',
+      '帮助新朋友快速熟悉规则',
+      '遵守桌游店和公共场所规则'
+    ],
+    locationType: '仅限公共场所',
+    locationText: '正规桌游店、咖啡馆或商场活动区',
+    rating: 4.8,
+    reviewCount: 31,
+    reviews: reviews
+  }
+}
+
+export function getProviderDetail(id: string): ProviderDetail {
+  return {
+    id: id,
+    providerName: '明仔教练',
+    avatar: '/static/avatars/linxiao.png',
+    themeTitle: '周末台球 · 认真陪练',
+    subtitle: '泸州本地 · 新手友好',
+    bio: '耐心细致，零基础也能轻松上手。',
+    age: 27,
+    city: '泸州江阳区',
+    distance: '距你 1.2km',
+    verified: true,
+    galleryImages: [
+      '/static/content/billiards.png',
+      '/static/content/city.png',
+      '/static/content/badminton.png',
+      '/static/content/coffee.png'
+    ],
+    momentCount: 36,
+    serviceCount: 3,
+    services: [serviceBilliards(), serviceCoffee(), serviceBoardGames()],
+    moments: [
+      {
+        id: 'moment-001',
+        title: '第一次打台球也能轻松上手，今天又进步了一点',
+        description: '认真陪练，新手也能轻松上手。',
+        coverImage: '/static/content/billiards.png',
+        likeCount: 128,
+        commentCount: 16,
+        publishedAt: '2 小时前',
+        location: '泸州 · 江阳区',
+        tags: ['台球助教', '新手友好']
+      },
+      {
+        id: 'moment-004',
+        title: '周末约一场轻松的羽毛球',
+        description: '运动之后一起喝杯咖啡。',
+        coverImage: '/static/content/badminton.png',
+        likeCount: 74,
+        commentCount: 8,
+        publishedAt: '昨天',
+        location: '泸州 · 龙马潭区',
+        tags: ['羽毛球搭子', '周末活动']
+      }
+    ]
+  }
+}
+
+export function getServiceDetail(id: string): ServiceDetail {
+  let service = serviceBilliards()
+  if (id == 'service-coffee-001') {
+    service = serviceCoffee()
+  } else if (id == 'service-boardgames-001') {
+    service = serviceBoardGames()
+  }
+  return {
+    id: service.id,
+    providerId: 'provider-001',
+    providerName: '明仔教练',
+    providerAvatar: '/static/avatars/linxiao.png',
+    title: service.title,
+    subtitle: service.description,
+    coverImage: service.coverImage,
+    galleryImages: [service.coverImage, '/static/content/city.png', '/static/content/badminton.png'],
+    tag: service.tag,
+    duration: service.duration,
+    format: service.format,
+    price: service.price.replace('/小时', ''),
+    priceUnit: '/小时',
+    contentLines: service.contentLines,
+    locationType: service.locationType,
+    locationText: service.locationText,
+    rating: service.rating,
+    reviewCount: service.reviewCount,
+    reviews: service.reviews
+  }
+}
+
+export function getMomentDetail(id: string): MomentDetail {
+  return {
+    id: id,
+    providerId: 'provider-001',
+    providerName: '明仔教练',
+    avatar: '/static/avatars/linxiao.png',
+    title: '周末来打两局？新手也没关系',
+    description: '认真陪练，轻松聊天，公共场所见面。',
+    coverImage: '/static/content/billiards.png',
+    videoUrl: '/static/video/moment-sample.mp4',
+    hashtags: ['泸州台球', '新手友好', '下班放松'],
+    location: '泸州 · 江阳区',
+    likeCount: 24000,
+    commentCount: 328,
+    serviceId: 'service-billiards-001'
+  }
+}
+
+export function getMomentFeed(): Array<MomentDetail> {
+  return [
+    getMomentDetail('moment-001'),
+    {
+      id: 'moment-002',
+      providerId: 'provider-002',
+      providerName: '阿橙',
+      avatar: '/static/avatars/acheng.png',
+      title: '安静的咖啡时光，认真听你聊聊最近',
+      description: '轻松、舒服、不尴尬的陪伴。',
+      coverImage: '/static/content/coffee.png',
+      videoUrl: '',
+      hashtags: ['咖啡陪伴', '轻松聊天'],
+      location: '泸州 · 龙马潭区',
+      likeCount: 9600,
+      commentCount: 128,
+      serviceId: 'service-coffee-001'
+    },
+    {
+      id: 'moment-003',
+      providerId: 'provider-003',
+      providerName: '小满',
+      avatar: '/static/avatars/xiaoman.png',
+      title: '周末桌游局，新朋友也能很快融入',
+      description: '一起玩桌游，认识更多同城朋友。',
+      coverImage: '/static/content/boardgames.png',
+      videoUrl: '/static/video/moment-sample.mp4',
+      hashtags: ['桌游陪玩', '周末活动'],
+      location: '泸州 · 江阳区',
+      likeCount: 15600,
+      commentCount: 240,
+      serviceId: 'service-boardgames-001'
+    }
+  ]
+}

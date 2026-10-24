@@ -1,0 +1,614 @@
+<template>
+	<view class="page">
+		<scroll-view class="page-scroll" direction="vertical" :show-scrollbar="false">
+			<view class="page-content">
+				<view class="gallery">
+					<swiper class="gallery-swiper" :current="currentMedia" :circular="true" @change="onMediaChange">
+						<swiper-item v-for="(image, index) in provider.galleryImages" :key="index">
+							<image class="gallery-image" :src="image" mode="aspectFill"></image>
+						</swiper-item>
+					</swiper>
+					<view class="gallery-mask"></view>
+					<view class="gallery-topbar">
+						<view class="circle-button" @click="goBack">
+							<text class="circle-icon">‹</text>
+						</view>
+						<view class="gallery-title">
+							<text class="gallery-title-text">{{ provider.themeTitle }}</text>
+							<text class="gallery-subtitle">{{ provider.subtitle }}</text>
+						</view>
+						<view class="circle-button" @click="shareProvider">
+							<text class="circle-icon">↑</text>
+						</view>
+					</view>
+					<view class="gallery-dots">
+						<view
+							v-for="(image, index) in provider.galleryImages"
+							:key="index"
+							class="dot"
+							:class="currentMedia == index ? 'dot-active' : ''"
+						></view>
+					</view>
+				</view>
+
+				<view class="profile-card">
+					<view class="profile-head">
+						<view class="avatar-wrap">
+							<image class="provider-avatar" :src="provider.avatar" mode="aspectFill"></image>
+							<view class="verified-check">
+								<text class="verified-check-text">✓</text>
+							</view>
+						</view>
+						<view class="profile-main">
+							<text class="provider-name">{{ provider.providerName }}</text>
+							<view class="verified-pill">
+								<text class="verified-pill-text">✓ 实名认证</text>
+							</view>
+							<text class="provider-meta">{{ provider.age }} 岁 · {{ provider.city }} · {{ provider.distance }}</text>
+						</view>
+					</view>
+					<text class="provider-bio">{{ provider.bio }}</text>
+					<view class="profile-actions">
+						<view class="profile-action follow" @click="followProvider">
+							<text class="action-icon">＋</text>
+							<text class="action-label">关注</text>
+						</view>
+						<view class="profile-action favorite profile-action-gap" @click="favoriteProvider">
+							<image class="action-icon-image favorite-action-icon" :src="favorited ? '/static/search/heart-filled.png' : '/static/search/heart-outline.png'" mode="aspectFit"></image>
+							<text class="action-label favorite-action-label">收藏</text>
+						</view>
+					</view>
+				</view>
+
+				<segment-tabs
+					:items="[('动态 ' + provider.momentCount), ('服务 ' + provider.serviceCount)]"
+					:active="activeTab"
+					variant="underline"
+					@change="changeTab"
+				></segment-tabs>
+
+				<view v-if="activeTab == ('服务 ' + provider.serviceCount)" class="service-list">
+					<view v-for="service in provider.services" :key="service.id" class="service-card" @click="openService(service.id)">
+						<image class="service-cover" :src="service.coverImage" mode="aspectFill"></image>
+						<view class="service-main">
+							<text class="service-title">{{ service.title }}</text>
+							<view class="service-tag">
+								<text class="service-tag-text">{{ service.tag }}</text>
+							</view>
+							<text class="service-meta">{{ service.duration }} · {{ service.format }}</text>
+							<text class="service-meta">已售 {{ service.soldCount }} 次</text>
+						</view>
+						<view class="price-block">
+							<text class="price-text">{{ service.price }}</text>
+						</view>
+					</view>
+				</view>
+
+				<view v-else class="moment-list">
+					<view v-for="moment in provider.moments" :key="moment.id" class="provider-moment" @click="openMoment(moment.id)">
+						<image class="moment-cover" :src="moment.coverImage" mode="aspectFill"></image>
+						<view class="moment-main">
+							<text class="moment-title">{{ moment.title }}</text>
+							<text class="moment-description">{{ moment.description }}</text>
+							<view class="moment-meta-row">
+								<text class="moment-meta">{{ moment.publishedAt }} · {{ moment.location }}</text>
+								<text class="moment-count">♡ {{ moment.likeCount }}</text>
+							</view>
+						</view>
+					</view>
+				</view>
+
+				<view class="bottom-space"></view>
+			</view>
+		</scroll-view>
+
+		<view class="booking-bar">
+			<view class="booking-price">
+				<text class="booking-price-value">¥45</text>
+				<text class="booking-price-unit">起 / 小时</text>
+			</view>
+			<view class="booking-button" @click="bookProvider">
+				<text class="booking-button-icon">▣</text>
+				<text class="booking-button-text">立即预约</text>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import SegmentTabs from '../../components/segment-tabs.uvue'
+	import { getProviderDetail } from '../../services/service-container.uts'
+	import type { ProviderDetail } from '../../types/models.uts'
+	import { sessionState } from '../../state/session-state.uts'
+	import { PROVIDER_DETAIL_ROUTE, requireAccount } from '../../router/route-guard.uts'
+
+	const provider = ref<ProviderDetail>(getProviderDetail('provider-001'))
+	const activeTab = ref('服务 3')
+	const currentMedia = ref(0)
+	const favorited = ref(false)
+	const providerId = ref('provider-001')
+
+	onLoad((options) => {
+		const id = options['providerId'] as string
+		if (id != null && id.length > 0) {
+			providerId.value = decodeURIComponent(id)
+		}
+		provider.value = getProviderDetail(providerId.value)
+		if (provider.value != null) {
+			activeTab.value = '服务 ' + provider.value.serviceCount
+		}
+	})
+
+	function onMediaChange(event: any) {
+		currentMedia.value = event.detail.current
+	}
+
+	function changeTab(tab: string) {
+		activeTab.value = tab
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/index/index'
+				})
+			}
+		})
+	}
+
+	function shareProvider() {
+		uni.showToast({
+			title: '分享能力将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function followProvider() {
+		if (!requireAccount('follow-provider', PROVIDER_DETAIL_ROUTE, providerId.value)) {
+			return
+		}
+		uni.showToast({
+			title: '已关注（开发 Mock）',
+			position: 'bottom',
+			icon: 'success'
+		})
+	}
+
+	function favoriteProvider() {
+		if (!requireAccount('favorite-provider', PROVIDER_DETAIL_ROUTE, providerId.value)) {
+			return
+		}
+		uni.showToast({
+			title: '已收藏（开发 Mock）',
+			position: 'bottom',
+			icon: 'success'
+		})
+	}
+
+	function openService(id: string) {
+		uni.navigateTo({
+			url: '/pages/service/detail?serviceId=' + encodeURIComponent(id)
+		})
+	}
+
+	function openMoment(id: string) {
+		uni.navigateTo({
+			url: '/pages/moment/detail?momentId=' + encodeURIComponent(id)
+		})
+	}
+
+	function bookProvider() {
+		openService(provider.value.services[0].id)
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-scroll {
+		flex: 1;
+		min-height: 0;
+	}
+
+	.page-content {
+		padding-bottom: 96px;
+	}
+
+	.gallery {
+		position: relative;
+		height: 330px;
+		flex-direction: row;
+		overflow: hidden;
+		background-color: #4B101B;
+	}
+
+	.gallery-swiper {
+		width: 100%;
+		height: 330px;
+	}
+
+	.gallery-image {
+		width: 100%;
+		height: 330px;
+	}
+
+	.gallery-mask {
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: 0;
+		height: 112px;
+		background-image: linear-gradient(to bottom, rgba(31, 26, 23, 0.55), rgba(31, 26, 23, 0));
+	}
+
+	.gallery-topbar {
+		position: absolute;
+		left: 14px;
+		right: 14px;
+		top: 14px;
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.circle-button {
+		width: 42px;
+		height: 42px;
+		align-items: center;
+		justify-content: center;
+		background-color: rgba(31, 26, 23, 0.62);
+		border-radius: 50%;
+	}
+
+	.circle-icon {
+		font-size: 28px;
+		line-height: 28px;
+		color: #FFFFFF;
+	}
+
+	.gallery-title {
+		flex: 1;
+		margin: 0 12px;
+	}
+
+	.gallery-title-text {
+		font-size: 16px;
+		font-weight: 600;
+		color: #FF8591;
+	}
+
+	.gallery-subtitle {
+		margin-top: 5px;
+		font-size: 12px;
+		color: #FF8591;
+	}
+
+	.gallery-dots {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 17px;
+		flex-direction: row;
+		justify-content: center;
+	}
+
+	.dot {
+		width: 8px;
+		height: 8px;
+		margin: 0 5px;
+		background-color: rgba(255, 255, 255, 0.5);
+		border-radius: 999px;
+	}
+
+	.dot-active {
+		width: 22px;
+		background-color: #FFFFFF;
+	}
+
+	.profile-card {
+		padding: 20px $facetof-space-page;
+		background-color: #FFFFFF;
+	}
+
+	.profile-head {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.avatar-wrap {
+		position: relative;
+		width: 76px;
+		height: 76px;
+	}
+
+	.provider-avatar {
+		width: 76px;
+		height: 76px;
+		border-radius: 26px;
+	}
+
+	.verified-check {
+		position: absolute;
+		right: -4px;
+		bottom: -4px;
+		width: 28px;
+		height: 28px;
+		align-items: center;
+		justify-content: center;
+		background-color: $facetof-color-primary;
+		border: 3px solid #FFFFFF;
+		border-radius: 50%;
+	}
+
+	.verified-check-text {
+		font-size: 14px;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.profile-main {
+		flex: 1;
+		margin-left: 13px;
+	}
+
+	.provider-name {
+		font-size: 23px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.verified-pill {
+		align-self: flex-start;
+		margin-top: 7px;
+		padding: 5px 9px;
+		background-color: #FFC768;
+		border-radius: 999px;
+	}
+
+	.verified-pill-text {
+		font-size: 11px;
+		font-weight: 700;
+		color: #704713;
+	}
+
+	.provider-meta {
+		margin-top: 8px;
+		font-size: 13px;
+		color: #8D817B;
+	}
+
+	.provider-bio {
+		margin-top: 17px;
+		font-size: 15px;
+		line-height: 22px;
+		color: #333A48;
+	}
+
+	.profile-actions {
+		flex-direction: row;
+		margin-top: 18px;
+	}
+
+	.profile-action {
+		flex: 1;
+		height: 47px;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+		border-radius: 14px;
+	}
+
+	.profile-action-gap {
+		margin-left: 12px;
+	}
+
+	.follow {
+		background-color: $facetof-color-primary;
+	}
+
+	.favorite {
+		border: 1px solid $facetof-color-primary;
+	}
+
+	.action-icon {
+		margin-right: 7px;
+		font-size: 18px;
+		color: #FFFFFF;
+	}
+
+	.action-icon-image {
+		width: 21px;
+		height: 21px;
+		margin-right: 7px;
+	}
+
+	.favorite-action-icon {
+		color: $facetof-color-primary;
+	}
+
+	.action-label {
+		font-size: 16px;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.favorite-action-label {
+		color: $facetof-color-primary;
+	}
+
+	.service-list,
+	.moment-list {
+		padding: 14px $facetof-space-page 0;
+	}
+
+	.service-card {
+		flex-direction: row;
+		align-items: center;
+		margin-bottom: 12px;
+		padding: 14px;
+		background-color: #FFFFFF;
+		border: 1px solid #F5DED5;
+		border-radius: 17px;
+	}
+
+	.service-cover {
+		width: 118px;
+		height: 118px;
+		border-radius: 14px;
+	}
+
+	.service-main {
+		flex: 1;
+		margin-left: 13px;
+	}
+
+	.service-title {
+		font-size: 17px;
+		font-weight: 700;
+		line-height: 23px;
+		color: #253047;
+	}
+
+	.service-tag {
+		align-self: flex-start;
+		margin-top: 8px;
+		padding: 4px 8px;
+		background-color: #FFF2EF;
+		border-radius: 999px;
+	}
+
+	.service-tag-text {
+		font-size: 11px;
+		font-weight: 600;
+		color: $facetof-color-primary;
+	}
+
+	.service-meta {
+		margin-top: 7px;
+		font-size: 12px;
+		color: #8D817B;
+	}
+
+	.price-block {
+		width: 76px;
+		align-items: flex-end;
+		justify-content: center;
+	}
+
+	.price-text {
+		font-size: 18px;
+		font-weight: 700;
+		white-space: nowrap;
+		color: $facetof-color-primary;
+	}
+
+	.provider-moment {
+		flex-direction: row;
+		margin-bottom: 12px;
+		padding: 13px;
+		background-color: #FFFFFF;
+		border: 1px solid #F5DED5;
+		border-radius: 17px;
+	}
+
+	.moment-cover {
+		width: 112px;
+		height: 112px;
+		border-radius: 14px;
+	}
+
+	.moment-main {
+		flex: 1;
+		margin-left: 12px;
+	}
+
+	.moment-title {
+		font-size: 16px;
+		font-weight: 700;
+		line-height: 23px;
+		color: #253047;
+	}
+
+	.moment-description {
+		margin-top: 7px;
+		font-size: 12px;
+		line-height: 18px;
+		color: #8D817B;
+	}
+
+	.moment-meta-row {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		margin-top: 11px;
+	}
+
+	.moment-meta,
+	.moment-count {
+		font-size: 10px;
+		color: #A1958F;
+	}
+
+	.booking-bar {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		height: 78px;
+		flex-direction: row;
+		align-items: center;
+		padding: 12px 18px;
+		padding-bottom: var(--uni-safe-area-inset-bottom);
+		background-color: #FFFFFF;
+		border-top: 1px solid #F5DED5;
+	}
+
+	.booking-price {
+		width: 112px;
+	}
+
+	.booking-price-value {
+		font-size: 22px;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.booking-price-unit {
+		margin-left: 3px;
+		font-size: 11px;
+		color: #8D817B;
+	}
+
+	.booking-button {
+		flex: 1;
+		height: 50px;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+		background-color: $facetof-color-primary;
+		border-radius: 15px;
+	}
+
+	.booking-button-icon {
+		margin-right: 8px;
+		font-size: 19px;
+		color: #FFFFFF;
+	}
+
+	.booking-button-text {
+		font-size: 18px;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.bottom-space {
+		height: 10px;
+	}
+</style>

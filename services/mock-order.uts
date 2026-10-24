@@ -1,0 +1,168 @@
+import { ActionOutcome, OrderDetail, OrderDraft, OrderListItem } from '../types/models.uts'
+
+export function getOrderDraft(serviceId: string): OrderDraft {
+  return {
+    orderId: 'FT2026101614380628',
+    serviceId: serviceId,
+    providerId: 'provider-001',
+    providerName: '阿川',
+    providerAvatar: '/static/content/billiards.png',
+    serviceTitle: '台球助教 · 轻松入门',
+    duration: '2 小时',
+    format: '一对一指导',
+    dateLabel: '明天 周六',
+    dateValue: '17',
+    timeRange: '14:00 - 16:00',
+    locationName: '星牌台球俱乐部（万象汇店）',
+    locationAddress: '泸州市江阳区康城路一段 · 万象汇商圈',
+    locationTip: '仅限公共场所的台球教学服务，不提供私人空间及约定范围外服务。',
+    note: '',
+    servicePrice: 160,
+    platformFee: 8,
+    totalAmount: 168,
+    paymentMethod: '微信支付'
+  }
+}
+
+export function submitOrder(orderId: string, paymentMethod: string): ActionOutcome {
+  return {
+    ok: true,
+    code: 'ORDER_PAID',
+    message: paymentMethod + '支付成功（开发 Mock）'
+  }
+}
+
+export function getOrderList(tab: string): Array<OrderListItem> {
+  const all: Array<OrderListItem> = [
+    {
+      id: 'order-001',
+      title: '台球助教 · 新手体验',
+      providerName: '阿哲',
+      avatar: '/static/avatars/achuan.png',
+      verified: true,
+      status: '待支付',
+      time: '10月18日 周日 15:30-16:30',
+      location: '泸州万达广场 · 星牌台球俱乐部',
+      amountLabel: '待付',
+      amount: '¥71.00',
+      actionLabel: '去支付'
+    },
+    {
+      id: 'order-002',
+      title: '咖啡陪伴 · 轻松交流',
+      providerName: '小禾',
+      avatar: '/static/avatars/qinghe.png',
+      verified: true,
+      status: '待接单',
+      time: '10月18日 周日 14:00-15:00',
+      location: '泸州万象汇 · 瑞幸咖啡',
+      amountLabel: '实付',
+      amount: '¥59.00',
+      actionLabel: '查看订单'
+    },
+    {
+      id: 'order-003',
+      title: '城市漫步 · 老城慢行',
+      providerName: '林川',
+      avatar: '/static/avatars/linxiao.png',
+      verified: true,
+      status: '已完成',
+      time: '10月16日 周五 16:00-17:30',
+      location: '泸州 · 水井沟商业步行街',
+      amountLabel: '实付',
+      amount: '¥88.00',
+      actionLabel: '再约一次'
+    },
+    {
+      id: 'order-004',
+      title: '桌游陪玩 · 欢乐组局',
+      providerName: '小满',
+      avatar: '/static/avatars/xiaoman.png',
+      verified: true,
+      status: '进行中',
+      time: '10月17日 周六 19:00-21:00',
+      location: '泸州 · 万象汇桌游店',
+      amountLabel: '实付',
+      amount: '¥120.00',
+      actionLabel: '查看订单'
+    },
+    {
+      id: 'order-005',
+      title: '羽毛球陪练 · 轻松出汗',
+      providerName: '知夏',
+      avatar: '/static/avatars/zhixia.png',
+      verified: true,
+      status: '待履约',
+      time: '10月19日 周一 18:00-19:00',
+      location: '泸州 · 市民运动中心',
+      amountLabel: '实付',
+      amount: '¥75.00',
+      actionLabel: '查看订单'
+    }
+  ]
+
+  if (tab == '全部') {
+    return all
+  }
+  return all.filter((item: OrderListItem) : boolean => item.status == tab)
+}
+
+export function getOrderDetail(orderId: string): OrderDetail {
+  let status = '待接单'
+  let statusDescription = '已提交预约，等待服务者确认'
+  if (orderId == 'order-001') {
+    status = '待支付'
+    statusDescription = '订单尚未支付，完成支付后预约才会生效'
+  } else if (orderId == 'order-003') {
+    status = '已完成'
+    statusDescription = '本次服务已完成，感谢你的信任'
+  } else if (orderId == 'order-004') {
+    status = '进行中'
+    statusDescription = '服务进行中，请按预约安排见面'
+  } else if (orderId == 'order-005') {
+    status = '待履约'
+    statusDescription = '服务者已接单，等待按预约时间履约'
+  }
+
+  return {
+    id: orderId,
+    status: status,
+    statusDescription: statusDescription,
+    serviceTitle: '台球助教 · 新手体验',
+    serviceLocation: '泸州 · 江阳区',
+    serviceDuration: '服务时长 60 分钟',
+    servicePrice: '¥68',
+    appointmentDate: '10月18日 周日 · 15:30',
+    appointmentTime: '预计服务时长 60 分钟',
+    locationName: '万达广场 · 星轶影城旁',
+    locationAddress: '泸州市江阳区康城路一段',
+    providerName: '阿哲',
+    providerAvatar: '/static/avatars/achuan.png',
+    providerRating: '评分 4.9 · 已完成 126 单',
+    providerCompleted: '已认证',
+    customerName: '林先生',
+    customerPhone: '138****2048',
+    platformFee: '¥3.00',
+    totalAmount: '¥71.00',
+    timeline: [
+      {
+        title: '订单已提交',
+        description: '预约信息已发送',
+        time: '10月16日 09:20',
+        state: 'done'
+      },
+      {
+        title: '等待服务者接单',
+        description: '确认后将通知你',
+        time: '',
+        state: 'current'
+      },
+      {
+        title: '服务开始 / 完成',
+        description: '到店后按流程确认',
+        time: '',
+        state: 'future'
+      }
+    ]
+  }
+}

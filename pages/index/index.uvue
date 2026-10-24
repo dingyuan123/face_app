@@ -1,13 +1,13 @@
 <template>
 	<view class="page">
-		<scroll-view class="page-scroll" scroll-y :show-scrollbar="false">
+		<scroll-view class="page-scroll" direction="vertical" :show-scrollbar="false">
 		<view class="page-content">
 		<view class="topbar">
 			<view class="city">
 				<text class="city-label">当前城市</text>
 				<text class="city-name">泸州 ▾</text>
 			</view>
-			<view class="search">
+			<view class="search" @click="openSearch">
 				<text class="search-icon">⌕</text>
 				<text class="search-placeholder">搜索服务者、服务项目</text>
 			</view>
@@ -27,19 +27,14 @@
 			</view>
 		</view>
 
-		<scroll-view class="category-scroll" scroll-x :show-scrollbar="false">
-			<view class="category-list">
-				<view
-					v-for="category in categories"
-					:key="category"
-					class="category-item"
-					:class="selectedCategory == category ? 'category-active' : ''"
-					@click="selectedCategory = category"
-				>
-					<text class="category-text" :class="selectedCategory == category ? 'category-text-active' : ''">{{ category }}</text>
-				</view>
-			</view>
-		</scroll-view>
+		<view class="category-wrap">
+			<segment-tabs
+				:items="categories"
+				:active="selectedCategory"
+				variant="pill"
+				@change="changeCategory"
+			></segment-tabs>
+		</view>
 
 		<view class="section-head">
 			<view>
@@ -55,7 +50,7 @@
 		</view>
 
 		<view v-for="item in filteredFeed" :key="item.id" class="feed-card">
-			<view class="cover">
+			<view class="cover" @click="openProvider(item.providerId)">
 				<image class="cover-main-image" :src="coverImageAt(item, 0)" mode="aspectFill"></image>
 				<view class="cover-side">
 					<image class="cover-side-image" :src="coverImageAt(item, 1)" mode="aspectFill"></image>
@@ -73,9 +68,7 @@
 
 			<view class="card-body">
 				<view class="provider-row">
-					<view class="avatar">
-						<text class="avatar-text">{{ item.providerName.slice(0, 1) }}</text>
-					</view>
+					<image class="avatar" :src="item.providerAvatar" mode="aspectFill"></image>
 					<view class="provider-main">
 						<view class="name-row">
 							<text class="provider-name">{{ item.providerName }}</text>
@@ -107,7 +100,7 @@
 						<text class="action-icon">◌</text>
 						<text class="action-text">私信</text>
 					</view>
-					<view class="action-button primary" @click="accountAction('booking', item.providerId)">
+					<view class="action-button primary" @click="openProvider(item.providerId)">
 						<text class="action-text white">立即预约</text>
 					</view>
 				</view>
@@ -120,84 +113,20 @@
 		</view>
 		</scroll-view>
 
-		<view class="bottom-nav">
-			<view class="nav-item nav-active">
-				<text class="nav-icon">⌂</text>
-				<text class="nav-label">首页</text>
-			</view>
-			<view class="nav-item" @click="showProfile = true">
-				<text class="nav-icon">○</text>
-				<text class="nav-label">我的</text>
-			</view>
-		</view>
-
-		<view v-if="showProfile" class="profile-mask" @click="showProfile = false">
-			<view class="profile-sheet" @click.stop="noop">
-				<view class="sheet-handle"></view>
-				<view class="sheet-head">
-					<view>
-						<text class="sheet-title">我的</text>
-						<text class="sheet-subtitle">{{ sessionState.loggedIn ? sessionState.displayName : '游客浏览中' }}</text>
-					</view>
-					<view class="close-button" @click="showProfile = false">
-						<text class="close-text">×</text>
-					</view>
-				</view>
-
-				<view v-if="!sessionState.loggedIn" class="profile-login">
-					<text class="profile-tip">登录后可预约、聊天、收藏并查看个人数据。</text>
-					<facetof-button label="登录 / 注册" tone="gradient" @press="loginFromProfile"></facetof-button>
-				</view>
-
-				<view v-else class="profile-content">
-					<view class="profile-row">
-						<text class="profile-label">当前身份</text>
-						<status-pill :label="identityLabel" tone="brand"></status-pill>
-					</view>
-					<view class="profile-row">
-						<text class="profile-label">服务者申请</text>
-						<status-pill :label="applicationLabel" :tone="applicationTone"></status-pill>
-					</view>
-					<text v-if="sessionState.applicationStatus == 'rejected'" class="sheet-reason">{{ sessionState.rejectionReason }}</text>
-
-					<view v-if="sessionState.providerPermission" class="workbench-entry" @click="showWorkbenchTip">
-						<view>
-							<text class="workbench-title">服务者工作台</text>
-							<text class="workbench-desc">审核已通过，可进入工作台</text>
-						</view>
-						<text class="entry-arrow">›</text>
-					</view>
-
-					<view v-if="sessionState.applicationStatus == 'rejected'" class="profile-action" @click="openApply">
-						<text class="profile-action-text">修改并重新提交申请</text>
-						<text class="entry-arrow">›</text>
-					</view>
-					<view v-if="sessionState.applicationStatus == 'pending'" class="profile-action" @click="openApply">
-						<text class="profile-action-text">查看申请进度</text>
-						<text class="entry-arrow">›</text>
-					</view>
-
-					<view class="logout-row" @click="logoutFromProfile">
-						<text class="logout-text">退出登录</text>
-					</view>
-				</view>
-			</view>
-		</view>
 	</view>
 </template>
 
 <script setup lang="uts">
 	import { computed } from 'vue'
-	import FacetofButton from '../../components/facetof-button.uvue'
 	import StatusPill from '../../components/status-pill.uvue'
+	import SegmentTabs from '../../components/segment-tabs.uvue'
 	import { getHomeFeed, performAccountAction } from '../../services/service-container.uts'
 	import type { HomeFeedItem } from '../../types/models.uts'
-	import { logout, sessionState } from '../../state/session-state.uts'
-	import { openLogin, openProviderApply } from '../../router/route-guard.uts'
+	import { sessionState } from '../../state/session-state.uts'
+	import { openLogin } from '../../router/route-guard.uts'
 
 	const categories = ['全部', '运动', '娱乐', '休闲']
 	const selectedCategory = ref('全部')
-	const showProfile = ref(false)
 	const allFeed = ref<HomeFeedItem[]>([])
 
 	const filteredFeed = computed(() : Array<HomeFeedItem> => {
@@ -211,42 +140,6 @@
 			}
 		}
 		return result
-	})
-
-	const identityLabel = computed(() : string => {
-		if (sessionState.identity == 'provider') {
-			return '服务者身份'
-		}
-		if (sessionState.identity == 'user') {
-			return '普通用户'
-		}
-		return '未选择'
-	})
-
-	const applicationLabel = computed(() : string => {
-		if (sessionState.applicationStatus == 'approved') {
-			return '审核通过'
-		}
-		if (sessionState.applicationStatus == 'pending') {
-			return '审核中'
-		}
-		if (sessionState.applicationStatus == 'rejected') {
-			return '审核拒绝'
-		}
-		return '未申请'
-	})
-
-	const applicationTone = computed(() : string => {
-		if (sessionState.applicationStatus == 'approved') {
-			return 'success'
-		}
-		if (sessionState.applicationStatus == 'pending') {
-			return 'warning'
-		}
-		if (sessionState.applicationStatus == 'rejected') {
-			return 'danger'
-		}
-		return 'neutral'
 	})
 
 	onShow(() => {
@@ -272,14 +165,27 @@
 		}
 	})
 
-	function noop() {
-	}
-
 	function coverImageAt(item: HomeFeedItem, index: number): string {
 		if (index < item.coverImages.length && item.coverImages[index].length > 0) {
 			return item.coverImages[index]
 		}
-		return '/static/placeholders/provider-1.png'
+		return '/static/content/city.png'
+	}
+
+	function changeCategory(category: string) {
+		selectedCategory.value = category
+	}
+
+	function openProvider(providerId: string) {
+		uni.navigateTo({
+			url: '/pages/provider/detail?providerId=' + encodeURIComponent(providerId)
+		})
+	}
+
+	function openSearch() {
+		uni.navigateTo({
+			url: '/pages/search/search'
+		})
 	}
 
 	function accountAction(action: string, targetId: string) {
@@ -295,38 +201,12 @@
 		})
 	}
 
-	function loginFromProfile() {
-		showProfile.value = false
-		openLogin('profile-login', '/pages/index/index', '')
-	}
-
-	function logoutFromProfile() {
-		logout()
-		showProfile.value = false
-		uni.showToast({
-			title: '已退出登录，身份选择已保留',
-			position: 'bottom',
-			icon: 'success'
-		})
-	}
-
-	function openApply() {
-		showProfile.value = false
-		openProviderApply()
-	}
-
-	function showWorkbenchTip() {
-		uni.showToast({
-			title: '工作台页面将在后续阶段接入',
-			position: 'bottom',
-			icon: 'none'
-		})
-	}
 </script>
 
 <style lang="scss">
 	.page {
 		flex: 1;
+		padding-top: var(--uni-safe-area-inset-top);
 		background-color: $facetof-color-warm-background;
 	}
 
@@ -335,7 +215,7 @@
 	}
 
 	.page-content {
-		padding-bottom: 82px;
+		padding-bottom: 20px;
 	}
 
 	.topbar {
@@ -413,7 +293,7 @@
 		align-items: center;
 		margin: 12px $facetof-space-page 0;
 		padding: 18px;
-		background-image: linear-gradient(135deg, #FD5A6B 0%, #FD955E 52%, #FCAE59 100%);
+		background-image: linear-gradient(to bottom right, #FD5A6B 0%, #FD955E 52%, #FCAE59 100%);
 		border-radius: $facetof-radius-card;
 	}
 
@@ -449,40 +329,8 @@
 		color: #FFFFFF;
 	}
 
-	.category-scroll {
-		margin-top: 16px;
-		white-space: nowrap;
-	}
-
-	.category-list {
-		flex-direction: row;
-		padding: 0 $facetof-space-page;
-	}
-
-	.category-item {
-		height: 34px;
-		padding: 0 17px;
-		align-items: center;
-		justify-content: center;
-		margin-right: 9px;
-		background-color: $facetof-color-background;
-		border: 1px solid $facetof-color-border;
-		border-radius: 999px;
-	}
-
-	.category-active {
-		background-color: $facetof-color-primary;
-		border-color: $facetof-color-primary;
-	}
-
-	.category-text {
-		font-size: 13px;
-		color: $facetof-color-secondary-text;
-	}
-
-	.category-text-active {
-		font-weight: 600;
-		color: #FFFFFF;
+	.category-wrap {
+		margin: 16px $facetof-space-page 0;
 	}
 
 	.section-head {
@@ -699,11 +547,6 @@
 		border-radius: 11px;
 	}
 
-	.action-button:last-child {
-		flex: 1;
-		margin-right: 0;
-	}
-
 	.ghost {
 		width: 70px;
 		background-color: $facetof-color-background;
@@ -711,6 +554,8 @@
 	}
 
 	.primary {
+		flex: 1;
+		margin-right: 0;
 		background-color: $facetof-color-primary;
 	}
 
@@ -762,177 +607,4 @@
 		color: #B5AAA5;
 	}
 
-	.bottom-nav {
-		position: absolute;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		height: 64px;
-		flex-direction: row;
-		background-color: $facetof-color-background;
-		border-top: 1px solid $facetof-color-border;
-	}
-
-	.nav-item {
-		flex: 1;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.nav-icon {
-		font-size: 20px;
-		color: $facetof-color-secondary-text;
-	}
-
-	.nav-label {
-		margin-top: 2px;
-		font-size: 10px;
-		color: $facetof-color-secondary-text;
-	}
-
-	.nav-active .nav-icon,
-	.nav-active .nav-label {
-		color: $facetof-color-primary;
-	}
-
-	.profile-mask {
-		position: absolute;
-		left: 0;
-		right: 0;
-		top: 0;
-		bottom: 0;
-		background-color: rgba(31, 26, 23, 0.34);
-	}
-
-	.profile-sheet {
-		position: absolute;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		padding: 10px $facetof-space-page 28px;
-		background-color: $facetof-color-background;
-		border-radius: 24px 24px 0 0;
-	}
-
-	.sheet-handle {
-		width: 42px;
-		height: 4px;
-		align-self: center;
-		background-color: $facetof-color-border;
-		border-radius: 999px;
-	}
-
-	.sheet-head {
-		flex-direction: row;
-		align-items: center;
-		justify-content: space-between;
-		margin-top: 16px;
-	}
-
-	.sheet-title {
-		font-size: 22px;
-		font-weight: 700;
-		color: $facetof-color-ink;
-	}
-
-	.sheet-subtitle {
-		margin-top: 3px;
-		font-size: 12px;
-		color: $facetof-color-secondary-text;
-	}
-
-	.close-button {
-		width: 34px;
-		height: 34px;
-		align-items: center;
-		justify-content: center;
-		background-color: $facetof-color-warm-background;
-		border-radius: 50%;
-	}
-
-	.close-text {
-		font-size: 22px;
-		color: $facetof-color-secondary-text;
-	}
-
-	.profile-login {
-		margin-top: 22px;
-	}
-
-	.profile-tip {
-		margin-bottom: 14px;
-		font-size: 13px;
-		line-height: 20px;
-		color: $facetof-color-secondary-text;
-	}
-
-	.profile-content {
-		margin-top: 20px;
-	}
-
-	.profile-row {
-		flex-direction: row;
-		align-items: center;
-		justify-content: space-between;
-		padding: 13px 0;
-		border-bottom: 1px solid $facetof-color-border;
-	}
-
-	.profile-label {
-		font-size: 14px;
-		color: $facetof-color-ink;
-	}
-
-	.sheet-reason {
-		margin-top: 10px;
-		font-size: 11px;
-		line-height: 17px;
-		color: $facetof-color-danger;
-	}
-
-	.workbench-entry,
-	.profile-action {
-		flex-direction: row;
-		align-items: center;
-		justify-content: space-between;
-		margin-top: 14px;
-		padding: 15px;
-		background-color: $facetof-color-warm-background;
-		border: 1px solid $facetof-color-border;
-		border-radius: 12px;
-	}
-
-	.workbench-title {
-		font-size: 15px;
-		font-weight: 600;
-		color: $facetof-color-ink;
-	}
-
-	.workbench-desc {
-		margin-top: 4px;
-		font-size: 11px;
-		color: $facetof-color-secondary-text;
-	}
-
-	.profile-action-text {
-		font-size: 14px;
-		font-weight: 500;
-		color: $facetof-color-primary;
-	}
-
-	.entry-arrow {
-		font-size: 22px;
-		color: $facetof-color-secondary-text;
-	}
-
-	.logout-row {
-		margin-top: 18px;
-		padding: 12px;
-		align-items: center;
-	}
-
-	.logout-text {
-		font-size: 13px;
-		color: $facetof-color-danger;
-	}
 </style>

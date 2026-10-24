@@ -1,0 +1,56 @@
+import { MessageThread } from '../types/models.uts'
+import { sessionState } from '../state/session-state.uts'
+
+export function getMessageThreads(tab: string): Array<MessageThread> {
+  if (!sessionState.loggedIn) {
+    return []
+  }
+
+  const orderThreads: Array<MessageThread> = [
+    {
+      id: 'message-order-001',
+      type: 'order',
+      name: '林晓',
+      avatar: '/static/avatars/linxiao.png',
+      preview: '好的，我们在商场一层服务台附近见面。',
+      time: '刚刚',
+      unreadCount: 2,
+      orderStatus: '进行中'
+    },
+    {
+      id: 'message-order-002',
+      type: 'order',
+      name: '阿橙',
+      avatar: '/static/avatars/acheng.png',
+      preview: '预约时间已确认，请注意出行安排。',
+      time: '昨天',
+      unreadCount: 0,
+      orderStatus: '待接单'
+    }
+  ]
+
+  const systemThreads: Array<MessageThread> = [
+    {
+      id: 'message-system-001',
+      type: 'system',
+      name: '平台通知',
+      avatar: '/static/avatars/platform.png',
+      preview: '你的服务者申请资料已进入审核队列。',
+      time: '10:30',
+      unreadCount: 1,
+      orderStatus: ''
+    },
+    {
+      id: 'message-system-002',
+      type: 'system',
+      name: '安全中心',
+      avatar: '/static/avatars/platform.png',
+      preview: '请优先选择公共场所，保护个人隐私与安全。',
+      time: '周一',
+      unreadCount: 0,
+      orderStatus: ''
+    }
+  ]
+
+  return tab == '系统通知' ? systemThreads : orderThreads
+}

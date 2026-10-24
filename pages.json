@@ -8,6 +8,118 @@
 			}
 		},
 		{
+			"path": "pages/search/search",
+			"style": {
+				"navigationBarTitleText": "搜索",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/search/results",
+			"style": {
+				"navigationBarTitleText": "搜索结果",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/moments/moments",
+			"style": {
+				"navigationBarTitleText": "动态",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/news/news",
+			"style": {
+				"navigationBarTitleText": "资讯",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/messages/messages",
+			"style": {
+				"navigationBarTitleText": "消息",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/profile/profile",
+			"style": {
+				"navigationBarTitleText": "我的",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/provider/detail",
+			"style": {
+				"navigationBarTitleText": "服务者主页",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/service/detail",
+			"style": {
+				"navigationBarTitleText": "服务详情",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/moment/detail",
+			"style": {
+				"navigationBarTitleText": "动态",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/favorites/list",
+			"style": {
+				"navigationBarTitleText": "我的收藏",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/following/list",
+			"style": {
+				"navigationBarTitleText": "我的关注",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/settings/settings",
+			"style": {
+				"navigationBarTitleText": "设置",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/order/list",
+			"style": {
+				"navigationBarTitleText": "我的订单",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/order/detail",
+			"style": {
+				"navigationBarTitleText": "订单详情",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/order/confirm",
+			"style": {
+				"navigationBarTitleText": "确认订单",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/payment/result",
+			"style": {
+				"navigationBarTitleText": "支付结果",
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/login/login",
 			"style": {
 				"navigationBarTitleText": "登录 / 注册"
@@ -32,5 +144,43 @@
 		"navigationBarBackgroundColor": "#FFFFFF",
 		"backgroundColor": "#FFF7F3"
 	},
-	"uniIdRouter": {}
+	"uniIdRouter": {},
+	"tabBar": {
+		"color": "#8D817B",
+		"selectedColor": "#FD5A6B",
+		"backgroundColor": "#FFFFFF",
+		"borderStyle": "white",
+		"list": [
+			{
+				"pagePath": "pages/index/index",
+				"text": "首页",
+				"iconPath": "static/tabbar/home.png",
+				"selectedIconPath": "static/tabbar/home-active.png"
+			},
+			{
+				"pagePath": "pages/moments/moments",
+				"text": "动态",
+				"iconPath": "static/tabbar/moments.png",
+				"selectedIconPath": "static/tabbar/moments-active.png"
+			},
+			{
+				"pagePath": "pages/news/news",
+				"text": "资讯",
+				"iconPath": "static/tabbar/news.png",
+				"selectedIconPath": "static/tabbar/news-active.png"
+			},
+			{
+				"pagePath": "pages/messages/messages",
+				"text": "消息",
+				"iconPath": "static/tabbar/messages.png",
+				"selectedIconPath": "static/tabbar/messages-active.png"
+			},
+			{
+				"pagePath": "pages/profile/profile",
+				"text": "我的",
+				"iconPath": "static/tabbar/profile.png",
+				"selectedIconPath": "static/tabbar/profile-active.png"
+			}
+		]
+	}
 }

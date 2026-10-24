@@ -48,10 +48,10 @@
 		"distribute": {
 			"modules": {},
 			"icons": {
-				"hdpi": "",
-				"xhdpi": "",
-				"xxhdpi": "",
-				"xxxhdpi": ""
+				"hdpi": "/Library/即享/faceTo打包资源/logov1.png",
+				"xhdpi": "/Library/即享/faceTo打包资源/logov1.png",
+				"xxhdpi": "/Library/即享/faceTo打包资源/logov1.png",
+				"xxxhdpi": "/Library/即享/faceTo打包资源/logov1.png"
 			},
 			"splashScreens": {
 				"default": {}

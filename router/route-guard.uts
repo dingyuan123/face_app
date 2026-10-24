@@ -9,6 +9,22 @@ export const HOME_ROUTE = '/pages/index/index'
 export const LOGIN_ROUTE = '/pages/login/login'
 export const IDENTITY_ROUTE = '/pages/identity/identity'
 export const PROVIDER_APPLY_ROUTE = '/pages/provider/apply'
+export const SEARCH_ROUTE = '/pages/search/search'
+export const SEARCH_RESULTS_ROUTE = '/pages/search/results'
+export const MOMENTS_ROUTE = '/pages/moments/moments'
+export const NEWS_ROUTE = '/pages/news/news'
+export const MESSAGES_ROUTE = '/pages/messages/messages'
+export const PROFILE_ROUTE = '/pages/profile/profile'
+export const PROVIDER_DETAIL_ROUTE = '/pages/provider/detail'
+export const SERVICE_DETAIL_ROUTE = '/pages/service/detail'
+export const MOMENT_DETAIL_ROUTE = '/pages/moment/detail'
+export const ORDER_CONFIRM_ROUTE = '/pages/order/confirm'
+export const PAYMENT_RESULT_ROUTE = '/pages/payment/result'
+export const ORDER_LIST_ROUTE = '/pages/order/list'
+export const ORDER_DETAIL_ROUTE = '/pages/order/detail'
+export const FAVORITES_ROUTE = '/pages/favorites/list'
+export const FOLLOWING_ROUTE = '/pages/following/list'
+export const SETTINGS_ROUTE = '/pages/settings/settings'
 
 export function saveIntent(action: string, route: string, payload: string) {
   const intent: PendingIntent = {
@@ -54,10 +70,10 @@ export function finishAuthenticatedNavigation(resumeMessage: string) {
   let url = HOME_ROUTE
   if (route == PROVIDER_APPLY_ROUTE) {
     url = PROVIDER_APPLY_ROUTE
+  } else if (route.length > 0 && route != LOGIN_ROUTE && route != HOME_ROUTE) {
+    url = route
   } else if (action.length > 0) {
     url = HOME_ROUTE + '?resumeAction=' + encodeURIComponent(action) + '&resumePayload=' + encodeURIComponent(payload)
-  } else if (route.length > 0 && route != LOGIN_ROUTE) {
-    url = route
   }
   uni.reLaunch({
     url: url,

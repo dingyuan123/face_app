@@ -2,13 +2,35 @@ import {
   ActionOutcome,
   AuthUser,
   HomeFeedItem,
+  MessageThread,
+  MomentsPost,
+  NewsArticle,
+  ProfileSummary,
   ProviderApplicationDraft,
+  SearchResultItem,
   ProviderApplicationRecord,
-  ProviderSubmitResult
+  ProviderDetail,
+  ProviderSubmitResult,
+  ServiceDetail,
+  MomentDetail,
+  OrderDetail,
+  OrderDraft,
+  OrderListItem,
+  FavoriteItem,
+  FollowingMoment,
+  FollowingProvider
 } from '../types/models.uts'
 import * as mockAuth from './mock-auth.uts'
 import * as mockPublic from './mock-public.uts'
+import * as mockContent from './mock-content.uts'
+import * as mockMessage from './mock-message.uts'
+import * as mockProfile from './mock-profile.uts'
 import * as mockProvider from './mock-provider.uts'
+import * as mockSearch from './mock-search.uts'
+import * as mockDetail from './mock-detail.uts'
+import * as mockOrder from './mock-order.uts'
+import * as mockFavorites from './mock-favorites.uts'
+import * as mockFollowing from './mock-following.uts'
 
 /**
  * 页面只依赖本文件中的业务服务。
@@ -36,6 +58,70 @@ export function loginWithTestAccount(kind: string): ActionOutcome {
 
 export function getHomeFeed(): Array<HomeFeedItem> {
   return mockPublic.getHomeFeed()
+}
+
+export function getMomentsFeed(tab: string): Array<MomentsPost> {
+  return mockContent.getMomentsFeed(tab)
+}
+
+export function getNewsFeed(tab: string): Array<NewsArticle> {
+  return mockContent.getNewsFeed(tab)
+}
+
+export function getMessageThreads(tab: string): Array<MessageThread> {
+  return mockMessage.getMessageThreads(tab)
+}
+
+export function getProfileSummary(): ProfileSummary | null {
+  return mockProfile.getProfileSummary()
+}
+
+export function getSearchResults(query: string, tab: string): Array<SearchResultItem> {
+  return mockSearch.getSearchResults(query, tab)
+}
+
+export function getProviderDetail(providerId: string): ProviderDetail {
+  return mockDetail.getProviderDetail(providerId)
+}
+
+export function getServiceDetail(serviceId: string): ServiceDetail {
+  return mockDetail.getServiceDetail(serviceId)
+}
+
+export function getMomentDetail(momentId: string): MomentDetail {
+  return mockDetail.getMomentDetail(momentId)
+}
+
+export function getMomentFeed(): Array<MomentDetail> {
+  return mockDetail.getMomentFeed()
+}
+
+export function getOrderDraft(serviceId: string): OrderDraft {
+  return mockOrder.getOrderDraft(serviceId)
+}
+
+export function submitOrder(orderId: string, paymentMethod: string): ActionOutcome {
+  return mockOrder.submitOrder(orderId, paymentMethod)
+}
+
+export function getOrderList(tab: string): Array<OrderListItem> {
+  return mockOrder.getOrderList(tab)
+}
+
+export function getOrderDetail(orderId: string): OrderDetail {
+  return mockOrder.getOrderDetail(orderId)
+}
+
+export function getFavoriteItems(category: string): Array<FavoriteItem> {
+  return mockFavorites.getFavoriteItems(category)
+}
+
+export function getFollowingProviders(): Array<FollowingProvider> {
+  return mockFollowing.getFollowingProviders()
+}
+
+export function getFollowingMoments(): Array<FollowingMoment> {
+  return mockFollowing.getFollowingMoments()
 }
 
 export function getApplicationHistory(): Array<ProviderApplicationRecord> {

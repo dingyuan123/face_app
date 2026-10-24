@@ -1,0 +1,563 @@
+<template>
+	<view class="page">
+		<scroll-view class="page-scroll" direction="vertical" :show-scrollbar="false">
+			<view class="page-content">
+				<view class="service-hero">
+					<swiper class="hero-swiper" :current="currentMedia" :circular="true" @change="onMediaChange">
+						<swiper-item v-for="(image, index) in service.galleryImages" :key="index">
+							<image class="hero-image" :src="image" mode="aspectFill"></image>
+						</swiper-item>
+					</swiper>
+					<view class="hero-overlay"></view>
+					<view class="hero-topbar">
+						<view class="circle-button" @click="goBack">
+							<text class="circle-icon">‹</text>
+						</view>
+						<view class="circle-button" @click="toggleFavorite">
+							<text class="circle-icon">{{ favorited ? '♥' : '♡' }}</text>
+						</view>
+					</view>
+					<view class="hero-caption">
+						<text class="hero-caption-icon">▶</text>
+						<text class="hero-caption-text">服务展示</text>
+					</view>
+					<text class="hero-count">{{ currentMedia + 1 }} / {{ service.galleryImages.length }}</text>
+				</view>
+
+				<view class="section-card service-summary">
+					<text class="service-title">{{ service.title }}</text>
+					<view class="summary-row">
+						<view class="verified-pill">
+							<text class="verified-pill-text">✓ 实名认证</text>
+						</view>
+						<view class="price-block">
+							<text class="price-value">{{ service.price }}</text>
+							<text class="price-unit">{{ service.priceUnit }}</text>
+						</view>
+					</view>
+					<text class="service-subtitle">{{ service.duration }} · {{ service.format }}</text>
+				</view>
+
+				<view class="section-card">
+					<text class="section-title">服务内容</text>
+					<view class="content-lines">
+						<view v-for="line in service.contentLines" :key="line" class="content-line">
+							<text class="line-dot">·</text>
+							<text class="line-text">{{ line }}</text>
+						</view>
+					</view>
+				</view>
+
+				<view class="section-card">
+					<text class="section-title">选择预约时间</text>
+					<text class="section-subtitle">可预约 · 选择日期和时段</text>
+					<scroll-view class="date-scroll" direction="horizontal" :show-scrollbar="false">
+						<view class="date-row">
+							<view v-for="date in dates" :key="date.label" class="date-item" :class="selectedDate == date.label ? 'date-item-active' : ''" @click="selectedDate = date.label">
+								<text class="date-label" :class="selectedDate == date.label ? 'date-label-active' : ''">{{ date.label }}</text>
+								<text class="date-value" :class="selectedDate == date.label ? 'date-value-active' : ''">{{ date.value }}</text>
+							</view>
+						</view>
+					</scroll-view>
+				</view>
+
+				<view class="section-card">
+					<text class="section-title">见面地点</text>
+					<view class="location-pill">
+						<text class="location-pill-text">♧ {{ service.locationType }}</text>
+					</view>
+					<text class="location-text">{{ service.locationText }}</text>
+				</view>
+
+				<view class="section-card review-card">
+					<view class="review-head">
+						<text class="section-title">用户评价</text>
+						<view class="rating-row">
+							<text class="rating-star">★</text>
+							<text class="rating-value">{{ service.rating }}</text>
+							<text class="rating-count">（{{ service.reviewCount }} 条评价）</text>
+						</view>
+					</view>
+					<view v-for="review in service.reviews" :key="review.id" class="review-item">
+						<image class="review-avatar" :src="review.reviewerAvatar" mode="aspectFill"></image>
+						<view class="review-main">
+							<view class="review-top">
+								<text class="review-name">{{ review.reviewerName }}</text>
+								<text class="review-rating">★ {{ review.rating }}</text>
+							</view>
+							<text class="review-content">{{ review.content }}</text>
+							<text class="review-time">{{ review.createdAt }}</text>
+						</view>
+					</view>
+				</view>
+
+				<view class="bottom-space"></view>
+			</view>
+		</scroll-view>
+
+		<view class="booking-bar">
+			<view class="booking-info">
+				<text class="booking-price">{{ service.price }}</text>
+				<text class="booking-unit">{{ service.priceUnit }}</text>
+				<text class="booking-duration">60 分钟起</text>
+			</view>
+			<view class="booking-button" @click="bookService">
+				<text class="booking-icon">▣</text>
+				<text class="booking-text">立即预约</text>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { getServiceDetail } from '../../services/service-container.uts'
+	import type { ServiceDetail } from '../../types/models.uts'
+	import { requireAccount, SERVICE_DETAIL_ROUTE } from '../../router/route-guard.uts'
+
+	const service = ref<ServiceDetail>(getServiceDetail('service-billiards-001'))
+	const favorited = ref(false)
+	const currentMedia = ref(0)
+	const selectedDate = ref('今天')
+	const dates = [
+		{ label: '今天', value: '16' },
+		{ label: '明天', value: '17' },
+		{ label: '周日', value: '18' },
+		{ label: '周一', value: '19' },
+		{ label: '周二', value: '20' }
+	]
+
+	onLoad((options) => {
+		const id = options['serviceId'] as string
+		service.value = getServiceDetail(id != null && id.length > 0 ? decodeURIComponent(id) : 'service-billiards-001')
+	})
+
+	function onMediaChange(event: any) {
+		currentMedia.value = event.detail.current
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/index/index'
+				})
+			}
+		})
+	}
+
+	function toggleFavorite() {
+		if (!requireAccount('favorite-service', SERVICE_DETAIL_ROUTE, service.value.id)) {
+			return
+		}
+		favorited.value = !favorited.value
+		uni.showToast({
+			title: favorited.value ? '已收藏（开发 Mock）' : '已取消收藏',
+			position: 'bottom',
+			icon: 'success'
+		})
+	}
+
+	function bookService() {
+		if (!requireAccount('booking-service', SERVICE_DETAIL_ROUTE, service.value.id)) {
+			return
+		}
+		uni.navigateTo({
+			url: '/pages/order/confirm?serviceId=' + encodeURIComponent(service.value.id)
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-scroll {
+		flex: 1;
+		min-height: 0;
+	}
+
+	.page-content {
+		padding-bottom: 98px;
+	}
+
+	.service-hero {
+		position: relative;
+		height: 330px;
+		overflow: hidden;
+		background-color: #4B101B;
+	}
+
+	.hero-swiper {
+		width: 100%;
+		height: 330px;
+	}
+
+	.hero-image {
+		width: 100%;
+		height: 330px;
+	}
+
+	.hero-overlay {
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: 0;
+		height: 130px;
+		background-image: linear-gradient(to bottom, rgba(31, 26, 23, 0.48), rgba(31, 26, 23, 0));
+	}
+
+	.hero-topbar {
+		position: absolute;
+		left: 14px;
+		right: 14px;
+		top: 14px;
+		flex-direction: row;
+		justify-content: space-between;
+	}
+
+	.circle-button {
+		width: 42px;
+		height: 42px;
+		align-items: center;
+		justify-content: center;
+		background-color: rgba(31, 26, 23, 0.56);
+		border-radius: 50%;
+	}
+
+	.circle-icon {
+		font-size: 28px;
+		line-height: 28px;
+		color: #FFFFFF;
+	}
+
+	.hero-caption {
+		position: absolute;
+		left: 15px;
+		bottom: 18px;
+		height: 31px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 11px;
+		background-color: rgba(31, 26, 23, 0.72);
+		border-radius: 999px;
+	}
+
+	.hero-caption-icon {
+		margin-right: 6px;
+		font-size: 11px;
+		color: #FFFFFF;
+	}
+
+	.hero-caption-text {
+		font-size: 12px;
+		color: #FFFFFF;
+	}
+
+	.hero-count {
+		position: absolute;
+		right: 17px;
+		bottom: 22px;
+		font-size: 13px;
+		color: #FFFFFF;
+	}
+
+	.section-card {
+		margin: 12px $facetof-space-page 0;
+		padding: 18px;
+		background-color: #FFFFFF;
+		border: 1px solid #F5DED5;
+		border-radius: 17px;
+	}
+
+	.service-summary {
+		padding: 21px;
+	}
+
+	.service-title {
+		font-size: 23px;
+		font-weight: 700;
+		line-height: 31px;
+		color: #253047;
+	}
+
+	.summary-row {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		margin-top: 12px;
+	}
+
+	.verified-pill {
+		padding: 5px 9px;
+		background-color: #FFC768;
+		border-radius: 999px;
+	}
+
+	.verified-pill-text {
+		font-size: 11px;
+		font-weight: 700;
+		color: #704713;
+	}
+
+	.price-block {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.price-value {
+		font-size: 25px;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.price-unit {
+		margin-left: 3px;
+		font-size: 12px;
+		color: #8D817B;
+	}
+
+	.service-subtitle {
+		margin-top: 11px;
+		font-size: 14px;
+		color: #8D817B;
+	}
+
+	.section-title {
+		font-size: 18px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.section-subtitle {
+		margin-top: 7px;
+		font-size: 12px;
+		color: #8D817B;
+	}
+
+	.content-lines {
+		margin-top: 12px;
+	}
+
+	.content-line {
+		flex-direction: row;
+		margin-top: 12px;
+	}
+
+	.line-dot {
+		margin-right: 8px;
+		font-size: 18px;
+		line-height: 21px;
+		color: $facetof-color-primary;
+	}
+
+	.line-text {
+		flex: 1;
+		font-size: 15px;
+		line-height: 22px;
+		color: #343B49;
+	}
+
+	.date-scroll {
+		margin-top: 14px;
+	}
+
+	.date-row {
+		flex-direction: row;
+		flex-shrink: 0;
+	}
+
+	.date-item {
+		width: 72px;
+		height: 82px;
+		align-items: center;
+		justify-content: center;
+		margin-right: 8px;
+		border: 1px solid #F5DED5;
+		border-radius: 13px;
+	}
+
+	.date-item-active {
+		background-color: #FFF1F2;
+		border-color: $facetof-color-primary;
+	}
+
+	.date-label {
+		font-size: 12px;
+		color: #8D817B;
+	}
+
+	.date-label-active {
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.date-value {
+		margin-top: 9px;
+		font-size: 22px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.date-value-active {
+		color: $facetof-color-primary;
+	}
+
+	.location-pill {
+		align-self: flex-start;
+		margin-top: 13px;
+		padding: 5px 9px;
+		background-color: #FFF2EF;
+		border-radius: 999px;
+	}
+
+	.location-pill-text {
+		font-size: 11px;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.location-text {
+		margin-top: 11px;
+		font-size: 15px;
+		color: #343B49;
+	}
+
+	.review-head {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.rating-row {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.rating-star,
+	.rating-value {
+		font-size: 16px;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.rating-count {
+		margin-left: 5px;
+		font-size: 11px;
+		color: #8D817B;
+	}
+
+	.review-item {
+		flex-direction: row;
+		margin-top: 16px;
+		padding-top: 14px;
+		border-top: 1px solid #F5DED5;
+	}
+
+	.review-avatar {
+		width: 40px;
+		height: 40px;
+		border-radius: 50%;
+	}
+
+	.review-main {
+		flex: 1;
+		margin-left: 10px;
+	}
+
+	.review-top {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.review-name {
+		font-size: 13px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.review-rating {
+		font-size: 11px;
+		color: $facetof-color-primary;
+	}
+
+	.review-content {
+		margin-top: 7px;
+		font-size: 13px;
+		line-height: 19px;
+		color: #655C58;
+	}
+
+	.review-time {
+		margin-top: 6px;
+		font-size: 10px;
+		color: #A1958F;
+	}
+
+	.booking-bar {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		height: 78px;
+		flex-direction: row;
+		align-items: center;
+		padding: 12px 18px;
+		background-color: #FFFFFF;
+		border-top: 1px solid #F5DED5;
+	}
+
+	.booking-info {
+		flex: 1;
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.booking-price {
+		font-size: 23px;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.booking-unit {
+		font-size: 12px;
+		color: #8D817B;
+	}
+
+	.booking-duration {
+		margin-left: 11px;
+		font-size: 11px;
+		color: #8D817B;
+	}
+
+	.booking-button {
+		width: 190px;
+		height: 50px;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+		background-color: $facetof-color-primary;
+		border-radius: 15px;
+	}
+
+	.booking-icon {
+		margin-right: 8px;
+		font-size: 18px;
+		color: #FFFFFF;
+	}
+
+	.booking-text {
+		font-size: 18px;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.bottom-space {
+		height: 10px;
+	}
+</style>

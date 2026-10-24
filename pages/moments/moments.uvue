@@ -1,0 +1,358 @@
+<template>
+	<view class="page">
+		<view class="page-head">
+			<text class="page-title">动态</text>
+			<view class="search-box" @click="showSearchTip">
+				<text class="search-icon">⌕</text>
+				<text class="search-placeholder">搜索服务者和动态</text>
+			</view>
+		</view>
+
+		<segment-tabs
+			:items="tabs"
+			:active="selectedTab"
+			variant="underline"
+			@change="changeTab"
+		></segment-tabs>
+
+		<scroll-view class="content-scroll" direction="vertical" :show-scrollbar="false">
+			<view class="content">
+				<view v-if="selectedTab == '关注' && !sessionState.loggedIn" class="login-gate">
+					<view class="gate-icon">◎</view>
+					<text class="gate-title">登录后查看关注动态</text>
+					<text class="gate-desc">关注内容属于账号数据，游客只能浏览公开动态。</text>
+					<facetof-button label="登录 / 注册" tone="gradient" @press="loginForFollowing"></facetof-button>
+				</view>
+
+				<view v-else-if="leftPosts.length == 0 && rightPosts.length == 0" class="empty-state">
+					<text class="empty-title">暂时没有动态</text>
+					<text class="empty-desc">稍后再来看看吧</text>
+				</view>
+
+				<view v-else class="waterfall">
+					<view class="waterfall-column">
+						<view v-for="post in leftPosts" :key="post.id" class="moment-card" @click="openMoment(post.id)">
+							<image class="moment-cover" :src="post.coverImage" mode="aspectFill"></image>
+							<view class="moment-body">
+								<text class="moment-title">{{ post.title }}</text>
+								<view class="moment-footer">
+									<view class="provider">
+										<image class="provider-avatar" :src="post.avatar" mode="aspectFill"></image>
+										<text class="provider-name">{{ post.providerName }}</text>
+										<text v-if="post.verified" class="verified-dot">✓</text>
+									</view>
+									<view class="like-button" @click.stop="likePost(post)">
+										<text class="like-icon">♡</text>
+										<text class="like-count">{{ post.likeCount }}</text>
+									</view>
+								</view>
+							</view>
+						</view>
+					</view>
+
+					<view class="waterfall-column right-column">
+						<view v-for="post in rightPosts" :key="post.id" class="moment-card" @click="openMoment(post.id)">
+							<image class="moment-cover tall-cover" :src="post.coverImage" mode="aspectFill"></image>
+							<view class="moment-body">
+								<text class="moment-title">{{ post.title }}</text>
+								<view class="moment-footer">
+									<view class="provider">
+										<image class="provider-avatar" :src="post.avatar" mode="aspectFill"></image>
+										<text class="provider-name">{{ post.providerName }}</text>
+										<text v-if="post.verified" class="verified-dot">✓</text>
+									</view>
+									<view class="like-button" @click.stop="likePost(post)">
+										<text class="like-icon">♡</text>
+										<text class="like-count">{{ post.likeCount }}</text>
+									</view>
+								</view>
+							</view>
+						</view>
+					</view>
+				</view>
+
+				<view class="bottom-space"></view>
+			</view>
+		</scroll-view>
+
+	</view>
+</template>
+
+<script setup lang="uts">
+	import FacetofButton from '../../components/facetof-button.uvue'
+	import SegmentTabs from '../../components/segment-tabs.uvue'
+		import { getMomentsFeed } from '../../services/service-container.uts'
+	import type { MomentsPost } from '../../types/models.uts'
+	import { sessionState } from '../../state/session-state.uts'
+	import { MOMENTS_ROUTE, openLogin } from '../../router/route-guard.uts'
+
+	const tabs = ['推荐', '关注', '附近']
+	const selectedTab = ref('推荐')
+	const leftPosts = ref<MomentsPost[]>([])
+	const rightPosts = ref<MomentsPost[]>([])
+
+	function refreshPosts() {
+		const posts = getMomentsFeed(selectedTab.value)
+		const left: Array<MomentsPost> = []
+		const right: Array<MomentsPost> = []
+		for (let i = 0; i < posts.length; i++) {
+			if (i % 2 == 0) {
+				left.push(posts[i])
+			} else {
+				right.push(posts[i])
+			}
+		}
+		leftPosts.value = left
+		rightPosts.value = right
+	}
+
+	onShow(() => {
+		refreshPosts()
+	})
+
+	function changeTab(tab: string) {
+		selectedTab.value = tab
+		refreshPosts()
+	}
+
+	function showSearchTip() {
+		uni.navigateTo({
+			url: '/pages/search/search'
+		})
+	}
+
+	function loginForFollowing() {
+		openLogin('following-feed', MOMENTS_ROUTE, '')
+	}
+
+	function openMoment(id: string) {
+		uni.navigateTo({
+			url: '/pages/moment/detail?momentId=' + encodeURIComponent(id)
+		})
+	}
+
+	function likePost(post: MomentsPost) {
+		post.likeCount = post.likeCount + 1
+		uni.showToast({
+			title: '已点赞（开发 Mock）',
+			position: 'bottom',
+			icon: 'success'
+		})
+	}
+
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-head {
+		flex-direction: row;
+		align-items: center;
+		padding: 16px $facetof-space-page 10px;
+		background-color: $facetof-color-background;
+	}
+
+	.page-title {
+		font-size: 25px;
+		font-weight: 700;
+		color: $facetof-color-ink;
+	}
+
+	.search-box {
+		flex: 1;
+		height: 38px;
+		flex-direction: row;
+		align-items: center;
+		margin-left: 18px;
+		padding: 0 13px;
+		background-color: $facetof-color-warm-background;
+		border: 1px solid $facetof-color-border;
+		border-radius: 999px;
+	}
+
+	.search-icon {
+		font-size: 18px;
+		color: $facetof-color-secondary-text;
+	}
+
+	.search-placeholder {
+		margin-left: 7px;
+		font-size: 12px;
+		color: #B5AAA5;
+	}
+
+	.tab-row {
+		flex-direction: row;
+		padding: 6px $facetof-space-page 0;
+		background-color: $facetof-color-background;
+	}
+
+	.tab-item {
+		position: relative;
+		width: 72px;
+		height: 42px;
+		align-items: center;
+		justify-content: center;
+		margin-right: 8px;
+	}
+
+	.tab-text {
+		font-size: 15px;
+		color: $facetof-color-secondary-text;
+	}
+
+	.tab-text-active {
+		font-weight: 700;
+		color: $facetof-color-ink;
+	}
+
+	.tab-indicator {
+		position: absolute;
+		bottom: 2px;
+		width: 22px;
+		height: 3px;
+		background-image: linear-gradient(to right, #FD5A6B, #FCAE59);
+		border-radius: 999px;
+	}
+
+	.content-scroll {
+		flex: 1;
+	}
+
+	.content {
+		padding: 12px $facetof-space-page 84px;
+	}
+
+	.waterfall {
+		flex-direction: row;
+	}
+
+	.waterfall-column {
+		flex: 1;
+	}
+
+	.right-column {
+		margin-left: 8px;
+	}
+
+	.moment-card {
+		margin-bottom: 10px;
+		background-color: $facetof-color-background;
+		border: 1px solid $facetof-color-border;
+		border-radius: $facetof-radius-card;
+		overflow: hidden;
+	}
+
+	.moment-cover {
+		width: 100%;
+		height: 172px;
+	}
+
+	.tall-cover {
+		height: 218px;
+	}
+
+	.moment-body {
+		padding: 11px;
+	}
+
+	.moment-title {
+		font-size: 13px;
+		font-weight: 600;
+		line-height: 19px;
+		color: $facetof-color-ink;
+	}
+
+	.moment-footer {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		margin-top: 11px;
+	}
+
+	.provider {
+		flex: 1;
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.provider-avatar {
+		width: 24px;
+		height: 24px;
+		border-radius: 50%;
+	}
+
+	.provider-name {
+		max-width: 70px;
+		margin-left: 6px;
+		font-size: 10px;
+		color: $facetof-color-secondary-text;
+	}
+
+	.verified-dot {
+		margin-left: 4px;
+		font-size: 9px;
+		color: #10B981;
+	}
+
+	.like-button {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.like-icon {
+		font-size: 16px;
+		color: $facetof-color-primary;
+	}
+
+	.like-count {
+		margin-left: 3px;
+		font-size: 10px;
+		color: $facetof-color-secondary-text;
+	}
+
+	.login-gate,
+	.empty-state {
+		padding: 36px 22px;
+		align-items: center;
+		background-color: $facetof-color-background;
+		border: 1px solid $facetof-color-border;
+		border-radius: $facetof-radius-card;
+	}
+
+	.gate-icon {
+		width: 56px;
+		height: 56px;
+		align-items: center;
+		justify-content: center;
+		font-size: 25px;
+		color: $facetof-color-primary;
+		background-color: rgba(253, 90, 107, 0.12);
+		border-radius: 50%;
+	}
+
+	.gate-title,
+	.empty-title {
+		margin-top: 14px;
+		font-size: 17px;
+		font-weight: 600;
+		color: $facetof-color-ink;
+	}
+
+	.gate-desc,
+	.empty-desc {
+		margin: 7px 0 18px;
+		font-size: 12px;
+		line-height: 18px;
+		text-align: center;
+		color: $facetof-color-secondary-text;
+	}
+
+	.bottom-space {
+		height: 10px;
+	}
+</style>

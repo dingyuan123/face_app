@@ -1,0 +1,50 @@
+import { FavoriteItem } from '../types/models.uts'
+
+export function getFavoriteItems(category: string): Array<FavoriteItem> {
+  const all: Array<FavoriteItem> = [
+    {
+      id: 'favorite-001',
+      providerId: 'provider-001',
+      providerName: '阿哲',
+      avatar: '/static/avatars/achuan.png',
+      verified: true,
+      city: '泸州 · 江阳区',
+      category: '运动',
+      serviceTitle: '台球助教 · 新手体验',
+      price: '¥68/小时',
+      duration: '',
+      distance: '1.2 km'
+    },
+    {
+      id: 'favorite-002',
+      providerId: 'provider-002',
+      providerName: '小禾',
+      avatar: '/static/avatars/qinghe.png',
+      verified: true,
+      city: '泸州 · 龙马潭区',
+      category: '休闲',
+      serviceTitle: '咖啡陪伴 · 轻松交流',
+      price: '¥59/小时',
+      duration: '',
+      distance: '2.4 km'
+    },
+    {
+      id: 'favorite-003',
+      providerId: 'provider-003',
+      providerName: '林川',
+      avatar: '/static/avatars/linxiao.png',
+      verified: true,
+      city: '泸州 · 江阳区',
+      category: '休闲',
+      serviceTitle: '城市漫步 · 老城慢行',
+      price: '¥88/次',
+      duration: '90分钟',
+      distance: '3.1 km'
+    }
+  ]
+
+  if (category == '全部') {
+    return all
+  }
+  return all.filter((item: FavoriteItem) : boolean => item.category == category)
+}

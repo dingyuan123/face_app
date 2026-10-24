@@ -1,0 +1,133 @@
+import { MomentsPost, NewsArticle } from '../types/models.uts'
+
+export function getMomentsFeed(tab: string): Array<MomentsPost> {
+  const all: Array<MomentsPost> = [
+    {
+      id: 'moment-001',
+      providerId: 'provider-001',
+      providerName: '林晓',
+      avatar: '/static/avatars/linxiao.png',
+      title: '第一次打台球也能轻松上手，今天又进步了一点',
+      coverImage: '/static/content/billiards.png',
+      likeCount: 128,
+      commentCount: 16,
+      verified: true
+    },
+    {
+      id: 'moment-002',
+      providerId: 'provider-002',
+      providerName: '阿橙',
+      avatar: '/static/avatars/acheng.png',
+      title: '安静的咖啡时光，认真听你聊聊最近',
+      coverImage: '/static/content/coffee.png',
+      likeCount: 96,
+      commentCount: 12,
+      verified: true
+    },
+    {
+      id: 'moment-003',
+      providerId: 'provider-003',
+      providerName: '小满',
+      avatar: '/static/avatars/xiaoman.png',
+      title: '周末桌游局，新朋友也能很快融入',
+      coverImage: '/static/content/boardgames.png',
+      likeCount: 156,
+      commentCount: 24,
+      verified: true
+    },
+    {
+      id: 'moment-004',
+      providerId: 'provider-004',
+      providerName: '知夏',
+      avatar: '/static/avatars/zhixia.png',
+      title: '一起看城市日落，保持舒服和安心的距离',
+      coverImage: '/static/content/city.png',
+      likeCount: 74,
+      commentCount: 8,
+      verified: true
+    },
+    {
+      id: 'moment-005',
+      providerId: 'provider-005',
+      providerName: '阿川',
+      avatar: '/static/avatars/achuan.png',
+      title: '羽毛球练习记录，耐心陪练不催促',
+      coverImage: '/static/content/badminton.png',
+      likeCount: 88,
+      commentCount: 11,
+      verified: true
+    },
+    {
+      id: 'moment-006',
+      providerId: 'provider-006',
+      providerName: '青禾',
+      avatar: '/static/avatars/qinghe.png',
+      title: '书店阅读陪伴，给需要专注的人一点安静',
+      coverImage: '/static/content/bookstore.png',
+      likeCount: 65,
+      commentCount: 7,
+      verified: true
+    }
+  ]
+
+  if (tab == '附近') {
+    return all.slice(0, 4)
+  }
+  return all
+}
+
+export function getNewsFeed(tab: string): Array<NewsArticle> {
+  const all: Array<NewsArticle> = [
+    {
+      id: 'news-001',
+      title: '泸州周末好去处：适合轻松见面的公共文化空间',
+      summary: '整理适合朋友见面、轻运动和休闲交流的公共场所。',
+      category: '同城',
+      coverImage: '/static/content/city.png',
+      readCount: 2380,
+      publishedAt: '今天 10:20',
+      isVideo: false
+    },
+    {
+      id: 'news-002',
+      title: '公共场所见面安全指南：第一次见面要注意什么',
+      summary: '从行程告知、地点选择到费用确认，提前做好安心准备。',
+      category: '安全',
+      coverImage: '/static/content/bookstore.png',
+      readCount: 4560,
+      publishedAt: '昨天 18:30',
+      isVideo: true
+    },
+    {
+      id: 'news-003',
+      title: '平台服务规范更新：让每一次陪伴都更真实可信',
+      summary: '了解服务者资料审核、行为规范和用户反馈机制。',
+      category: '公告',
+      coverImage: '/static/content/boardgames.png',
+      readCount: 1860,
+      publishedAt: '10-21',
+      isVideo: false
+    },
+    {
+      id: 'news-004',
+      title: '城市运动体验活动开放报名',
+      summary: '台球、羽毛球和桌游主题活动，欢迎在公共场所参与。',
+      category: '活动',
+      coverImage: '/static/content/badminton.png',
+      readCount: 980,
+      publishedAt: '10-20',
+      isVideo: false
+    }
+  ]
+
+  if (tab == '同城') {
+    return all.filter((article: NewsArticle) : boolean => article.category == '同城')
+  }
+  if (tab == '安全') {
+    return all.filter((article: NewsArticle) : boolean => article.category == '安全')
+  }
+  if (tab == '活动') {
+    return all.filter((article: NewsArticle) : boolean => article.category == '活动' || article.category == '公告')
+  }
+  return all
+}

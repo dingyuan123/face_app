@@ -1,5 +1,5 @@
 <template>
-	<view class="page">
+	<scroll-view class="page" direction="vertical" :show-scrollbar="false">
 		<view class="page-head">
 			<text class="eyebrow">服务者申请</text>
 			<text class="title">提交真实资料，等待平台审核</text>
@@ -27,7 +27,7 @@
 					<text class="benefit-title">真实展示</text>
 					<text class="benefit-desc">通过资料审核后展示服务能力</text>
 				</view>
-				<view class="benefit-item">
+				<view class="benefit-item benefit-item-last">
 					<text class="benefit-icon">03</text>
 					<text class="benefit-title">平台保障</text>
 					<text class="benefit-desc">在规范流程下提供安心服务</text>
@@ -119,7 +119,7 @@
 			@press="submit"
 		></facetof-button>
 		<text class="form-tip">提交后不可撤回为草稿；重新进入本页时，未提交内容会清空。</text>
-	</view>
+	</scroll-view>
 </template>
 
 <script setup lang="uts">
@@ -357,7 +357,7 @@
 		border-radius: 12px;
 	}
 
-	.benefit-item:last-child {
+	.benefit-item-last {
 		margin-right: 0;
 	}
 

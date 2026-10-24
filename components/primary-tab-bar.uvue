@@ -1,0 +1,100 @@
+<template>
+	<view class="primary-tab-bar">
+		<view class="tab-item" :class="active == 'home' ? 'tab-active' : ''" @click="selectTab('/pages/index/index')">
+			<text class="tab-icon" :class="active == 'home' ? 'tab-icon-active' : ''">⌂</text>
+			<text class="tab-label" :class="active == 'home' ? 'tab-label-active' : ''">首页</text>
+		</view>
+		<view class="tab-item" :class="active == 'moments' ? 'tab-active' : ''" @click="selectTab('/pages/moments/moments')">
+			<text class="tab-icon" :class="active == 'moments' ? 'tab-icon-active' : ''">◫</text>
+			<text class="tab-label" :class="active == 'moments' ? 'tab-label-active' : ''">动态</text>
+		</view>
+		<view class="tab-item" :class="active == 'news' ? 'tab-active' : ''" @click="selectTab('/pages/news/news')">
+			<text class="tab-icon" :class="active == 'news' ? 'tab-icon-active' : ''">◇</text>
+			<text class="tab-label" :class="active == 'news' ? 'tab-label-active' : ''">资讯</text>
+		</view>
+		<view class="tab-item" :class="active == 'messages' ? 'tab-active' : ''" @click="selectTab('/pages/messages/messages')">
+			<view class="message-icon-wrap">
+				<text class="tab-icon" :class="active == 'messages' ? 'tab-icon-active' : ''">○</text>
+				<view class="message-dot"></view>
+			</view>
+			<text class="tab-label" :class="active == 'messages' ? 'tab-label-active' : ''">消息</text>
+		</view>
+		<view class="tab-item" :class="active == 'profile' ? 'tab-active' : ''" @click="selectTab('/pages/profile/profile')">
+			<text class="tab-icon" :class="active == 'profile' ? 'tab-icon-active' : ''">●</text>
+			<text class="tab-label" :class="active == 'profile' ? 'tab-label-active' : ''">我的</text>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	defineProps({
+		active: {
+			type: String,
+			default: 'home'
+		}
+	})
+
+	const emit = defineEmits(['change'])
+
+	function selectTab(route: string) {
+		emit('change', route)
+	}
+</script>
+
+<style>
+	.primary-tab-bar {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		height: 64px;
+		flex-direction: row;
+		background-color: #FFFFFF;
+		border-top: 1px solid #F5DED5;
+	}
+
+	.tab-item {
+		flex: 1;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.tab-icon {
+		font-size: 20px;
+		line-height: 22px;
+		color: #756B66;
+	}
+
+	.tab-label {
+		margin-top: 2px;
+		font-size: 10px;
+		color: #756B66;
+	}
+
+	.tab-icon-active {
+		color: #FD5A6B;
+	}
+
+	.tab-label-active {
+		color: #FD5A6B;
+	}
+
+	.message-icon-wrap {
+		position: relative;
+		width: 24px;
+		height: 22px;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.message-dot {
+		position: absolute;
+		top: 0;
+		right: 0;
+		width: 7px;
+		height: 7px;
+		background-color: #FD5A6B;
+		border: 1px solid #FFFFFF;
+		border-radius: 50%;
+	}
+</style>
