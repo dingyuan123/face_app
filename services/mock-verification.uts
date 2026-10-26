@@ -1,0 +1,25 @@
+import { ActionOutcome } from '../types/models.uts'
+
+export function submitIdVerification(realName: string, idNumber: string): ActionOutcome {
+  const name = realName.trim()
+  const id = idNumber.trim()
+  if (name.length < 2) {
+    return {
+      ok: false,
+      code: 'INVALID_REAL_NAME',
+      message: '请输入本人真实姓名'
+    }
+  }
+  if (id.length != 18) {
+    return {
+      ok: false,
+      code: 'INVALID_ID_NUMBER',
+      message: '请输入 18 位身份证号码'
+    }
+  }
+  return {
+    ok: true,
+    code: 'VERIFICATION_SUBMITTED',
+    message: '认证资料已提交，等待核验'
+  }
+}

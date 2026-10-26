@@ -1,0 +1,523 @@
+<template>
+	<view class="page">
+		<scroll-view class="page-scroll" direction="vertical" :show-scrollbar="false">
+			<view class="page-content">
+				<view class="nav-bar">
+					<view class="nav-button" @click="goBack">
+						<text class="nav-icon">‹</text>
+					</view>
+					<text class="nav-title">发布动态</text>
+					<view class="nav-placeholder"></view>
+				</view>
+
+				<view class="media-card">
+					<view class="media-head">
+						<text class="section-title">添加图片或视频</text>
+						<text class="section-count">{{ images.length + (videoUrl.length > 0 ? 1 : 0) }}/9</text>
+					</view>
+
+					<view class="media-grid">
+						<view v-for="(image, index) in images" :key="image" class="media-preview">
+							<image class="preview-image" :src="image" mode="aspectFill"></image>
+							<view class="remove-button" @click="removeImage(index)">
+								<text class="remove-text">×</text>
+							</view>
+						</view>
+
+						<view v-if="videoUrl.length > 0" class="media-preview">
+							<image class="preview-image" src="/static/content/billiards.png" mode="aspectFill"></image>
+							<view class="video-label">
+								<text class="video-label-text">视频</text>
+							</view>
+							<view class="remove-button" @click="removeVideo">
+								<text class="remove-text">×</text>
+							</view>
+						</view>
+
+						<view v-if="images.length + (videoUrl.length > 0 ? 1 : 0) < 9" class="add-media" @click="chooseMedia">
+							<text class="add-plus">＋</text>
+							<text class="add-text">添加媒体</text>
+						</view>
+					</view>
+
+					<view class="media-actions">
+						<view class="media-action" @click="chooseImages">
+							<text class="media-action-icon">▧</text>
+							<text class="media-action-text">图片</text>
+						</view>
+						<view class="media-action" @click="chooseVideo">
+							<text class="media-action-icon">▶</text>
+							<text class="media-action-text">视频</text>
+						</view>
+					</view>
+				</view>
+
+				<view class="form-card">
+					<text class="section-title">分享此刻</text>
+					<textarea
+						class="content-input"
+						:value="content"
+						maxlength="500"
+						placeholder="记录你此刻的心情、见闻或体验…"
+						placeholder-class="content-placeholder"
+						@input="onContentInput"
+					></textarea>
+					<text class="content-count">{{ content.length }}/500</text>
+				</view>
+
+				<view class="setting-card">
+					<view class="setting-row" @click="chooseService">
+						<view class="setting-main">
+							<text class="setting-label">关联服务</text>
+							<text class="setting-value">{{ serviceName }}</text>
+						</view>
+						<text class="setting-arrow">›</text>
+					</view>
+					<view class="setting-divider"></view>
+					<view class="visibility-row">
+						<text class="setting-label">可见范围</text>
+						<view class="visibility-options">
+							<view class="visibility-option" :class="visibility == '公开' ? 'visibility-active' : ''" @click="visibility = '公开'">
+								<text class="visibility-dot" :class="visibility == '公开' ? 'visibility-dot-active' : ''">{{ visibility == '公开' ? '●' : '○' }}</text>
+								<text class="visibility-text" :class="visibility == '公开' ? 'visibility-text-active' : ''">公开</text>
+							</view>
+							<view class="visibility-option" :class="visibility == '仅粉丝' ? 'visibility-active' : ''" @click="visibility = '仅粉丝'">
+								<text class="visibility-dot" :class="visibility == '仅粉丝' ? 'visibility-dot-active' : ''">{{ visibility == '仅粉丝' ? '●' : '○' }}</text>
+								<text class="visibility-text" :class="visibility == '仅粉丝' ? 'visibility-text-active' : ''">仅粉丝</text>
+							</view>
+						</view>
+					</view>
+				</view>
+
+				<view class="policy-row">
+					<view class="policy-check">✓</view>
+					<text class="policy-text">发布内容应真实友善，不包含隐私和违法信息</text>
+				</view>
+				<view class="bottom-space"></view>
+			</view>
+		</scroll-view>
+
+		<view class="action-bar">
+			<view class="publish-button" :class="canPublish ? '' : 'publish-disabled'" @click="publish">
+				<text class="publish-text">发布</text>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { computed } from 'vue'
+	import { publishMoment as publishMomentRequest } from '../../services/service-container.uts'
+
+	const images = ref<string[]>([])
+	const videoUrl = ref('')
+	const content = ref('')
+	const serviceName = ref('台球助教 · 新手体验')
+	const visibility = ref('公开')
+
+	const canPublish = computed(() : boolean => {
+		return content.value.trim().length > 0 || images.value.length > 0 || videoUrl.value.length > 0
+	})
+
+	function onContentInput(event: InputEvent) {
+		content.value = event.detail.value
+	}
+
+	function chooseMedia() {
+		chooseImages()
+	}
+
+	function chooseImages() {
+		uni.chooseImage({
+			count: 9,
+			success: (result) => {
+				const next: Array<string> = []
+				for (let i = 0; i < result.tempFilePaths.length; i++) {
+					next.push(result.tempFilePaths[i])
+				}
+				images.value = next
+				videoUrl.value = ''
+			}
+		})
+	}
+
+	function chooseVideo() {
+		uni.chooseVideo({
+			success: (result) => {
+				videoUrl.value = result.tempFilePath
+				images.value = []
+			}
+		})
+	}
+
+	function removeImage(index: number) {
+		const next: Array<string> = []
+		for (let i = 0; i < images.value.length; i++) {
+			if (i != index) {
+				next.push(images.value[i])
+			}
+		}
+		images.value = next
+	}
+
+	function removeVideo() {
+		videoUrl.value = ''
+	}
+
+	function chooseService() {
+		uni.showToast({
+			title: '关联服务选择将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function publish() {
+		if (!canPublish.value) {
+			uni.showToast({
+				title: '请先添加图片、视频或文字',
+				position: 'bottom',
+				icon: 'none'
+			})
+			return
+		}
+		const result = publishMomentRequest({
+			images: images.value,
+			video: videoUrl.value,
+			content: content.value,
+			serviceId: 'service-billiards-001',
+			visibility: visibility.value
+		})
+		uni.showToast({
+			title: result.message,
+			position: 'bottom',
+			icon: result.ok ? 'success' : 'error'
+		})
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/moments/mine'
+				})
+			}
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-scroll {
+		flex: 1;
+		min-height: 0;
+	}
+
+	.page-content {
+		padding-bottom: 170rpx;
+	}
+
+	.nav-bar {
+		height: 128rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32rpx;
+		background-color: #FFF9F5;
+	}
+
+	.nav-button,
+	.nav-placeholder {
+		width: 76rpx;
+		height: 76rpx;
+	}
+
+	.nav-button {
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 60rpx;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.media-card,
+	.form-card,
+	.setting-card {
+		margin: 20rpx 32rpx 0;
+		padding: 26rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.media-head,
+	.setting-row,
+	.visibility-row {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.section-title {
+		font-size: 34rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.section-count {
+		font-size: 23rpx;
+		color: #8D817B;
+	}
+
+	.media-grid {
+		flex-direction: row;
+		flex-wrap: wrap;
+		margin-top: 20rpx;
+	}
+
+	.media-preview,
+	.add-media {
+		position: relative;
+		width: 196rpx;
+		height: 196rpx;
+		margin: 0 12rpx 12rpx 0;
+		border-radius: 18rpx;
+		overflow: hidden;
+	}
+
+	.preview-image {
+		width: 196rpx;
+		height: 196rpx;
+	}
+
+	.add-media {
+		align-items: center;
+		justify-content: center;
+		background-color: #FFF1E8;
+		border: 1rpx dashed #F1B8BE;
+	}
+
+	.add-plus {
+		font-size: 42rpx;
+		color: $facetof-color-primary;
+	}
+
+	.add-text {
+		margin-top: 6rpx;
+		font-size: 21rpx;
+		color: $facetof-color-primary;
+	}
+
+	.video-label {
+		position: absolute;
+		left: 10rpx;
+		bottom: 10rpx;
+		padding: 5rpx 9rpx;
+		background-color: rgba(31, 26, 23, 0.58);
+		border-radius: 999rpx;
+	}
+
+	.video-label-text {
+		font-size: 19rpx;
+		color: #FFFFFF;
+	}
+
+	.remove-button {
+		position: absolute;
+		top: 8rpx;
+		right: 8rpx;
+		width: 32rpx;
+		height: 32rpx;
+		align-items: center;
+		justify-content: center;
+		background-color: rgba(31, 26, 23, 0.58);
+		border-radius: 50%;
+	}
+
+	.remove-text {
+		font-size: 24rpx;
+		color: #FFFFFF;
+	}
+
+	.media-actions {
+		flex-direction: row;
+		margin-top: 16rpx;
+	}
+
+	.media-action {
+		flex-direction: row;
+		align-items: center;
+		margin-right: 26rpx;
+	}
+
+	.media-action-icon {
+		margin-right: 7rpx;
+		font-size: 28rpx;
+		color: $facetof-color-primary;
+	}
+
+	.media-action-text {
+		font-size: 23rpx;
+		color: $facetof-color-primary;
+	}
+
+	.content-input {
+		height: 260rpx;
+		margin-top: 18rpx;
+		padding: 22rpx;
+		font-size: 27rpx;
+		line-height: 42rpx;
+		color: #253047;
+		background-color: #FFF1E8;
+		border: 1rpx solid #F5DED5;
+		border-radius: 20rpx;
+	}
+
+	.content-placeholder {
+		font-size: 27rpx;
+		color: #B8ADA8;
+	}
+
+	.content-count {
+		margin-top: 8rpx;
+		text-align: right;
+		font-size: 21rpx;
+		color: #A1958F;
+	}
+
+	.setting-row {
+		height: 92rpx;
+	}
+
+	.setting-main {
+		flex: 1;
+	}
+
+	.setting-label {
+		font-size: 27rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.setting-value {
+		margin-top: 8rpx;
+		font-size: 23rpx;
+		color: #8D817B;
+	}
+
+	.setting-arrow {
+		font-size: 38rpx;
+		color: #8D817B;
+	}
+
+	.setting-divider {
+		height: 1rpx;
+		margin: 8rpx 0;
+		background-color: #F5DED5;
+	}
+
+	.visibility-row {
+		height: 92rpx;
+	}
+
+	.visibility-options {
+		flex-direction: row;
+	}
+
+	.visibility-option {
+		flex-direction: row;
+		align-items: center;
+		margin-left: 22rpx;
+	}
+
+	.visibility-dot {
+		margin-right: 7rpx;
+		font-size: 24rpx;
+		color: #B8ADA8;
+	}
+
+	.visibility-dot-active {
+		color: $facetof-color-primary;
+	}
+
+	.visibility-text {
+		font-size: 23rpx;
+		color: #8D817B;
+	}
+
+	.visibility-text-active {
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.policy-row {
+		flex-direction: row;
+		align-items: center;
+		margin: 24rpx 36rpx 0;
+	}
+
+	.policy-check {
+		width: 34rpx;
+		height: 34rpx;
+		align-items: center;
+		justify-content: center;
+		font-size: 20rpx;
+		color: #FFFFFF;
+		background-color: $facetof-color-primary;
+		border-radius: 50%;
+	}
+
+	.policy-text {
+		margin-left: 12rpx;
+		font-size: 22rpx;
+		color: #8D817B;
+	}
+
+	.action-bar {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		padding: 18rpx 32rpx;
+		padding-bottom: var(--uni-safe-area-inset-bottom);
+		background-color: #FFFFFF;
+		border-top: 1rpx solid #F5DED5;
+	}
+
+	.publish-button {
+		height: 92rpx;
+		align-items: center;
+		justify-content: center;
+		background-color: $facetof-color-primary;
+		border-radius: 18rpx;
+	}
+
+	.publish-disabled {
+		background-color: #EFE6E1;
+	}
+
+	.publish-text {
+		font-size: 32rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.bottom-space {
+		height: 16rpx;
+	}
+</style>

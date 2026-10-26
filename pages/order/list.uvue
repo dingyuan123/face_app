@@ -93,7 +93,7 @@
 	import { sessionState } from '../../state/session-state.uts'
 	import { openLogin, ORDER_LIST_ROUTE } from '../../router/route-guard.uts'
 
-	const tabs = ['全部', '待支付', '待接单', '待履约', '进行中', '已完成', '已取消']
+	const tabs = ['全部', '待支付', '待接单', '待履约', '进行中', '待评价', '已完成', '已取消']
 	const activeTab = ref('全部')
 	const orders = ref<OrderListItem[]>(getOrderList('全部'))
 
@@ -127,20 +127,26 @@
 	}
 
 	function actionClass(status: string): string {
-		if (status == '待支付') {
+		if (status == '待支付' || status == '待评价') {
 			return 'action-primary'
 		}
 		return 'action-outline'
 	}
 
 	function actionTextClass(status: string): string {
-		return status == '待支付' ? 'action-primary-text' : 'action-outline-text'
+		return status == '待支付' || status == '待评价' ? 'action-primary-text' : 'action-outline-text'
 	}
 
 	function handleOrder(order: OrderListItem) {
 		if (order.status == '待支付') {
 			uni.navigateTo({
 				url: '/pages/order/confirm?serviceId=service-billiards-001'
+			})
+			return
+		}
+		if (order.status == '待评价') {
+			uni.navigateTo({
+				url: '/pages/review/review?orderId=' + encodeURIComponent(order.id)
 			})
 			return
 		}

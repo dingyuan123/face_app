@@ -229,11 +229,7 @@
 			openMomentDetail('moment-001')
 			return
 		}
-		uni.showToast({
-			title: '资讯详情将在后续阶段接入',
-			position: 'bottom',
-			icon: 'none'
-		})
+		openNewsDetail(item.id)
 	}
 
 	function handleSecondary(item: SearchResultItem) {
@@ -263,6 +259,12 @@
 	function openMomentDetail(momentId: string) {
 		uni.navigateTo({
 			url: '/pages/moment/detail?momentId=' + encodeURIComponent(momentId)
+		})
+	}
+
+	function openNewsDetail(newsId: string) {
+		uni.navigateTo({
+			url: '/pages/news/detail?newsId=' + encodeURIComponent(newsId)
 		})
 	}
 </script>

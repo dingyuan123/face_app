@@ -103,10 +103,8 @@
 	}
 
 	function openThread(id: string) {
-		uni.showToast({
-			title: '聊天详情页将在后续阶段接入',
-			position: 'bottom',
-			icon: 'none'
+		uni.navigateTo({
+			url: '/pages/chat/detail?threadId=' + encodeURIComponent(id)
 		})
 	}
 

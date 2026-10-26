@@ -1,0 +1,65 @@
+import { CouponItem } from '../types/models.uts'
+
+export function getCouponItems(status: string): Array<CouponItem> {
+  const available: Array<CouponItem> = [
+    {
+      id: 'coupon-001',
+      amount: '¥30',
+      threshold: '满150元可用',
+      title: '台球助教券',
+      scope: '泸州同城 · 台球助教服务',
+      dateRange: '2026.10.01 — 2026.10.31',
+      status: '可使用'
+    },
+    {
+      id: 'coupon-002',
+      amount: '¥20',
+      threshold: '满100元可用',
+      title: '咖啡陪伴券',
+      scope: '泸州同城 · 咖啡陪伴服务',
+      dateRange: '2026.10.10 — 2026.11.09',
+      status: '可使用'
+    },
+    {
+      id: 'coupon-003',
+      amount: '¥15',
+      threshold: '满80元可用',
+      title: '城市漫步券',
+      scope: '泸州同城 · 城市漫步服务',
+      dateRange: '2026.10.15 — 2026.11.14',
+      status: '可使用'
+    }
+  ]
+
+  const expired: Array<CouponItem> = [
+    {
+      id: 'coupon-004',
+      amount: '¥30',
+      threshold: '满150元可用',
+      title: '台球助教券',
+      scope: '泸州同城 · 台球助教服务',
+      dateRange: '2026.09.16 — 2026.10.15',
+      status: '已过期'
+    },
+    {
+      id: 'coupon-005',
+      amount: '¥20',
+      threshold: '满100元可用',
+      title: '咖啡陪伴券',
+      scope: '泸州同城 · 咖啡陪伴服务',
+      dateRange: '2026.09.01 — 2026.09.30',
+      status: '已过期'
+    },
+    {
+      id: 'coupon-006',
+      amount: '¥15',
+      threshold: '满80元可用',
+      title: '城市漫步券',
+      scope: '泸州同城 · 城市漫步服务',
+      dateRange: '2026.08.25 — 2026.09.23',
+      status: '已过期'
+    }
+  ]
+
+  return status == '已过期' ? expired : available
+}

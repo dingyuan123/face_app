@@ -57,27 +57,34 @@
 </template>
 
 <script setup lang="uts">
-		import StatusPill from '../../components/status-pill.uvue'
+		import SegmentTabs from '../../components/segment-tabs.uvue'
+	import StatusPill from '../../components/status-pill.uvue'
 	import { getNewsFeed } from '../../services/service-container.uts'
 	import type { NewsArticle } from '../../types/models.uts'
 
 	const tabs = ['推荐', '同城', '安全', '活动']
 	const selectedTab = ref('推荐')
 	const articles = ref<NewsArticle[]>([])
+	const listArticles = ref<NewsArticle[]>([])
 
 	function refreshArticles() {
-		articles.value = getNewsFeed(selectedTab.value)
+		const result = getNewsFeed(selectedTab.value)
+		articles.value = result
+		const next: Array<NewsArticle> = []
+		if (selectedTab.value == '推荐' && result.length > 1) {
+			for (let i = 1; i < result.length; i++) {
+				next.push(result[i])
+			}
+		} else {
+			for (let i = 0; i < result.length; i++) {
+				next.push(result[i])
+			}
+		}
+		listArticles.value = next
 	}
 
 	onShow(() => {
 		refreshArticles()
-	})
-
-	const listArticles = computed(() : Array<NewsArticle> => {
-		if (selectedTab.value == '推荐' && articles.value.length > 1) {
-			return articles.value.slice(1)
-		}
-		return articles.value
 	})
 
 	function changeTab(tab: string) {
@@ -94,10 +101,8 @@
 	}
 
 	function openArticle(id: string) {
-		uni.showToast({
-			title: '资讯详情页将在后续阶段接入',
-			position: 'bottom',
-			icon: 'none'
+		uni.navigateTo({
+			url: '/pages/news/detail?newsId=' + encodeURIComponent(id)
 		})
 	}
 

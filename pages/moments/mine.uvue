@@ -1,0 +1,402 @@
+<template>
+	<scroll-view class="page" direction="vertical" :show-scrollbar="false">
+		<view class="page-content">
+			<view class="nav-bar">
+				<view class="nav-button" @click="goBack">
+					<image class="nav-icon-image" src="/static/moments/icon-back.png" mode="aspectFit"></image>
+				</view>
+				<text class="nav-title">我的动态</text>
+				<view class="publish-button" @click="publishMoment">
+					<image class="publish-plus-image" src="/static/moments/icon-plus.png" mode="aspectFit"></image>
+					<text class="publish-text">发布动态</text>
+				</view>
+			</view>
+
+			<view class="stats-card">
+				<view class="stat-item">
+					<text class="stat-value stat-highlight">{{ items.length }}</text>
+					<text class="stat-label">已发布</text>
+				</view>
+				<view class="stat-item">
+					<text class="stat-value">{{ likeTotal }}</text>
+					<text class="stat-label">获赞</text>
+				</view>
+				<view class="stat-item">
+					<text class="stat-value">{{ commentTotal }}</text>
+					<text class="stat-label">评论</text>
+				</view>
+			</view>
+
+			<view class="section-head">
+				<text class="section-title">生活里的小美好</text>
+				<text class="section-meta">{{ items.length == 0 ? '0 条动态' : '最新发布' }}</text>
+			</view>
+
+			<view v-if="items.length == 0" class="empty-state">
+				<image class="empty-image" src="/static/moments/empty.png" mode="aspectFit"></image>
+				<text class="empty-title">还没有发布动态</text>
+				<text class="empty-desc">练球的进步、咖啡的香气、漫步的风景，</text>
+				<text class="empty-desc">把值得记住的日常，留在这里。</text>
+				<view class="publish-empty-button" @click="publishMoment">
+					<image class="publish-empty-plus-image" src="/static/moments/icon-plus.png" mode="aspectFit"></image>
+					<text class="publish-empty-text">发布第一条动态</text>
+				</view>
+				<text class="empty-tip">用图文或视频，记录你的第一份美好</text>
+			</view>
+
+			<view v-else class="moment-grid">
+				<view v-for="(item, index) in items" :key="item.id" class="moment-card" :class="index % 2 == 1 ? 'moment-card-right' : ''" @click="openMoment(item.id)">
+					<view class="cover-wrap">
+						<image class="moment-cover" :src="item.coverImage" mode="aspectFill"></image>
+						<view class="media-badge">
+							<image class="media-icon-image" :src="item.mediaType == 'video' ? '/static/moments/icon-video.png' : '/static/moments/icon-images.png'" mode="aspectFit"></image>
+							<text class="media-label">{{ item.mediaLabel }}</text>
+						</view>
+					</view>
+					<text class="moment-title">{{ item.title }}</text>
+					<text class="moment-time">{{ item.publishedAt }}</text>
+					<view class="moment-stats">
+						<view class="stat-action">
+							<image class="stat-icon-image" :src="index == 0 ? '/static/moments/icon-heart-filled.png' : '/static/moments/icon-heart-outline.png'" mode="aspectFit"></image>
+							<text class="stat-text">{{ item.likeCount }}</text>
+						</view>
+						<view class="stat-action">
+							<image class="stat-icon-image comment-icon-image" src="/static/moments/icon-comment.png" mode="aspectFit"></image>
+							<text class="stat-text">{{ item.commentCount }}</text>
+						</view>
+					</view>
+				</view>
+			</view>
+
+			<text class="brand-footer">FaceTo · 见面聊，安心见</text>
+			<view class="bottom-space"></view>
+		</view>
+	</scroll-view>
+</template>
+
+<script setup lang="uts">
+	import { computed } from 'vue'
+	import { getMyMomentItems } from '../../services/service-container.uts'
+	import type { MyMomentItem } from '../../types/models.uts'
+
+	const items = ref<MyMomentItem[]>(getMyMomentItems(false))
+
+	onLoad((options) => {
+		const emptyValue = options['empty'] as string
+		items.value = getMyMomentItems(emptyValue == '1' || emptyValue == 'true')
+	})
+
+	const likeTotal = computed(() : number => {
+		let total = 0
+		for (let i = 0; i < items.value.length; i++) {
+			total += items.value[i].likeCount
+		}
+		return total
+	})
+
+	const commentTotal = computed(() : number => {
+		let total = 0
+		for (let i = 0; i < items.value.length; i++) {
+			total += items.value[i].commentCount
+		}
+		return total
+	})
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/profile/profile'
+				})
+			}
+		})
+	}
+
+	function publishMoment() {
+		uni.navigateTo({
+			url: '/pages/moment/publish'
+		})
+	}
+
+	function openMoment(id: string) {
+		uni.navigateTo({
+			url: '/pages/moment/detail?momentId=' + encodeURIComponent(id.replace('my-moment-', 'moment-'))
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-content {
+		padding-bottom: 32rpx;
+	}
+
+	.nav-bar {
+		height: 128rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32rpx;
+		background-color: #FFF9F5;
+	}
+
+	.nav-button {
+		width: 76rpx;
+		height: 76rpx;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon-image {
+		width: 40rpx;
+		height: 45rpx;
+	}
+
+	.nav-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.publish-button {
+		height: 76rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+		padding: 0 22rpx;
+		background-color: $facetof-color-primary;
+		border-radius: 20rpx;
+	}
+
+	.publish-plus-image {
+		width: 28rpx;
+		height: 28rpx;
+		margin-right: 8rpx;
+	}
+
+	.publish-text {
+		font-size: 24rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.stats-card {
+		flex-direction: row;
+		align-items: center;
+		margin: 22rpx 32rpx 0;
+		padding: 30rpx 20rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.stat-item {
+		flex: 1;
+		align-items: center;
+	}
+
+	.stat-value {
+		font-size: 48rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.stat-highlight {
+		color: $facetof-color-primary;
+	}
+
+	.stat-label {
+		margin-top: 12rpx;
+		font-size: 24rpx;
+		color: #8D817B;
+	}
+
+	.section-head {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		margin: 32rpx 32rpx 0;
+	}
+
+	.section-title {
+		font-size: 36rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.section-meta {
+		font-size: 24rpx;
+		color: #8D817B;
+	}
+
+	.moment-grid {
+		flex-direction: row;
+		flex-wrap: wrap;
+		margin: 18rpx 32rpx 0;
+	}
+
+	.moment-card {
+		width: 332rpx;
+		margin-bottom: 18rpx;
+		padding: 12rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 22rpx;
+	}
+
+	.moment-card-right {
+		margin-left: 18rpx;
+	}
+
+	.cover-wrap {
+		position: relative;
+		width: 100%;
+		height: 340rpx;
+		overflow: hidden;
+		border-radius: 18rpx;
+	}
+
+	.moment-cover {
+		width: 100%;
+		height: 340rpx;
+	}
+
+	.media-badge {
+		position: absolute;
+		top: 12rpx;
+		right: 12rpx;
+		height: 38rpx;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 10rpx;
+		background-color: rgba(31, 26, 23, 0.55);
+		border-radius: 999rpx;
+	}
+
+	.media-icon-image {
+		width: 22rpx;
+		height: 22rpx;
+	}
+
+	.media-label {
+		margin-left: 5rpx;
+		font-size: 18rpx;
+		color: #FFFFFF;
+	}
+
+	.moment-title {
+		margin-top: 18rpx;
+		font-size: 28rpx;
+		font-weight: 700;
+		line-height: 40rpx;
+		color: #253047;
+	}
+
+	.moment-time {
+		margin-top: 10rpx;
+		font-size: 21rpx;
+		color: #8D817B;
+	}
+
+	.moment-stats {
+		flex-direction: row;
+		align-items: center;
+		margin-top: 14rpx;
+	}
+
+	.stat-action {
+		flex-direction: row;
+		align-items: center;
+		margin-right: 24rpx;
+	}
+
+	.stat-icon-image {
+		width: 28rpx;
+		height: 28rpx;
+	}
+
+	.comment-icon-image {
+		width: 28rpx;
+		height: 28rpx;
+	}
+
+	.stat-text {
+		margin-left: 7rpx;
+		font-size: 20rpx;
+		color: #8D817B;
+	}
+
+	.empty-state {
+		min-height: 980rpx;
+		padding: 80rpx 48rpx 40rpx;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.empty-image {
+		width: 420rpx;
+		height: 344rpx;
+	}
+
+	.empty-title {
+		margin-top: 38rpx;
+		font-size: 38rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.empty-desc {
+		margin-top: 12rpx;
+		font-size: 26rpx;
+		line-height: 40rpx;
+		text-align: center;
+		color: #8D817B;
+	}
+
+	.publish-empty-button {
+		height: 92rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+		margin-top: 32rpx;
+		padding: 0 36rpx;
+		background-color: $facetof-color-primary;
+		border-radius: 18rpx;
+	}
+
+	.publish-empty-plus-image {
+		width: 32rpx;
+		height: 32rpx;
+		margin-right: 10rpx;
+	}
+
+	.publish-empty-text {
+		font-size: 30rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.empty-tip {
+		margin-top: 18rpx;
+		font-size: 22rpx;
+		color: #8D817B;
+	}
+
+	.brand-footer {
+		margin-top: 34rpx;
+		text-align: center;
+		font-size: 26rpx;
+		color: #253047;
+	}
+
+	.bottom-space {
+		height: 32rpx;
+	}
+</style>

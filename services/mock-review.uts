@@ -1,0 +1,16 @@
+import { ActionOutcome } from '../types/models.uts'
+
+export function submitReview(rating: number, tags: string[], content: string, anonymous: boolean): ActionOutcome {
+  if (rating < 1) {
+    return {
+      ok: false,
+      code: 'RATING_REQUIRED',
+      message: '请先为服务打分'
+    }
+  }
+  return {
+    ok: true,
+    code: 'REVIEW_SUBMITTED',
+    message: '评价已提交，感谢你的真实反馈'
+  }
+}

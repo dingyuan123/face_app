@@ -1,0 +1,16 @@
+import { ActionOutcome, ProfileEditDraft } from '../types/models.uts'
+
+export function saveProfileDraft(draft: ProfileEditDraft): ActionOutcome {
+  if (draft.nickname.trim().length == 0) {
+    return {
+      ok: false,
+      code: 'NICKNAME_REQUIRED',
+      message: '请输入昵称'
+    }
+  }
+  return {
+    ok: true,
+    code: 'PROFILE_SAVED',
+    message: '资料已保存（开发 Mock）'
+  }
+}

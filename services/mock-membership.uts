@@ -1,0 +1,49 @@
+import { MembershipSummary } from '../types/models.uts'
+
+export function getMembershipSummary(): MembershipSummary {
+  return {
+    membershipName: '金卡会员',
+    expireAt: '2026.11.16',
+    status: '生效中',
+    benefits: [
+      {
+        id: 'benefit-001',
+        title: '优先推荐',
+        description: '在推荐列表中获得优先展示',
+        iconType: 'recommend'
+      },
+      {
+        id: 'benefit-002',
+        title: '专属客服',
+        description: '会员问题专属咨询入口',
+        iconType: 'support'
+      },
+      {
+        id: 'benefit-003',
+        title: '会员折扣券',
+        description: '领取会员券，使用条件以券面为准',
+        iconType: 'coupon'
+      }
+    ],
+    plans: [
+      {
+        id: 'plan-month',
+        title: '月卡',
+        price: '¥28',
+        duration: '有效期 1 个月'
+      },
+      {
+        id: 'plan-quarter',
+        title: '季卡',
+        price: '¥78',
+        duration: '有效期 3 个月'
+      },
+      {
+        id: 'plan-year',
+        title: '年卡',
+        price: '¥288',
+        duration: '有效期 12 个月'
+      }
+    ]
+  }
+}

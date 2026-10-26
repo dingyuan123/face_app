@@ -1,0 +1,354 @@
+<template>
+	<scroll-view class="page" direction="vertical" :show-scrollbar="false">
+		<view class="page-content">
+			<view class="nav-bar">
+				<view class="nav-button" @click="goBack">
+					<text class="nav-icon">‹</text>
+				</view>
+				<text class="nav-title">我的优惠券</text>
+				<view class="nav-placeholder"></view>
+			</view>
+
+			<view class="coupon-tabs">
+				<view
+					v-for="tab in tabs"
+					:key="tab"
+					class="coupon-tab-item"
+					:class="activeTab == tab ? 'coupon-tab-item-active' : ''"
+					@click="changeTab(tab)"
+				>
+					<text class="coupon-tab-text" :class="activeTab == tab ? 'coupon-tab-text-active' : ''">{{ tab }}</text>
+					<view v-if="activeTab == tab" class="coupon-tab-indicator"></view>
+				</view>
+			</view>
+
+			<view class="notice-row">
+				<text class="notice-text">{{ activeTab == '可用 3' ? '好好见面，优惠相伴' : '已过期优惠券不可使用' }}</text>
+				<text class="notice-count">{{ activeTab == '可用 3' ? '共 3 张可用' : '共 3 张已过期' }}</text>
+			</view>
+
+			<view class="coupon-list">
+				<view v-for="coupon in coupons" :key="coupon.id" class="coupon-card" :class="coupon.status == '已过期' ? 'coupon-card-expired' : ''">
+					<view class="coupon-top">
+						<view class="coupon-amount">
+							<view class="amount-main">
+							<text class="amount-symbol">¥</text>
+							<text class="amount-value">{{ coupon.amount.replace('¥', '') }}</text>
+						</view>
+						<text class="amount-threshold">{{ coupon.threshold }}</text>
+						</view>
+						<view class="coupon-divider"></view>
+						<view class="coupon-detail">
+							<view class="coupon-title-row">
+								<text class="coupon-title">{{ coupon.title }}</text>
+								<view class="coupon-status" :class="coupon.status == '已过期' ? 'status-expired' : 'status-available'">
+									<text class="coupon-status-text" :class="coupon.status == '已过期' ? 'coupon-status-text-expired' : ''">{{ coupon.status }}</text>
+								</view>
+							</view>
+							<text class="coupon-label">适用范围</text>
+							<text class="coupon-scope">{{ coupon.scope }}</text>
+						</view>
+					</view>
+					<view class="coupon-date-row">
+						<text class="date-label">有效期</text>
+						<text class="date-value">{{ coupon.dateRange }}</text>
+					</view>
+				</view>
+			</view>
+
+			<view class="policy-note">
+				<text class="policy-icon">ⓘ</text>
+				<view class="policy-copy">
+					<text class="policy-text">券面内容仅为设计示例，非平台已确认政策。</text>
+					<text class="policy-text">实际优惠与使用规则以订单页展示为准。</text>
+				</view>
+			</view>
+
+			<text class="brand-footer">FaceTo · 见面聊，安心见</text>
+			<view class="bottom-space"></view>
+		</view>
+	</scroll-view>
+</template>
+
+<script setup lang="uts">
+	import { getCouponItems } from '../../services/service-container.uts'
+	import type { CouponItem } from '../../types/models.uts'
+
+	const tabs = ['可用 3', '已过期 3']
+	const activeTab = ref('可用 3')
+	const coupons = ref<CouponItem[]>(getCouponItems('可用'))
+
+	function changeTab(tab: string) {
+		activeTab.value = tab
+		coupons.value = getCouponItems(tab.indexOf('已过期') >= 0 ? '已过期' : '可用')
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/profile/profile'
+				})
+			}
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-content {
+		padding-bottom: 32rpx;
+	}
+
+	.nav-bar {
+		height: 128rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32rpx;
+		background-color: #FFF9F5;
+	}
+
+	.nav-button,
+	.nav-placeholder {
+		width: 76rpx;
+		height: 76rpx;
+	}
+
+	.nav-button {
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 60rpx;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.coupon-tabs {
+		flex-direction: row;
+		background-color: #FFF9F5;
+		padding: 0 32rpx;
+	}
+
+	.coupon-tab-item {
+		position: relative;
+		flex: 1;
+		height: 88rpx;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.coupon-tab-text {
+		font-size: 30rpx;
+		font-weight: 600;
+		color: #8D817B;
+	}
+
+	.coupon-tab-text-active {
+		color: $facetof-color-primary;
+	}
+
+	.coupon-tab-indicator {
+		position: absolute;
+		bottom: 8rpx;
+		width: 48rpx;
+		height: 6rpx;
+		background-color: $facetof-color-primary;
+		border-radius: 999rpx;
+	}
+
+	.notice-row {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 28rpx 32rpx;
+	}
+
+	.notice-text {
+		font-size: 28rpx;
+		color: #253047;
+	}
+
+	.notice-count {
+		font-size: 24rpx;
+		color: #8D817B;
+	}
+
+	.coupon-list {
+		margin: 0 32rpx;
+	}
+
+	.coupon-card {
+		margin-bottom: 24rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+		overflow: hidden;
+	}
+
+	.coupon-card-expired {
+		background-color: #EFE6E1;
+		border-color: #E5D8D1;
+		opacity: 0.58;
+	}
+
+	.coupon-top {
+		flex-direction: row;
+		padding: 30rpx 24rpx 26rpx;
+	}
+
+	.coupon-amount {
+		width: 190rpx;
+		align-items: flex-start;
+	}
+
+	.amount-main {
+		flex-direction: row;
+		align-items: flex-end;
+	}
+
+	.amount-symbol {
+		margin-right: 6rpx;
+		font-size: 28rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.amount-value {
+		font-size: 66rpx;
+		font-weight: 700;
+		line-height: 72rpx;
+		color: #253047;
+	}
+
+	.amount-threshold {
+		margin-top: 10rpx;
+		font-size: 24rpx;
+		color: #8D817B;
+	}
+
+	.coupon-divider {
+		width: 1rpx;
+		margin: 0 22rpx;
+		border-left: 1rpx dashed #F1B8BE;
+	}
+
+	.coupon-detail {
+		flex: 1;
+	}
+
+	.coupon-title-row {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.coupon-title {
+		font-size: 32rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.coupon-status {
+		padding: 7rpx 12rpx;
+		border-radius: 999rpx;
+	}
+
+	.status-available {
+		background-color: #FFF1F2;
+	}
+
+	.status-expired {
+		background-color: #756B66;
+	}
+
+	.coupon-status-text {
+		font-size: 20rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.coupon-status-text-expired {
+		color: #FFFFFF;
+	}
+
+	.coupon-label {
+		margin-top: 14rpx;
+		font-size: 22rpx;
+		font-weight: 600;
+		color: $facetof-color-primary;
+	}
+
+	.coupon-scope {
+		margin-top: 10rpx;
+		font-size: 24rpx;
+		line-height: 34rpx;
+		color: #253047;
+	}
+
+	.coupon-date-row {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 22rpx 24rpx;
+		border-top: 1rpx dashed #F1B8BE;
+	}
+
+	.date-label {
+		font-size: 24rpx;
+		color: #8D817B;
+	}
+
+	.date-value {
+		font-size: 24rpx;
+		font-weight: 600;
+		color: #253047;
+	}
+
+	.policy-note {
+		flex-direction: row;
+		align-items: flex-start;
+		margin: 22rpx 36rpx 0;
+	}
+
+	.policy-icon {
+		margin-right: 10rpx;
+		font-size: 32rpx;
+		color: #8D817B;
+	}
+
+	.policy-copy {
+		flex: 1;
+	}
+
+	.policy-text {
+		font-size: 22rpx;
+		line-height: 34rpx;
+		color: #8D817B;
+	}
+
+	.brand-footer {
+		margin-top: 34rpx;
+		text-align: center;
+		font-size: 26rpx;
+		color: #253047;
+	}
+
+	.bottom-space {
+		height: 32rpx;
+	}
+</style>

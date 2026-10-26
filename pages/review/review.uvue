@@ -1,0 +1,480 @@
+<template>
+	<view class="page">
+		<scroll-view class="page-scroll" direction="vertical" :show-scrollbar="false">
+			<view class="page-content">
+				<view class="nav-bar">
+					<view class="nav-button" @click="goBack">
+						<text class="nav-icon">‹</text>
+					</view>
+					<text class="nav-title">发表评价</text>
+					<view class="nav-placeholder"></view>
+				</view>
+
+				<text class="intro">评价将帮助更多人做出选择</text>
+
+				<view class="provider-card">
+					<view class="provider-avatar">
+						<text class="provider-avatar-text">哲</text>
+					</view>
+					<view class="provider-main">
+						<text class="provider-name">阿哲</text>
+						<view class="verified-pill">
+							<text class="verified-text">✓ 已认证</text>
+						</view>
+						<text class="service-title">台球助教 · 新手体验</text>
+						<text class="service-meta">泸州 · 江阳区 · ¥68</text>
+					</view>
+				</view>
+
+				<view class="section">
+					<text class="section-title">这次服务体验如何？</text>
+					<text class="section-desc">点亮星星，为服务打分</text>
+					<view class="rating-row">
+						<view class="star-button" @click="setRating(1)">
+							<text class="star" :class="rating >= 1 ? 'star-active' : ''">★</text>
+						</view>
+						<view class="star-button" @click="setRating(2)">
+							<text class="star" :class="rating >= 2 ? 'star-active' : ''">★</text>
+						</view>
+						<view class="star-button" @click="setRating(3)">
+							<text class="star" :class="rating >= 3 ? 'star-active' : ''">★</text>
+						</view>
+						<view class="star-button" @click="setRating(4)">
+							<text class="star" :class="rating >= 4 ? 'star-active' : ''">★</text>
+						</view>
+						<view class="star-button" @click="setRating(5)">
+							<text class="star" :class="rating >= 5 ? 'star-active' : ''">★</text>
+						</view>
+					</view>
+					<text class="rating-label">{{ ratingLabel }}</text>
+				</view>
+
+				<view class="section">
+					<text class="section-title">哪些方面让你满意？</text>
+					<text class="section-desc">可多选，分享你的真实感受</text>
+					<view class="tag-wrap">
+						<view class="tag-button" :class="tagOne ? 'tag-button-active' : ''" @click="tagOne = !tagOne">
+							<text class="tag-check">{{ tagOne ? '✓' : '' }}</text>
+							<text class="tag-text">服务热情</text>
+						</view>
+						<view class="tag-button" :class="tagTwo ? 'tag-button-active' : ''" @click="tagTwo = !tagTwo">
+							<text class="tag-check">{{ tagTwo ? '✓' : '' }}</text>
+							<text class="tag-text">准时到达</text>
+						</view>
+						<view class="tag-button" :class="tagThree ? 'tag-button-active' : ''" @click="tagThree = !tagThree">
+							<text class="tag-check">{{ tagThree ? '✓' : '' }}</text>
+							<text class="tag-text">专业耐心</text>
+						</view>
+						<view class="tag-button" :class="tagFour ? 'tag-button-active' : ''" @click="tagFour = !tagFour">
+							<text class="tag-check">{{ tagFour ? '✓' : '' }}</text>
+							<text class="tag-text">气氛好</text>
+						</view>
+					</view>
+				</view>
+
+				<view class="section">
+					<text class="section-title">写下你的评价</text>
+					<textarea
+						class="review-input"
+						:value="content"
+						maxlength="200"
+						placeholder="说说服务中的细节，帮助其他用户参考～"
+						placeholder-class="input-placeholder"
+						@input="onContentInput"
+					></textarea>
+					<text class="count">{{ content.length }}/200</text>
+				</view>
+
+				<view class="anonymous-row" @click="anonymous = !anonymous">
+					<view class="checkbox">{{ anonymous ? '✓' : '' }}</view>
+					<view class="anonymous-copy">
+						<text class="anonymous-title">匿名评价</text>
+						<text class="anonymous-desc">隐藏昵称和头像，评价内容仍会展示</text>
+					</view>
+				</view>
+
+				<view class="bottom-space"></view>
+			</view>
+		</scroll-view>
+
+		<view class="action-bar">
+			<view class="submit-button" :class="rating > 0 ? '' : 'submit-disabled'" @click="submitReview">
+				<text class="submit-text" :class="rating > 0 ? '' : 'submit-text-disabled'">提交评价</text>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { computed } from 'vue'
+	import { submitReview as submitReviewRequest } from '../../services/service-container.uts'
+
+	const rating = ref(5)
+	const anonymous = ref(false)
+	const content = ref('')
+	const tagOne = ref(true)
+	const tagTwo = ref(true)
+	const tagThree = ref(true)
+	const tagFour = ref(true)
+
+	const ratingLabel = computed(() : string => {
+		if (rating.value >= 5) {
+			return '非常满意'
+		}
+		if (rating.value == 4) {
+			return '满意'
+		}
+		if (rating.value == 3) {
+			return '一般'
+		}
+		if (rating.value == 2) {
+			return '不满意'
+		}
+		return '非常不满意'
+	})
+
+	function setRating(value: number) {
+		rating.value = value
+	}
+
+	function buildSelectedTags(): Array<string> {
+		const result: Array<string> = []
+		if (tagOne.value) {
+			result.push('服务热情')
+		}
+		if (tagTwo.value) {
+			result.push('准时到达')
+		}
+		if (tagThree.value) {
+			result.push('专业耐心')
+		}
+		if (tagFour.value) {
+			result.push('气氛好')
+		}
+		return result
+	}
+
+	function onContentInput(event: InputEvent) {
+		content.value = event.detail.value
+	}
+
+	function submitReview() {
+		const result = submitReviewRequest(rating.value, buildSelectedTags(), content.value, anonymous.value)
+		uni.showToast({
+			title: result.message,
+			position: 'bottom',
+			icon: result.ok ? 'success' : 'error'
+		})
+		if (result.ok) {
+			setTimeout(() => {
+				uni.reLaunch({
+					url: '/pages/order/list'
+				})
+			}, 500)
+		}
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/order/list'
+				})
+			}
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-scroll {
+		flex: 1;
+		min-height: 0;
+	}
+
+	.page-content {
+		padding-bottom: 170rpx;
+	}
+
+	.nav-bar {
+		height: 128rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32rpx;
+		background-color: #FFF9F5;
+	}
+
+	.nav-button,
+	.nav-placeholder {
+		width: 76rpx;
+		height: 76rpx;
+	}
+
+	.nav-button {
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 60rpx;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.intro {
+		margin: 24rpx 32rpx;
+		font-size: 26rpx;
+		color: #8D817B;
+	}
+
+	.provider-card {
+		flex-direction: row;
+		align-items: center;
+		margin: 0 32rpx;
+		padding: 28rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.provider-avatar {
+		width: 112rpx;
+		height: 112rpx;
+		align-items: center;
+		justify-content: center;
+		background-color: #FFF1F2;
+		border: 2rpx solid #F1B8BE;
+		border-radius: 50%;
+	}
+
+	.provider-avatar-text {
+		font-size: 44rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.provider-main {
+		flex: 1;
+		margin-left: 20rpx;
+	}
+
+	.provider-name {
+		font-size: 36rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.verified-pill {
+		align-self: flex-start;
+		margin-top: 8rpx;
+		padding: 6rpx 12rpx;
+		background-color: #FFC768;
+		border-radius: 999rpx;
+	}
+
+	.verified-text {
+		font-size: 21rpx;
+		font-weight: 700;
+		color: #704713;
+	}
+
+	.service-title {
+		margin-top: 12rpx;
+		font-size: 30rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.service-meta {
+		margin-top: 8rpx;
+		font-size: 23rpx;
+		color: #8D817B;
+	}
+
+	.section {
+		margin: 34rpx 32rpx 0;
+	}
+
+	.section-title {
+		font-size: 38rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.section-desc {
+		margin-top: 10rpx;
+		font-size: 25rpx;
+		color: #8D817B;
+	}
+
+	.rating-row {
+		flex-direction: row;
+		align-items: center;
+		margin-top: 18rpx;
+	}
+
+	.star-button {
+		margin-right: 18rpx;
+	}
+
+	.star {
+		font-size: 72rpx;
+		line-height: 82rpx;
+		color: #FCAE59;
+	}
+
+	.star-active {
+		color: #F5A800;
+	}
+
+	.rating-label {
+		margin-top: 12rpx;
+		text-align: center;
+		font-size: 28rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.tag-wrap {
+		flex-direction: row;
+		flex-wrap: wrap;
+		margin-top: 18rpx;
+	}
+
+	.tag-button {
+		flex-direction: row;
+		align-items: center;
+		height: 72rpx;
+		margin: 0 14rpx 14rpx 0;
+		padding: 0 20rpx;
+		border: 1rpx solid #F1B8BE;
+		border-radius: 999rpx;
+	}
+
+	.tag-button-active {
+		background-color: #FFF1F2;
+		border-color: $facetof-color-primary;
+	}
+
+	.tag-check {
+		margin-right: 8rpx;
+		font-size: 24rpx;
+		color: $facetof-color-primary;
+	}
+
+	.tag-text {
+		font-size: 25rpx;
+		color: $facetof-color-primary;
+	}
+
+	.review-input {
+		height: 240rpx;
+		margin-top: 18rpx;
+		padding: 22rpx;
+		font-size: 27rpx;
+		line-height: 42rpx;
+		color: #253047;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 22rpx;
+	}
+
+	.input-placeholder {
+		font-size: 27rpx;
+		color: #B8ADA8;
+	}
+
+	.count {
+		margin-top: 8rpx;
+		text-align: right;
+		font-size: 21rpx;
+		color: #A1958F;
+	}
+
+	.anonymous-row {
+		flex-direction: row;
+		align-items: center;
+		margin: 22rpx 32rpx 0;
+		padding: 22rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 20rpx;
+	}
+
+	.checkbox {
+		width: 42rpx;
+		height: 42rpx;
+		align-items: center;
+		justify-content: center;
+		border: 1rpx solid #F1B8BE;
+		border-radius: 10rpx;
+		color: #FFFFFF;
+		background-color: $facetof-color-primary;
+	}
+
+	.anonymous-copy {
+		margin-left: 18rpx;
+	}
+
+	.anonymous-title {
+		font-size: 28rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.anonymous-desc {
+		margin-top: 6rpx;
+		font-size: 21rpx;
+		color: #8D817B;
+	}
+
+	.action-bar {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		padding: 18rpx 32rpx;
+		padding-bottom: var(--uni-safe-area-inset-bottom);
+		background-color: #FFFFFF;
+		border-top: 1rpx solid #F5DED5;
+	}
+
+	.submit-button {
+		height: 92rpx;
+		align-items: center;
+		justify-content: center;
+		background-color: $facetof-color-primary;
+		border-radius: 18rpx;
+	}
+
+	.submit-disabled {
+		background-color: #EFE6E1;
+	}
+
+	.submit-text {
+		font-size: 32rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.submit-text-disabled {
+		color: #8D817B;
+	}
+
+	.bottom-space {
+		height: 20rpx;
+	}
+</style>

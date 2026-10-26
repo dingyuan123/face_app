@@ -1,0 +1,26 @@
+import { NewsDetail } from '../types/models.uts'
+
+export function getNewsDetail(id: string): NewsDetail {
+  return {
+    id: id,
+    title: '见面安心指南',
+    subtitle: '第一次线下见面，这些细节要留心',
+    category: '安全指南 · 同城见面',
+    author: '见面聊安全小助手',
+    authorAvatar: '/static/avatars/platform.png',
+    verified: true,
+    publishedAt: '2026-10-16',
+    readTime: '阅读约 3 分钟',
+    coverImage: '/static/following/moment-city.png',
+    intro: '第一次见面，选择明亮、熟悉的公共场所，提前和对方确认时间地点，让交流从容开始。',
+    sectionTitle: '让每一次见面，都多一份安心',
+    sectionDescription: '在平台内沟通服务内容与时长，确认价格和预约信息。如有变化，及时沟通；也可以把行程告知信任的人。',
+    recommendation: {
+      title: '咖啡陪伴 · 轻松聊一聊',
+      subtitle: '安心推荐 · 认证服务',
+      price: '¥55 / 小时 · 60 分钟起',
+      serviceId: 'service-coffee-001'
+    },
+    outro: '选择经过认证的服务者，提前了解服务规则，让见面更自在，也让彼此的边界更清晰。'
+  }
+}

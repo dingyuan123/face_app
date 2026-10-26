@@ -117,7 +117,6 @@
 </template>
 
 <script setup lang="uts">
-	import { computed } from 'vue'
 	import StatusPill from '../../components/status-pill.uvue'
 	import SegmentTabs from '../../components/segment-tabs.uvue'
 	import { getHomeFeed, performAccountAction } from '../../services/service-container.uts'
@@ -128,22 +127,21 @@
 	const categories = ['全部', '运动', '娱乐', '休闲']
 	const selectedCategory = ref('全部')
 	const allFeed = ref<HomeFeedItem[]>([])
+	const filteredFeed = ref<HomeFeedItem[]>([])
 
-	const filteredFeed = computed(() : Array<HomeFeedItem> => {
-		if (selectedCategory.value == '全部') {
-			return allFeed.value
-		}
+	function refreshFeed() {
+		allFeed.value = getHomeFeed()
 		const result: Array<HomeFeedItem> = []
 		for (let i = 0; i < allFeed.value.length; i++) {
-			if (allFeed.value[i].categoryName == selectedCategory.value) {
+			if (selectedCategory.value == '全部' || allFeed.value[i].categoryName == selectedCategory.value) {
 				result.push(allFeed.value[i])
 			}
 		}
-		return result
-	})
+		filteredFeed.value = result
+	}
 
 	onShow(() => {
-		allFeed.value = getHomeFeed()
+		refreshFeed()
 	})
 
 	onLoad((options) => {
@@ -174,6 +172,7 @@
 
 	function changeCategory(category: string) {
 		selectedCategory.value = category
+		refreshFeed()
 	}
 
 	function openProvider(providerId: string) {

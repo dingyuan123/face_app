@@ -1,0 +1,16 @@
+import { ActionOutcome, MomentPublishDraft } from '../types/models.uts'
+
+export function publishMoment(draft: MomentPublishDraft): ActionOutcome {
+  if (draft.content.trim().length == 0 && draft.images.length == 0 && draft.video.length == 0) {
+    return {
+      ok: false,
+      code: 'MOMENT_CONTENT_REQUIRED',
+      message: '请先添加图片、视频或文字'
+    }
+  }
+  return {
+    ok: true,
+    code: 'MOMENT_PUBLISHED',
+    message: '动态已发布（开发 Mock）'
+  }
+}

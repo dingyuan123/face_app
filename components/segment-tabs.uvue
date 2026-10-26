@@ -1,6 +1,6 @@
 <template>
 	<scroll-view class="segment-scroll" direction="horizontal" :show-scrollbar="false">
-		<view class="segment-row" :class="'variant-' + variant">
+		<view class="segment-row" :class="['segment-row-' + variant, 'variant-' + variant]">
 			<view
 				v-for="item in items"
 				:key="item"
@@ -46,6 +46,10 @@
 	.segment-row {
 		flex-direction: row;
 		flex-shrink: 0;
+	}
+
+	.segment-row-chip {
+		min-width: 800rpx;
 	}
 
 	.segment-item {

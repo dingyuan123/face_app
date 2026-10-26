@@ -1,0 +1,433 @@
+<template>
+	<view class="page">
+		<scroll-view class="page-scroll" direction="vertical" :show-scrollbar="false">
+			<view class="page-content">
+				<view class="nav-bar">
+					<view class="nav-button" @click="goBack">
+						<text class="nav-icon">‹</text>
+					</view>
+					<text class="nav-title">实名认证</text>
+					<view class="nav-placeholder"></view>
+				</view>
+
+				<view class="security-banner">
+					<image class="security-icon" src="/static/search/shield.png" mode="aspectFit"></image>
+					<view class="security-copy">
+						<text class="security-title">真实身份，安心相见</text>
+						<text class="security-desc">平台加密保护你的身份信息，仅用于身份核验，不公开展示。</text>
+					</view>
+				</view>
+
+				<view class="form-card">
+					<text class="section-title">填写身份信息</text>
+					<text class="field-label">姓名</text>
+					<view class="input-wrap">
+						<text class="input-icon">♙</text>
+						<input
+							class="input"
+							:value="realName"
+							maxlength="20"
+							placeholder="请输入本人真实姓名"
+							placeholder-class="placeholder"
+							@input="onNameInput"
+						/>
+					</view>
+					<text class="field-help">请与身份证上的姓名保持一致</text>
+
+					<text class="field-label field-label-space">身份证号码</text>
+					<view class="input-wrap">
+						<text class="input-icon">▣</text>
+						<input
+							class="input"
+							type="text"
+							:value="idNumber"
+							maxlength="18"
+							placeholder="请输入本人身份证号码"
+							placeholder-class="placeholder"
+							@input="onIdInput"
+						/>
+					</view>
+					<text class="field-help">18位身份证号码，末位为 X 时请大写</text>
+				</view>
+
+				<view class="status-card">
+					<view class="status-head">
+						<text class="section-title">认证状态</text>
+						<view class="status-pill" :class="statusClass()">
+							<text class="status-text" :class="verificationStatus == '已提交' ? 'status-text-pending' : verificationStatus == '认证通过' ? 'status-text-success' : ''">{{ verificationStatus }}</text>
+						</view>
+					</view>
+					<text class="status-desc">{{ statusDescription() }}</text>
+				</view>
+
+				<view class="privacy-row">
+					<text class="privacy-icon">♙</text>
+					<text class="privacy-text">你的姓名和身份证号码不会公开展示</text>
+				</view>
+				<view class="privacy-links">
+					<text class="privacy-link">隐私政策</text>
+					<text class="privacy-divider">|</text>
+					<text class="privacy-link">实名认证须知</text>
+				</view>
+
+				<view class="bottom-space"></view>
+			</view>
+		</scroll-view>
+
+		<view class="action-bar">
+			<view class="submit-button" :class="canSubmit() ? '' : 'submit-disabled'" @click="submitVerification">
+				<text class="submit-text" :class="canSubmit() ? '' : 'submit-text-disabled'">提交认证</text>
+			</view>
+			<text class="submit-tip">填写完整后即可提交认证</text>
+			<text class="brand-footer">FaceTo · 见面聊，安心见</text>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+		import { submitIdVerification } from '../../services/service-container.uts'
+
+	const realName = ref('')
+	const idNumber = ref('')
+	const verificationStatus = ref('未认证')
+
+	function canSubmit(): boolean {
+		return realName.value.trim().length >= 2 && idNumber.value.trim().length == 18
+	}
+
+	function statusClass(): string {
+		if (verificationStatus.value == '已提交') {
+			return 'status-pending'
+		}
+		if (verificationStatus.value == '认证通过') {
+			return 'status-success'
+		}
+		return 'status-idle'
+	}
+
+	function statusDescription(): string {
+		if (verificationStatus.value == '已提交') {
+			return '资料已提交，平台正在核验身份信息。'
+		}
+		if (verificationStatus.value == '认证通过') {
+			return '身份信息核验通过。'
+		}
+		return '尚未提交认证，请先填写本人的身份信息。'
+	}
+
+	function onNameInput(event: InputEvent) {
+		realName.value = event.detail.value
+	}
+
+	function onIdInput(event: InputEvent) {
+		idNumber.value = event.detail.value
+	}
+
+	function submitVerification() {
+		if (!canSubmit.value) {
+			uni.showToast({
+				title: '请完整填写姓名和身份证号码',
+				position: 'bottom',
+				icon: 'none'
+			})
+			return
+		}
+		const result = submitIdVerification(realName.value, idNumber.value)
+		uni.showToast({
+			title: result.message,
+			position: 'bottom',
+			icon: result.ok ? 'success' : 'error'
+		})
+		if (result.ok) {
+			verificationStatus.value = '已提交'
+		}
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/profile/profile'
+				})
+			}
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-scroll {
+		flex: 1;
+		min-height: 0;
+	}
+
+	.page-content {
+		padding-bottom: 260rpx;
+	}
+
+	.nav-bar {
+		height: 128rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32rpx;
+		background-color: #FFF9F5;
+	}
+
+	.nav-button,
+	.nav-placeholder {
+		width: 76rpx;
+		height: 76rpx;
+	}
+
+	.nav-button {
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 60rpx;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.security-banner {
+		flex-direction: row;
+		align-items: center;
+		margin: 26rpx 32rpx 0;
+		padding: 30rpx;
+		background-color: #FFF1F2;
+		border: 1rpx solid $facetof-color-primary;
+		border-radius: 28rpx;
+	}
+
+	.security-icon {
+		width: 64rpx;
+		height: 64rpx;
+	}
+
+	.security-copy {
+		flex: 1;
+		margin-left: 18rpx;
+	}
+
+	.security-title {
+		font-size: 32rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.security-desc {
+		margin-top: 10rpx;
+		font-size: 23rpx;
+		line-height: 36rpx;
+		color: $facetof-color-primary;
+	}
+
+	.form-card,
+	.status-card {
+		margin: 26rpx 32rpx 0;
+		padding: 30rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.section-title {
+		font-size: 36rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.field-label {
+		margin-top: 26rpx;
+		font-size: 28rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.field-label-space {
+		margin-top: 30rpx;
+	}
+
+	.input-wrap {
+		height: 96rpx;
+		flex-direction: row;
+		align-items: center;
+		margin-top: 14rpx;
+		padding: 0 22rpx;
+		background-color: #FFF9F5;
+		border: 1rpx solid #F5DED5;
+		border-radius: 18rpx;
+	}
+
+	.input-icon {
+		width: 42rpx;
+		font-size: 32rpx;
+		font-weight: 700;
+		color: #B87916;
+	}
+
+	.input {
+		flex: 1;
+		height: 94rpx;
+		margin-left: 12rpx;
+		font-size: 28rpx;
+		color: #253047;
+	}
+
+	.placeholder {
+		font-size: 26rpx;
+		color: #B8ADA8;
+	}
+
+	.field-help {
+		margin-top: 12rpx;
+		font-size: 21rpx;
+		line-height: 32rpx;
+		color: #8D817B;
+	}
+
+	.status-head {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.status-pill {
+		padding: 10rpx 16rpx;
+		border-radius: 999rpx;
+	}
+
+	.status-idle {
+		background-color: #F1E9E5;
+	}
+
+	.status-pending {
+		background-color: #FFF0D7;
+	}
+
+	.status-success {
+		background-color: #E7F8F2;
+	}
+
+	.status-text {
+		font-size: 24rpx;
+		font-weight: 700;
+		color: #8D817B;
+	}
+
+	.status-text-pending {
+		color: #B87916;
+	}
+
+	.status-text-success {
+		color: #10B981;
+	}
+
+	.status-desc {
+		margin-top: 18rpx;
+		font-size: 26rpx;
+		line-height: 38rpx;
+		color: #8D817B;
+	}
+
+	.privacy-row {
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+		margin-top: 28rpx;
+	}
+
+	.privacy-icon {
+		margin-right: 8rpx;
+		font-size: 28rpx;
+		color: $facetof-color-primary;
+	}
+
+	.privacy-text {
+		font-size: 23rpx;
+		color: #8D817B;
+	}
+
+	.privacy-links {
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+		margin-top: 18rpx;
+	}
+
+	.privacy-link {
+		font-size: 23rpx;
+		color: $facetof-color-primary;
+	}
+
+	.privacy-divider {
+		margin: 0 18rpx;
+		font-size: 23rpx;
+		color: #B8ADA8;
+	}
+
+	.action-bar {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		padding: 18rpx 32rpx;
+		padding-bottom: var(--uni-safe-area-inset-bottom);
+		background-color: #FFFFFF;
+		border-top: 1rpx solid #F5DED5;
+	}
+
+	.submit-button {
+		height: 92rpx;
+		align-items: center;
+		justify-content: center;
+		background-color: $facetof-color-primary;
+		border-radius: 18rpx;
+	}
+
+	.submit-disabled {
+		background-color: #EFE6E1;
+	}
+
+	.submit-text {
+		font-size: 32rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.submit-text-disabled {
+		color: #8D817B;
+	}
+
+	.submit-tip {
+		margin-top: 12rpx;
+		text-align: center;
+		font-size: 22rpx;
+		color: #8D817B;
+	}
+
+	.brand-footer {
+		margin-top: 12rpx;
+		text-align: center;
+		font-size: 24rpx;
+		color: #253047;
+	}
+
+	.bottom-space {
+		height: 12rpx;
+	}
+</style>

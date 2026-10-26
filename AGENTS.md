@@ -61,6 +61,25 @@
 - Mock 关键业务状态需要持久化；未提交申请表单不持久化。
 - 网络错误、业务错误、权限错误分别处理，不得伪造成功。
 
+## UniApp x 样式约束
+
+- 禁止使用后代选择器，例如 `.parent .child`。
+- 禁止使用相邻兄弟选择器，例如 `.item + .item`。
+- 禁止使用 `:last-child` 等当前 UniApp x 样式编译器不支持的选择器。
+- 需要区分状态时，直接给目标节点绑定明确的状态类，不通过父子选择器命中。
+- `align-items` 仅使用 UniApp x 支持的 `center`、`flex-start`、`flex-end`、`stretch`。
+- `display` 仅使用 UniApp x 支持的 `flex`、`none`，禁止使用 `block`、`inline`、`grid`。
+- 横向滚动使用 `scroll-view direction="horizontal"`，并保证滚动内容项不被压缩。
+- 页面尺寸优先使用 `rpx`，不要把设计图像素直接当作固定 `px` 使用。
+- 编译警告即使没有导致构建失败，也必须修复后再进入验收。
+- 列表页不要使用返回数组的 `computed` 做派生列表；在数据刷新函数中显式生成并赋值数组，避免 Android 真机响应式数组迭代时出现 `ConcurrentModificationException`。
+
+## 验证范围
+
+- 当前已验证的主要目标是 Android 真机。
+- iOS、HarmonyOS、微信小程序及其他机型目前尚未完成系统验证。
+- 后续兼容性结论必须区分 Android 真机已验证和其他平台待验证。
+
 ## 设计规范
 
 最新版设计源文件是视觉和页面结构的首要依据。Figma 是补充参考；设计文档与 Figma 冲突时，先报告，不自行猜测。

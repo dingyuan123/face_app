@@ -1,0 +1,51 @@
+import { ChatMessage } from '../types/models.uts'
+
+export function getChatMessages(): Array<ChatMessage> {
+  return [
+    {
+      id: 'chat-001',
+      type: 'text',
+      content: '你好呀，我已经确认订单啦～',
+      image: '',
+      time: '14:02',
+      isSelf: false,
+      read: true
+    },
+    {
+      id: 'chat-002',
+      type: 'text',
+      content: '好的！我会提前到店等你😊',
+      image: '',
+      time: '14:03',
+      isSelf: true,
+      read: true
+    },
+    {
+      id: 'chat-003',
+      type: 'image',
+      content: '店门口长这样～',
+      image: '/static/following/moment-billiards.png',
+      time: '14:03',
+      isSelf: false,
+      read: true
+    },
+    {
+      id: 'chat-004',
+      type: 'voice',
+      content: '12" 语音消息',
+      image: '',
+      time: '14:04',
+      isSelf: false,
+      read: true
+    },
+    {
+      id: 'chat-005',
+      type: 'location',
+      content: '星光台球俱乐部 · 位置',
+      image: '',
+      time: '14:05',
+      isSelf: false,
+      read: true
+    }
+  ]
+}

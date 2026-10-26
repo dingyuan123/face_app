@@ -1,0 +1,317 @@
+<template>
+	<scroll-view class="page" direction="vertical" :show-scrollbar="false">
+		<view class="page-content">
+			<view class="nav-bar">
+				<view class="nav-button" @click="goBack">
+					<text class="nav-icon">‹</text>
+				</view>
+				<text class="nav-title">我的评价</text>
+				<view class="nav-placeholder"></view>
+			</view>
+
+			<view class="tabs">
+				<view class="tab-item" :class="activeTab == '我评价的' ? 'tab-active' : ''" @click="changeTab('我评价的')">
+					<text class="tab-text" :class="activeTab == '我评价的' ? 'tab-text-active' : ''">我评价的</text>
+					<view v-if="activeTab == '我评价的'" class="tab-indicator"></view>
+				</view>
+				<view class="tab-item" :class="activeTab == '我收到的' ? 'tab-active' : ''" @click="changeTab('我收到的')">
+					<text class="tab-text" :class="activeTab == '我收到的' ? 'tab-text-active' : ''">我收到的</text>
+					<view v-if="activeTab == '我收到的'" class="tab-indicator"></view>
+				</view>
+			</view>
+
+			<view class="list-head">
+				<text class="list-title">{{ activeTab == '我评价的' ? '我对服务者的评价' : '服务者对我的评价' }}</text>
+				<text class="list-count">共 {{ reviews.length }} 条</text>
+			</view>
+
+			<view class="review-list">
+				<view v-for="review in reviews" :key="review.id" class="review-card">
+					<view class="review-head">
+						<image class="review-avatar" :src="review.avatar" mode="aspectFill"></image>
+						<view class="review-main">
+							<view class="review-name-row">
+								<text class="review-name">{{ review.reviewerName }}</text>
+								<view class="role-pill">
+									<text class="role-text">{{ review.roleLabel }}</text>
+								</view>
+							</view>
+							<text class="review-meta">{{ review.serviceMeta }}</text>
+						</view>
+					</view>
+
+					<view class="rating-row">
+						<text class="rating-label">{{ activeTab == '我评价的' ? '我的评分' : '给我的评分' }}</text>
+						<view class="star-list">
+							<text v-for="star in 5" :key="star" class="star" :class="star <= review.rating ? 'star-active' : ''">★</text>
+						</view>
+						<text class="rating-value">{{ review.rating.toFixed(1) }}</text>
+						<text class="review-date">{{ review.date }}</text>
+					</view>
+
+					<text class="review-content">{{ review.content }}</text>
+
+					<view class="tag-row">
+						<view v-for="tag in review.tags" :key="tag" class="tag-pill">
+							<text class="tag-text">{{ tag }}</text>
+						</view>
+					</view>
+				</view>
+			</view>
+
+			<text class="brand-footer">FaceTo · 见面聊，安心见</text>
+			<view class="bottom-space"></view>
+		</view>
+	</scroll-view>
+</template>
+
+<script setup lang="uts">
+	import { getMyReviewItems, getReceivedReviewItems } from '../../services/service-container.uts'
+	import type { ReviewListItem } from '../../types/models.uts'
+
+	const activeTab = ref('我评价的')
+	const reviews = ref<ReviewListItem[]>(getMyReviewItems())
+
+	function changeTab(tab: string) {
+		activeTab.value = tab
+		reviews.value = tab == '我评价的' ? getMyReviewItems() : getReceivedReviewItems()
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/profile/profile'
+				})
+			}
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-content {
+		padding-bottom: 32rpx;
+	}
+
+	.nav-bar {
+		height: 128rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32rpx;
+		background-color: #FFF9F5;
+	}
+
+	.nav-button,
+	.nav-placeholder {
+		width: 76rpx;
+		height: 76rpx;
+	}
+
+	.nav-button {
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 60rpx;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.tabs {
+		flex-direction: row;
+		background-color: #FFF9F5;
+	}
+
+	.tab-item {
+		position: relative;
+		flex: 1;
+		height: 92rpx;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.tab-text {
+		font-size: 32rpx;
+		font-weight: 700;
+		color: #8D817B;
+	}
+
+	.tab-text-active {
+		color: $facetof-color-primary;
+	}
+
+	.tab-indicator {
+		position: absolute;
+		bottom: 10rpx;
+		width: 48rpx;
+		height: 6rpx;
+		background-color: $facetof-color-primary;
+		border-radius: 999rpx;
+	}
+
+	.list-head {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 30rpx 32rpx;
+	}
+
+	.list-title {
+		font-size: 27rpx;
+		color: #253047;
+	}
+
+	.list-count {
+		font-size: 23rpx;
+		color: #8D817B;
+	}
+
+	.review-list {
+		margin: 0 32rpx;
+	}
+
+	.review-card {
+		margin-bottom: 22rpx;
+		padding: 28rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.review-head {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.review-avatar {
+		width: 88rpx;
+		height: 88rpx;
+		border-radius: 50%;
+	}
+
+	.review-main {
+		flex: 1;
+		margin-left: 16rpx;
+	}
+
+	.review-name-row {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.review-name {
+		font-size: 32rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.role-pill {
+		margin-left: 12rpx;
+		padding: 7rpx 12rpx;
+		background-color: #FFC768;
+		border-radius: 999rpx;
+	}
+
+	.role-text {
+		font-size: 20rpx;
+		font-weight: 700;
+		color: #704713;
+	}
+
+	.review-meta {
+		margin-top: 8rpx;
+		font-size: 22rpx;
+		color: #8D817B;
+	}
+
+	.rating-row {
+		flex-direction: row;
+		align-items: center;
+		margin-top: 22rpx;
+	}
+
+	.rating-label {
+		font-size: 22rpx;
+		color: #8D817B;
+	}
+
+	.star-list {
+		flex-direction: row;
+		margin-left: 12rpx;
+	}
+
+	.star {
+		margin-right: 3rpx;
+		font-size: 27rpx;
+		color: #E6D6CC;
+	}
+
+	.star-active {
+		color: #F5A800;
+	}
+
+	.rating-value {
+		margin-left: 10rpx;
+		font-size: 23rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.review-date {
+		margin-left: auto;
+		font-size: 21rpx;
+		color: #8D817B;
+	}
+
+	.review-content {
+		margin-top: 20rpx;
+		font-size: 28rpx;
+		line-height: 44rpx;
+		color: #343B49;
+	}
+
+	.tag-row {
+		flex-direction: row;
+		flex-wrap: wrap;
+		margin-top: 18rpx;
+	}
+
+	.tag-pill {
+		padding: 9rpx 14rpx;
+		margin: 0 12rpx 10rpx 0;
+		background-color: #FFF1F2;
+		border-radius: 999rpx;
+	}
+
+	.tag-text {
+		font-size: 22rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.brand-footer {
+		margin-top: 30rpx;
+		text-align: center;
+		font-size: 26rpx;
+		color: #253047;
+	}
+
+	.bottom-space {
+		height: 32rpx;
+	}
+</style>

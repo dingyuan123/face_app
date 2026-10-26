@@ -317,3 +317,131 @@ export type FollowingMoment = {
   location: string,
   likeCount: number
 }
+
+export type MyMomentItem = {
+  id: string,
+  title: string,
+  publishedAt: string,
+  coverImage: string,
+  mediaType: string,
+  mediaLabel: string,
+  likeCount: number,
+  commentCount: number
+}
+
+export type WalletTransaction = {
+  id: string,
+  type: string,
+  title: string,
+  subtitle: string,
+  time: string,
+  amount: string,
+  status: string,
+  iconType: string
+}
+
+export type WalletSummary = {
+  availableAmount: string,
+  frozenAmount: string,
+  frozenDescription: string,
+  paymentName: string,
+  cardTail: string,
+  transactions: WalletTransaction[]
+}
+
+export type CouponItem = {
+  id: string,
+  amount: string,
+  threshold: string,
+  title: string,
+  scope: string,
+  dateRange: string,
+  status: string
+}
+
+export type MembershipBenefit = {
+  id: string,
+  title: string,
+  description: string,
+  iconType: string
+}
+
+export type MembershipPlan = {
+  id: string,
+  title: string,
+  price: string,
+  duration: string
+}
+
+export type MembershipSummary = {
+  membershipName: string,
+  expireAt: string,
+  status: string,
+  benefits: MembershipBenefit[],
+  plans: MembershipPlan[]
+}
+
+export type ChatMessage = {
+  id: string,
+  type: string,
+  content: string,
+  image: string,
+  time: string,
+  isSelf: boolean,
+  read: boolean
+}
+
+export type NewsRecommendation = {
+  title: string,
+  subtitle: string,
+  price: string,
+  serviceId: string
+}
+
+export type NewsDetail = {
+  id: string,
+  title: string,
+  subtitle: string,
+  category: string,
+  author: string,
+  authorAvatar: string,
+  verified: boolean,
+  publishedAt: string,
+  readTime: string,
+  coverImage: string,
+  intro: string,
+  sectionTitle: string,
+  sectionDescription: string,
+  recommendation: NewsRecommendation,
+  outro: string
+}
+
+export type ProfileEditDraft = {
+  nickname: string,
+  gender: string,
+  age: string,
+  city: string,
+  bio: string,
+  avatar: string,
+  tags: string[]
+}
+
+export type ReviewListItem = {
+  id: string,
+  reviewerName: string,
+  avatar: string,
+  roleLabel: string,
+  serviceMeta: string,
+  rating: number,
+  date: string,
+  content: string,
+  tags: string[]
+}
+
+export type MomentPublishDraft = {
+  images: string[],
+  video: string,
+  content: string,
+  serviceId: string,
+  visibility: string
+}

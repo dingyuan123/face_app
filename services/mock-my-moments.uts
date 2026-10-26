@@ -1,0 +1,49 @@
+import { MyMomentItem } from '../types/models.uts'
+
+export function getMyMomentItems(empty: boolean): Array<MyMomentItem> {
+  if (empty) {
+    return []
+  }
+  return [
+    {
+      id: 'my-moment-001',
+      title: '在泸州，练好第一杆',
+      publishedAt: '今天 12:10',
+      coverImage: '/static/following/moment-billiards.png',
+      mediaType: 'video',
+      mediaLabel: '00:28',
+      likeCount: 18,
+      commentCount: 3
+    },
+    {
+      id: 'my-moment-002',
+      title: '一杯手冲的慢时光',
+      publishedAt: '昨天 10:35',
+      coverImage: '/static/following/moment-coffee.png',
+      mediaType: 'image',
+      mediaLabel: '3',
+      likeCount: 12,
+      commentCount: 2
+    },
+    {
+      id: 'my-moment-003',
+      title: '沿着江边，走进老城',
+      publishedAt: '10月14日 16:20',
+      coverImage: '/static/following/moment-city.png',
+      mediaType: 'image',
+      mediaLabel: '6',
+      likeCount: 26,
+      commentCount: 4
+    },
+    {
+      id: 'my-moment-004',
+      title: '把日落装进镜头里',
+      publishedAt: '10月12日 17:46',
+      coverImage: '/static/content/badminton.png',
+      mediaType: 'video',
+      mediaLabel: '00:16',
+      likeCount: 30,
+      commentCount: 3
+    }
+  ]
+}

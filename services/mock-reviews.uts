@@ -1,0 +1,77 @@
+import { ReviewListItem } from '../types/models.uts'
+
+export function getMyReviewItems(): Array<ReviewListItem> {
+  return [
+    {
+      id: 'my-review-001',
+      reviewerName: '阿哲',
+      avatar: '/static/following/avatar-zhe.png',
+      roleLabel: '被评价 · 服务者',
+      serviceMeta: '泸州 · 台球助教 · 新手体验',
+      rating: 5,
+      date: '2026.10.16',
+      content: '第一次打台球，阿哲从握杆和站姿教起，纠正动作很耐心，一小时下来敢自己开球了。',
+      tags: ['专业耐心', '准时到达', '新手友好']
+    },
+    {
+      id: 'my-review-002',
+      reviewerName: '小禾',
+      avatar: '/static/following/avatar-xiaohe.png',
+      roleLabel: '被评价 · 服务者',
+      serviceMeta: '泸州 · 咖啡陪伴 · 轻松交流',
+      rating: 5,
+      date: '2026.10.12',
+      content: '约在街角咖啡馆，小禾很会倾听，聊了旅行和最近读的书，整个下午轻松又自在。',
+      tags: ['服务热情', '气氛好', '善于倾听']
+    },
+    {
+      id: 'my-review-003',
+      reviewerName: '林川',
+      avatar: '/static/following/avatar-linchuan.png',
+      roleLabel: '被评价 · 服务者',
+      serviceMeta: '泸州 · 城市漫步 · 老城慢行',
+      rating: 4,
+      date: '2026.10.08',
+      content: '沿江边走到老街，听了不少泸州故事。路线很舒服，下次出发前再确认一下集合点。',
+      tags: ['路线用心', '讲解生动', '气氛好']
+    }
+  ]
+}
+
+export function getReceivedReviewItems(): Array<ReviewListItem> {
+  return [
+    {
+      id: 'received-review-001',
+      reviewerName: '阿哲',
+      avatar: '/static/following/avatar-zhe.png',
+      roleLabel: '评价人 · 服务者',
+      serviceMeta: '泸州 · 台球助教 · 新手体验',
+      rating: 5,
+      date: '2026.10.16',
+      content: '提前到店，练习时很认真，也愿意尝试调整握杆姿势。交流顺畅，很高兴陪你入门！',
+      tags: ['准时赴约', '沟通顺畅', '认真投入']
+    },
+    {
+      id: 'received-review-002',
+      reviewerName: '小禾',
+      avatar: '/static/following/avatar-xiaohe.png',
+      roleLabel: '评价人 · 服务者',
+      serviceMeta: '泸州 · 咖啡陪伴 · 轻松交流',
+      rating: 5,
+      date: '2026.10.12',
+      content: '提前确认了咖啡馆和时间，聊天时互相倾听，也分享了几本好书，是很愉快的见面。',
+      tags: ['准时赴约', '友好真诚', '尊重他人']
+    },
+    {
+      id: 'received-review-003',
+      reviewerName: '林川',
+      avatar: '/static/following/avatar-linchuan.png',
+      roleLabel: '评价人 · 服务者',
+      serviceMeta: '泸州 · 城市漫步 · 老城慢行',
+      rating: 5,
+      date: '2026.10.08',
+      content: '对老街的历史很感兴趣，一路聊得很开心。临时绕行也能耐心配合，谢谢你的理解！',
+      tags: ['沟通顺畅', '友好真诚', '尊重约定']
+    }
+  ]
+}

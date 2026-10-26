@@ -84,7 +84,7 @@
 				<view class="section-block menu-block">
 					<text class="section-title">服务与设置</text>
 					<view class="menu-list">
-						<view v-for="(item, index) in menuItems" :key="item" :class="index == menuItems.length - 1 ? 'menu-item menu-item-last' : 'menu-item'" @click="openFeature(item)">
+						<view v-for="(item, index) in menuItems" :key="item" :class="index == menuItems.length - 1 ? 'menu-item menu-item-last' : 'menu-item'" @click="openQuickItem(item)">
 							<text class="menu-name">{{ item }}</text>
 							<text class="entry-arrow">›</text>
 						</view>
@@ -107,7 +107,7 @@
 	import { getApplicationHistory, getProfileSummary } from '../../services/service-container.uts'
 	import type { ProfileSummary } from '../../types/models.uts'
 	import { logout, sessionState } from '../../state/session-state.uts'
-	import { openLogin, openProviderApply, PROFILE_ROUTE, ORDER_LIST_ROUTE, FAVORITES_ROUTE, FOLLOWING_ROUTE, SETTINGS_ROUTE } from '../../router/route-guard.uts'
+	import { openLogin, openProviderApply, PROFILE_ROUTE, ORDER_LIST_ROUTE, FAVORITES_ROUTE, FOLLOWING_ROUTE, SETTINGS_ROUTE, MY_MOMENTS_ROUTE, WALLET_ROUTE, COUPONS_ROUTE, MEMBERSHIP_ROUTE, ID_VERIFY_ROUTE, PROFILE_EDIT_ROUTE, MY_REVIEWS_ROUTE, ABOUT_ROUTE, HELP_ROUTE } from '../../router/route-guard.uts'
 
 	const profile = ref<ProfileSummary | null>(null)
 
@@ -192,10 +192,8 @@
 	}
 
 	function showEditTip() {
-		uni.showToast({
-			title: '编辑资料页将在后续阶段接入',
-			position: 'bottom',
-			icon: 'none'
+		uni.navigateTo({
+			url: PROFILE_EDIT_ROUTE
 		})
 	}
 
@@ -215,6 +213,54 @@
 		if (name == '我的关注') {
 			uni.navigateTo({
 				url: FOLLOWING_ROUTE
+			})
+			return
+		}
+		if (name == '我的动态') {
+			uni.navigateTo({
+				url: MY_MOMENTS_ROUTE
+			})
+			return
+		}
+		if (name == '钱包') {
+			uni.navigateTo({
+				url: WALLET_ROUTE
+			})
+			return
+		}
+		if (name == '优惠券') {
+			uni.navigateTo({
+				url: COUPONS_ROUTE
+			})
+			return
+		}
+		if (name == '会员中心') {
+			uni.navigateTo({
+				url: MEMBERSHIP_ROUTE
+			})
+			return
+		}
+		if (name == '实名认证') {
+			uni.navigateTo({
+				url: ID_VERIFY_ROUTE
+			})
+			return
+		}
+		if (name == '我的评价') {
+			uni.navigateTo({
+				url: MY_REVIEWS_ROUTE
+			})
+			return
+		}
+		if (name == '客服帮助') {
+			uni.navigateTo({
+				url: HELP_ROUTE
+			})
+			return
+		}
+		if (name == '关于我们') {
+			uni.navigateTo({
+				url: ABOUT_ROUTE
 			})
 			return
 		}

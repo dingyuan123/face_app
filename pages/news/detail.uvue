@@ -1,0 +1,434 @@
+<template>
+	<view class="page">
+		<scroll-view class="page-scroll" direction="vertical" :show-scrollbar="false">
+			<view class="page-content">
+				<view class="nav-bar">
+					<view class="nav-button" @click="goBack">
+						<text class="nav-icon">‹</text>
+					</view>
+					<text class="nav-title">资讯详情</text>
+					<view class="nav-button" @click="openMore">
+						<text class="nav-icon">···</text>
+					</view>
+				</view>
+
+				<view class="hero">
+					<text class="hero-title">{{ news.title }}</text>
+					<text class="hero-subtitle">{{ news.subtitle }}</text>
+					<view class="hero-line"></view>
+				</view>
+
+				<view class="article-content">
+					<text class="category-text">{{ news.category }}</text>
+
+					<view class="author-row">
+						<image class="author-avatar" :src="news.authorAvatar" mode="aspectFill"></image>
+						<view class="author-main">
+							<view class="author-name-row">
+								<text class="author-name">{{ news.author }}</text>
+								<view v-if="news.verified" class="verified-pill">
+									<text class="verified-text">✓ 官方认证</text>
+								</view>
+							</view>
+							<text class="article-meta">{{ news.publishedAt }} · {{ news.readTime }}</text>
+						</view>
+					</view>
+
+					<view class="article-divider"></view>
+					<text class="article-intro">{{ news.intro }}</text>
+					<text class="article-section-title">{{ news.sectionTitle }}</text>
+					<text class="article-paragraph">{{ news.sectionDescription }}</text>
+
+					<view class="recommend-card" @click="openService">
+						<view class="recommend-icon">
+							<text class="recommend-icon-text">☕</text>
+						</view>
+						<view class="recommend-main">
+							<text class="recommend-subtitle">{{ news.recommendation.subtitle }}</text>
+							<text class="recommend-title">{{ news.recommendation.title }}</text>
+							<text class="recommend-price">{{ news.recommendation.price }}</text>
+						</view>
+						<view class="recommend-arrow">
+							<text class="recommend-arrow-text">→</text>
+						</view>
+					</view>
+
+					<text class="article-paragraph">{{ news.outro }}</text>
+				</view>
+
+				<view class="bottom-space"></view>
+			</view>
+		</scroll-view>
+
+		<view class="action-bar">
+			<view class="comment-box">
+				<text class="comment-icon">◌</text>
+				<input
+					class="comment-input"
+					:value="comment"
+					placeholder="聊聊你的看法…"
+					placeholder-class="comment-placeholder"
+					@input="onCommentInput"
+				/>
+			</view>
+			<view class="action-item" @click="toggleLike">
+				<text class="action-icon">♡</text>
+				<text class="action-count">1.2k</text>
+			</view>
+			<view class="action-item" @click="toggleFavorite">
+				<text class="action-icon">♧</text>
+				<text class="action-label">收藏</text>
+			</view>
+			<view class="action-item" @click="shareArticle">
+				<text class="action-icon">↑</text>
+				<text class="action-label">分享</text>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { getNewsDetail } from '../../services/service-container.uts'
+	import type { NewsDetail } from '../../types/models.uts'
+
+	const news = ref<NewsDetail>(getNewsDetail('news-001'))
+	const comment = ref('')
+	const liked = ref(false)
+	const favorited = ref(false)
+
+	onLoad((options) => {
+		const id = options['newsId'] as string
+		news.value = getNewsDetail(id != null && id.length > 0 ? decodeURIComponent(id) : 'news-001')
+	})
+
+	function onCommentInput(event: InputEvent) {
+		comment.value = event.detail.value
+	}
+
+	function toggleLike() {
+		liked.value = !liked.value
+		uni.showToast({
+			title: liked.value ? '已点赞' : '已取消点赞',
+			position: 'bottom',
+			icon: 'success'
+		})
+	}
+
+	function toggleFavorite() {
+		favorited.value = !favorited.value
+		uni.showToast({
+			title: favorited.value ? '已收藏' : '已取消收藏',
+			position: 'bottom',
+			icon: 'success'
+		})
+	}
+
+	function shareArticle() {
+		uni.showToast({
+			title: '分享能力将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function openService() {
+		uni.navigateTo({
+			url: '/pages/service/detail?serviceId=' + encodeURIComponent(news.value.recommendation.serviceId)
+		})
+	}
+
+	function openMore() {
+		uni.showToast({
+			title: '更多操作将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/news/news'
+				})
+			}
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: #FFFFFF;
+	}
+
+	.page-scroll {
+		flex: 1;
+		min-height: 0;
+	}
+
+	.page-content {
+		padding-bottom: 150rpx;
+	}
+
+	.nav-bar {
+		height: 128rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32rpx;
+		background-color: #FFFFFF;
+	}
+
+	.nav-button {
+		width: 76rpx;
+		height: 76rpx;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 54rpx;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.hero {
+		height: 520rpx;
+		padding: 100rpx 32rpx 0;
+		background-image: linear-gradient(to bottom right, #4B101B, #7B1829);
+	}
+
+	.hero-title {
+		font-size: 54rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.hero-subtitle {
+		margin-top: 18rpx;
+		font-size: 30rpx;
+		line-height: 44rpx;
+		color: #F6DCD8;
+	}
+
+	.hero-line {
+		width: 120rpx;
+		height: 8rpx;
+		margin-top: 26rpx;
+		background-image: linear-gradient(to right, #FD5A6B, #FCAE59);
+		border-radius: 999rpx;
+	}
+
+	.article-content {
+		padding: 38rpx 32rpx 0;
+	}
+
+	.category-text {
+		font-size: 28rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.author-row {
+		flex-direction: row;
+		align-items: center;
+		margin-top: 60rpx;
+	}
+
+	.author-avatar {
+		width: 88rpx;
+		height: 88rpx;
+		border-radius: 50%;
+	}
+
+	.author-main {
+		flex: 1;
+		margin-left: 18rpx;
+	}
+
+	.author-name-row {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.author-name {
+		font-size: 30rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.verified-pill {
+		margin-left: 12rpx;
+		padding: 5rpx 10rpx;
+		background-color: #FFF1F2;
+		border-radius: 999rpx;
+	}
+
+	.verified-text {
+		font-size: 20rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.article-meta {
+		margin-top: 10rpx;
+		font-size: 21rpx;
+		color: #8D817B;
+	}
+
+	.article-divider {
+		height: 1rpx;
+		margin: 30rpx 0;
+		background-color: #F5DED5;
+	}
+
+	.article-intro,
+	.article-paragraph {
+		font-size: 28rpx;
+		line-height: 46rpx;
+		color: #343B49;
+	}
+
+	.article-section-title {
+		margin-top: 34rpx;
+		font-size: 38rpx;
+		font-weight: 700;
+		line-height: 52rpx;
+		color: #253047;
+	}
+
+	.recommend-card {
+		flex-direction: row;
+		align-items: center;
+		margin-top: 26rpx;
+		padding: 20rpx;
+		background-color: #FFF1F2;
+		border-radius: 22rpx;
+	}
+
+	.recommend-icon {
+		width: 100rpx;
+		height: 100rpx;
+		align-items: center;
+		justify-content: center;
+		background-color: #FFF5DE;
+		border-radius: 20rpx;
+	}
+
+	.recommend-icon-text {
+		font-size: 42rpx;
+		color: #B87916;
+	}
+
+	.recommend-main {
+		flex: 1;
+		margin-left: 18rpx;
+	}
+
+	.recommend-subtitle {
+		font-size: 22rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.recommend-title {
+		margin-top: 8rpx;
+		font-size: 28rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.recommend-price {
+		margin-top: 8rpx;
+		font-size: 22rpx;
+		color: $facetof-color-primary;
+	}
+
+	.recommend-arrow {
+		width: 72rpx;
+		height: 72rpx;
+		align-items: center;
+		justify-content: center;
+		background-color: $facetof-color-primary;
+		border-radius: 18rpx;
+	}
+
+	.recommend-arrow-text {
+		font-size: 34rpx;
+		color: #FFFFFF;
+	}
+
+	.action-bar {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		height: 116rpx;
+		flex-direction: row;
+		align-items: center;
+		padding: 14rpx 24rpx;
+		padding-bottom: var(--uni-safe-area-inset-bottom);
+		background-color: #FFFFFF;
+		border-top: 1rpx solid #F5DED5;
+	}
+
+	.comment-box {
+		flex: 1;
+		height: 78rpx;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 18rpx;
+		background-color: #FFF1E8;
+		border: 1rpx solid #F5DED5;
+		border-radius: 999rpx;
+	}
+
+	.comment-icon {
+		margin-right: 8rpx;
+		font-size: 28rpx;
+		color: #8D817B;
+	}
+
+	.comment-input {
+		flex: 1;
+		height: 72rpx;
+		font-size: 24rpx;
+		color: #253047;
+	}
+
+	.comment-placeholder {
+		font-size: 24rpx;
+		color: #B8ADA8;
+	}
+
+	.action-item {
+		width: 112rpx;
+		align-items: center;
+		margin-left: 12rpx;
+	}
+
+	.action-icon {
+		font-size: 36rpx;
+		color: #253047;
+	}
+
+	.action-count,
+	.action-label {
+		margin-top: 4rpx;
+		font-size: 18rpx;
+		color: #8D817B;
+	}
+
+	.bottom-space {
+		height: 20rpx;
+	}
+</style>

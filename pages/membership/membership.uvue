@@ -1,0 +1,484 @@
+<template>
+	<view class="page">
+		<scroll-view class="page-scroll" direction="vertical" :show-scrollbar="false">
+		<view class="page-content">
+			<view class="nav-bar">
+				<view class="nav-button" @click="goBack">
+					<text class="nav-icon">‹</text>
+				</view>
+				<text class="nav-title">会员中心</text>
+				<view class="nav-placeholder"></view>
+			</view>
+
+			<view class="membership-card">
+				<view class="membership-copy">
+					<text class="membership-brand">FaceTo MEMBERSHIP</text>
+					<view class="membership-status-row">
+						<view class="membership-status-dot"></view>
+						<text class="membership-status">{{ membership.status }}</text>
+					</view>
+					<text class="membership-name">{{ membership.membershipName }}</text>
+					<text class="membership-expire">有效期至 {{ membership.expireAt }}</text>
+				</view>
+				<view class="crown-circle">
+					<text class="crown-text">♛</text>
+				</view>
+			</view>
+
+			<view class="benefit-head">
+				<text class="section-title">让每次见面，多一份心意</text>
+				<text class="section-count">3 项权益</text>
+			</view>
+
+			<view class="benefit-card">
+				<view v-for="(benefit, index) in membership.benefits" :key="benefit.id" class="benefit-row" :class="index == membership.benefits.length - 1 ? 'benefit-row-last' : ''">
+					<view class="benefit-icon">
+						<text class="benefit-icon-text">{{ benefitIcon(benefit.iconType) }}</text>
+					</view>
+					<view class="benefit-copy">
+						<text class="benefit-title">{{ benefit.title }}</text>
+						<text class="benefit-desc">{{ benefit.description }}</text>
+					</view>
+				</view>
+			</view>
+
+			<view class="plan-head">
+				<text class="section-title">续费会员</text>
+				<text class="section-subtitle">金卡权益，随心选择</text>
+			</view>
+
+			<view class="plan-grid">
+				<view
+					v-for="plan in membership.plans"
+					:key="plan.id"
+					class="plan-card"
+					:class="selectedPlan == plan.id ? 'plan-card-active' : ''"
+					@click="selectedPlan = plan.id"
+				>
+					<view class="plan-title-row">
+						<text class="plan-title">{{ plan.title }}</text>
+						<view v-if="selectedPlan == plan.id" class="plan-check">✓</view>
+					</view>
+					<view class="plan-price-row">
+						<text class="plan-symbol">¥</text>
+						<text class="plan-price" :class="selectedPlan == plan.id ? 'plan-price-active' : ''">{{ plan.price.replace('¥', '') }}</text>
+					</view>
+					<text class="plan-duration">{{ plan.duration }}</text>
+				</view>
+			</view>
+
+			<text class="policy-note">套餐价格与权益仅为设计示例，非平台已确认政策。</text>
+			<view class="bottom-safe-space"></view>
+		</view>
+		</scroll-view>
+
+		<view class="action-bar">
+			<view class="selected-row">
+				<text class="selected-label">已选{{ selectedPlanTitle }} · {{ selectedPlanDuration }}</text>
+				<view class="pay-row">
+					<text class="pay-label">应付</text>
+					<text class="pay-symbol">¥</text>
+					<text class="pay-value">{{ selectedPlanPrice }}</text>
+				</view>
+			</view>
+			<view class="open-button" @click="openMembership">
+				<text class="open-text">立即开通</text>
+			</view>
+			<text class="action-tip">已是会员，开通后有效期顺延</text>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { computed } from 'vue'
+	import { getMembershipSummary } from '../../services/service-container.uts'
+	import type { MembershipSummary } from '../../types/models.uts'
+
+	const membership = ref<MembershipSummary>(getMembershipSummary())
+	const selectedPlan = ref('plan-quarter')
+
+	const selectedPlanData = computed(() => {
+		for (let i = 0; i < membership.value.plans.length; i++) {
+			if (membership.value.plans[i].id == selectedPlan.value) {
+				return membership.value.plans[i]
+			}
+		}
+		return membership.value.plans[1]
+	})
+
+	const selectedPlanTitle = computed(() : string => selectedPlanData.value.title)
+	const selectedPlanDuration = computed(() : string => selectedPlanData.value.duration.replace('有效期 ', ''))
+	const selectedPlanPrice = computed(() : string => selectedPlanData.value.price.replace('¥', '') + '.00')
+
+	function benefitIcon(type: string): string {
+		if (type == 'support') {
+			return '♧'
+		}
+		if (type == 'coupon') {
+			return '券'
+		}
+		return '✦'
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/profile/profile'
+				})
+			}
+		})
+	}
+
+	function openMembership() {
+		uni.showToast({
+			title: '会员开通将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-scroll {
+		flex: 1;
+		min-height: 0;
+	}
+
+	.page-content {
+		padding-bottom: 260rpx;
+	}
+
+	.nav-bar {
+		height: 128rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32rpx;
+		background-color: #FFF9F5;
+	}
+
+	.nav-button,
+	.nav-placeholder {
+		width: 76rpx;
+		height: 76rpx;
+	}
+
+	.nav-button {
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 60rpx;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.membership-card {
+		height: 360rpx;
+		flex-direction: row;
+		align-items: center;
+		margin: 26rpx 32rpx 0;
+		padding: 36rpx;
+		background-image: linear-gradient(to right, #FD5A6B, #FCAE59);
+		border-radius: 28rpx;
+	}
+
+	.membership-copy {
+		flex: 1;
+	}
+
+	.membership-brand {
+		font-size: 24rpx;
+		font-weight: 700;
+		letter-spacing: 2rpx;
+		color: #FFFFFF;
+	}
+
+	.membership-status-row {
+		flex-direction: row;
+		align-items: center;
+		margin-top: 14rpx;
+	}
+
+	.membership-status-dot {
+		width: 10rpx;
+		height: 10rpx;
+		margin-right: 8rpx;
+		background-color: #FFFFFF;
+		border-radius: 50%;
+	}
+
+	.membership-status {
+		font-size: 22rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.membership-name {
+		margin-top: 18rpx;
+		font-size: 52rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.membership-expire {
+		margin-top: 18rpx;
+		font-size: 24rpx;
+		color: rgba(255, 255, 255, 0.88);
+	}
+
+	.crown-circle {
+		width: 180rpx;
+		height: 180rpx;
+		align-items: center;
+		justify-content: center;
+		background-color: rgba(255, 255, 255, 0.18);
+		border: 2rpx solid rgba(255, 255, 255, 0.24);
+		border-radius: 50%;
+	}
+
+	.crown-text {
+		font-size: 82rpx;
+		color: rgba(255, 255, 255, 0.72);
+	}
+
+	.benefit-head,
+	.plan-head {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		margin: 38rpx 32rpx 18rpx;
+	}
+
+	.section-title {
+		font-size: 34rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.section-count,
+	.section-subtitle {
+		font-size: 24rpx;
+		color: #8D817B;
+	}
+
+	.benefit-card {
+		margin: 0 32rpx;
+		padding: 0 22rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.benefit-row {
+		flex-direction: row;
+		align-items: center;
+		padding: 22rpx 0;
+		border-bottom: 1rpx solid #F5DED5;
+	}
+
+	.benefit-row-last {
+		border-bottom-width: 0;
+	}
+
+	.benefit-icon {
+		width: 68rpx;
+		height: 68rpx;
+		align-items: center;
+		justify-content: center;
+		background-color: #FFF5DE;
+		border-radius: 18rpx;
+	}
+
+	.benefit-icon-text {
+		font-size: 30rpx;
+		font-weight: 700;
+		color: #B87916;
+	}
+
+	.benefit-copy {
+		flex: 1;
+		margin-left: 18rpx;
+	}
+
+	.benefit-title {
+		font-size: 30rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.benefit-desc {
+		margin-top: 7rpx;
+		font-size: 22rpx;
+		color: #8D817B;
+	}
+
+	.plan-grid {
+		flex-direction: row;
+		margin: 0 32rpx;
+	}
+
+	.plan-card {
+		flex: 1;
+		padding: 22rpx 18rpx;
+		margin-right: 16rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 20rpx;
+	}
+
+	.plan-card-last {
+		margin-right: 0;
+	}
+
+	.plan-card-active {
+		background-color: #FFF1F2;
+		border-color: $facetof-color-primary;
+	}
+
+	.plan-title-row {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.plan-title {
+		font-size: 30rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.plan-check {
+		width: 36rpx;
+		height: 36rpx;
+		align-items: center;
+		justify-content: center;
+		font-size: 21rpx;
+		color: #FFFFFF;
+		background-color: $facetof-color-primary;
+		border-radius: 50%;
+	}
+
+	.plan-price-row {
+		flex-direction: row;
+		align-items: center;
+		margin-top: 16rpx;
+	}
+
+	.plan-symbol {
+		font-size: 22rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.plan-price {
+		margin-left: 4rpx;
+		font-size: 52rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.plan-price-active {
+		color: $facetof-color-primary;
+	}
+
+	.plan-duration {
+		margin-top: 12rpx;
+		font-size: 21rpx;
+		color: #8D817B;
+	}
+
+	.policy-note {
+		margin: 22rpx 36rpx 0;
+		font-size: 22rpx;
+		line-height: 34rpx;
+		color: #8D817B;
+	}
+
+	.bottom-safe-space {
+		height: 20rpx;
+	}
+
+	.action-bar {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		padding: 18rpx 32rpx;
+		padding-bottom: var(--uni-safe-area-inset-bottom);
+		background-color: #FFFFFF;
+		border-top: 1rpx solid #F5DED5;
+	}
+
+	.selected-row {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.selected-label {
+		font-size: 24rpx;
+		color: #8D817B;
+	}
+
+	.pay-row {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.pay-label {
+		margin-right: 6rpx;
+		font-size: 22rpx;
+		color: #8D817B;
+	}
+
+	.pay-symbol {
+		font-size: 24rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.pay-value {
+		margin-left: 4rpx;
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.open-button {
+		height: 92rpx;
+		align-items: center;
+		justify-content: center;
+		margin-top: 14rpx;
+		background-color: $facetof-color-primary;
+		border-radius: 18rpx;
+	}
+
+	.open-text {
+		font-size: 32rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.action-tip {
+		margin-top: 12rpx;
+		text-align: center;
+		font-size: 22rpx;
+		color: #253047;
+	}
+</style>

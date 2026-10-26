@@ -1,0 +1,328 @@
+<template>
+	<scroll-view class="page" direction="vertical" :show-scrollbar="false">
+		<view class="page-content">
+			<view class="nav-bar">
+				<view class="nav-button" @click="goBack">
+					<text class="nav-icon">‹</text>
+				</view>
+				<text class="nav-title">客服帮助</text>
+				<view class="nav-placeholder"></view>
+			</view>
+
+			<view class="search-box">
+				<image class="search-icon" src="/static/search/search.png" mode="aspectFit"></image>
+				<input
+					class="search-input"
+					:value="keyword"
+					placeholder="搜索帮助内容"
+					placeholder-class="search-placeholder"
+					@input="onKeywordInput"
+				/>
+			</view>
+
+			<view class="intro-card">
+				<text class="intro-title">需要帮助吗？</text>
+				<text class="intro-desc">选择下方分类，快速找到答案</text>
+			</view>
+
+			<view class="faq-grid">
+				<view v-for="item in faqItems" :key="item.title" class="faq-card" @click="openFaq(item.title)">
+					<view class="faq-icon" :class="item.tone">
+						<text class="faq-icon-text">{{ item.icon }}</text>
+					</view>
+					<view class="faq-copy">
+						<text class="faq-title">{{ item.title }}</text>
+						<text class="faq-desc">{{ item.desc }}</text>
+					</view>
+					<text class="faq-arrow">›</text>
+				</view>
+			</view>
+
+			<view class="support-card">
+				<view class="support-head">
+					<text class="support-title">联系客服</text>
+					<text class="support-desc">工作日 09:00 - 22:00</text>
+				</view>
+				<view class="support-actions">
+					<view class="support-button primary" @click="openService">
+						<text class="support-button-text">在线客服</text>
+					</view>
+					<view class="support-button secondary support-button-second" @click="openFeedback">
+						<text class="support-button-text secondary-text">意见反馈</text>
+					</view>
+				</view>
+			</view>
+
+			<text class="brand-footer">FaceTo · 见面聊，安心见</text>
+			<view class="bottom-space"></view>
+		</view>
+	</scroll-view>
+</template>
+
+<script setup lang="uts">
+	const keyword = ref('')
+	const faqItems = [
+		{ title: '订单问题', desc: '预约、取消、退款与订单状态', icon: '单', tone: 'tone-brand' },
+		{ title: '支付问题', desc: '支付方式、余额与发票相关', icon: '¥', tone: 'tone-warm' },
+		{ title: '安全问题', desc: '见面安全、认证与平台保障', icon: '♢', tone: 'tone-brand' },
+		{ title: '账号问题', desc: '登录、资料、隐私与账号安全', icon: '♙', tone: 'tone-warm' }
+	]
+
+	function onKeywordInput(event: InputEvent) {
+		keyword.value = event.detail.value
+	}
+
+	function openFaq(title: string) {
+		uni.showToast({
+			title: title + '帮助内容将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function openService() {
+		uni.showToast({
+			title: '在线客服将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function openFeedback() {
+		uni.showToast({
+			title: '意见反馈将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/profile/profile'
+				})
+			}
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-content {
+		padding-bottom: 32rpx;
+	}
+
+	.nav-bar {
+		height: 128rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32rpx;
+		background-color: #FFF9F5;
+	}
+
+	.nav-button,
+	.nav-placeholder {
+		width: 76rpx;
+		height: 76rpx;
+	}
+
+	.nav-button {
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 60rpx;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.search-box {
+		height: 96rpx;
+		flex-direction: row;
+		align-items: center;
+		margin: 24rpx 32rpx 0;
+		padding: 0 22rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 22rpx;
+	}
+
+	.search-icon {
+		width: 36rpx;
+		height: 36rpx;
+	}
+
+	.search-input {
+		flex: 1;
+		height: 90rpx;
+		margin-left: 14rpx;
+		font-size: 27rpx;
+		color: #253047;
+	}
+
+	.search-placeholder {
+		font-size: 27rpx;
+		color: #B8ADA8;
+	}
+
+	.intro-card {
+		margin: 22rpx 32rpx 0;
+	}
+
+	.intro-title {
+		font-size: 38rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.intro-desc {
+		margin-top: 10rpx;
+		font-size: 25rpx;
+		color: #8D817B;
+	}
+
+	.faq-grid {
+		margin: 24rpx 32rpx 0;
+	}
+
+	.faq-card {
+		flex-direction: row;
+		align-items: center;
+		margin-bottom: 16rpx;
+		padding: 24rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 24rpx;
+	}
+
+	.faq-icon {
+		width: 72rpx;
+		height: 72rpx;
+		align-items: center;
+		justify-content: center;
+		border-radius: 20rpx;
+	}
+
+	.tone-brand {
+		background-color: #FFF1F2;
+	}
+
+	.tone-warm {
+		background-color: #FFF5DE;
+	}
+
+	.faq-icon-text {
+		font-size: 30rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.faq-copy {
+		flex: 1;
+		margin-left: 18rpx;
+	}
+
+	.faq-title {
+		font-size: 30rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.faq-desc {
+		margin-top: 8rpx;
+		font-size: 22rpx;
+		color: #8D817B;
+	}
+
+	.faq-arrow {
+		font-size: 38rpx;
+		color: #8D817B;
+	}
+
+	.support-card {
+		margin: 28rpx 32rpx 0;
+		padding: 28rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.support-head {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.support-title {
+		font-size: 34rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.support-desc {
+		font-size: 22rpx;
+		color: #8D817B;
+	}
+
+	.support-actions {
+		flex-direction: row;
+		margin-top: 22rpx;
+	}
+
+	.support-button {
+		flex: 1;
+		height: 82rpx;
+		align-items: center;
+		justify-content: center;
+		border-radius: 18rpx;
+	}
+
+	.support-button-second {
+		margin-left: 14rpx;
+	}
+
+	.primary {
+		background-color: $facetof-color-primary;
+	}
+
+	.secondary {
+		background-color: #FFFFFF;
+		border: 1rpx solid #F1B8BE;
+	}
+
+	.support-button-text {
+		font-size: 27rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.secondary-text {
+		color: $facetof-color-primary;
+	}
+
+	.brand-footer {
+		margin-top: 32rpx;
+		text-align: center;
+		font-size: 25rpx;
+		color: #253047;
+	}
+
+	.bottom-space {
+		height: 32rpx;
+	}
+</style>

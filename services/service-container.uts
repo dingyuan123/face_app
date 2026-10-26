@@ -18,7 +18,17 @@ import {
   OrderListItem,
   FavoriteItem,
   FollowingMoment,
-  FollowingProvider
+  FollowingProvider,
+  MyMomentItem,
+  WalletSummary,
+  WalletTransaction,
+  CouponItem,
+  MembershipSummary,
+  ChatMessage,
+  NewsDetail,
+  ProfileEditDraft,
+  ReviewListItem,
+  MomentPublishDraft
 } from '../types/models.uts'
 import * as mockAuth from './mock-auth.uts'
 import * as mockPublic from './mock-public.uts'
@@ -31,6 +41,17 @@ import * as mockDetail from './mock-detail.uts'
 import * as mockOrder from './mock-order.uts'
 import * as mockFavorites from './mock-favorites.uts'
 import * as mockFollowing from './mock-following.uts'
+import * as mockMyMoments from './mock-my-moments.uts'
+import * as mockWallet from './mock-wallet.uts'
+import * as mockCoupons from './mock-coupons.uts'
+import * as mockMembership from './mock-membership.uts'
+import * as mockVerification from './mock-verification.uts'
+import * as mockChat from './mock-chat.uts'
+import * as mockNewsDetail from './mock-news-detail.uts'
+import * as mockReview from './mock-review.uts'
+import * as mockProfileEdit from './mock-profile-edit.uts'
+import * as mockReviews from './mock-reviews.uts'
+import * as mockMomentPublish from './mock-moment-publish.uts'
 
 /**
  * 页面只依赖本文件中的业务服务。
@@ -122,6 +143,58 @@ export function getFollowingProviders(): Array<FollowingProvider> {
 
 export function getFollowingMoments(): Array<FollowingMoment> {
   return mockFollowing.getFollowingMoments()
+}
+
+export function getMyMomentItems(empty: boolean): Array<MyMomentItem> {
+  return mockMyMoments.getMyMomentItems(empty)
+}
+
+export function getWalletSummary(): WalletSummary {
+  return mockWallet.getWalletSummary()
+}
+
+export function getWalletTransactions(tab: string): Array<WalletTransaction> {
+  return mockWallet.getWalletTransactions(tab)
+}
+
+export function getCouponItems(status: string): Array<CouponItem> {
+  return mockCoupons.getCouponItems(status)
+}
+
+export function getMembershipSummary(): MembershipSummary {
+  return mockMembership.getMembershipSummary()
+}
+
+export function submitIdVerification(realName: string, idNumber: string): ActionOutcome {
+  return mockVerification.submitIdVerification(realName, idNumber)
+}
+
+export function getChatMessages(): Array<ChatMessage> {
+  return mockChat.getChatMessages()
+}
+
+export function getNewsDetail(id: string): NewsDetail {
+  return mockNewsDetail.getNewsDetail(id)
+}
+
+export function submitReview(rating: number, tags: string[], content: string, anonymous: boolean): ActionOutcome {
+  return mockReview.submitReview(rating, tags, content, anonymous)
+}
+
+export function saveProfileDraft(draft: ProfileEditDraft): ActionOutcome {
+  return mockProfileEdit.saveProfileDraft(draft)
+}
+
+export function getMyReviewItems(): Array<ReviewListItem> {
+  return mockReviews.getMyReviewItems()
+}
+
+export function getReceivedReviewItems(): Array<ReviewListItem> {
+  return mockReviews.getReceivedReviewItems()
+}
+
+export function publishMoment(draft: MomentPublishDraft): ActionOutcome {
+  return mockMomentPublish.publishMoment(draft)
 }
 
 export function getApplicationHistory(): Array<ProviderApplicationRecord> {

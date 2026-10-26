@@ -1,0 +1,77 @@
+import { WalletSummary, WalletTransaction } from '../types/models.uts'
+
+export function getWalletSummary(): WalletSummary {
+  return {
+    availableAmount: '800.00',
+    frozenAmount: '200.00',
+    frozenDescription: '提现处理中，已从可用余额扣除，暂不可用',
+    paymentName: '微信支付',
+    cardTail: '6228',
+    transactions: [
+      {
+        id: 'wallet-001',
+        type: '提现',
+        title: '提现至银行卡',
+        subtitle: '提现冻结 · 尾号 6228',
+        time: '10-17 11:20',
+        amount: '-¥200.00',
+        status: '处理中 · 已冻结',
+        iconType: 'withdraw'
+      },
+      {
+        id: 'wallet-002',
+        type: '收入',
+        title: '台球助教 · 服务收入',
+        subtitle: '收入 · 订单已完成',
+        time: '10-16 18:30',
+        amount: '+¥180.00',
+        status: '已完成',
+        iconType: 'income'
+      },
+      {
+        id: 'wallet-003',
+        type: '支出',
+        title: '城市漫步 · 服务支付',
+        subtitle: '支出 · 余额支付',
+        time: '10-16 15:00',
+        amount: '-¥80.00',
+        status: '已完成',
+        iconType: 'expense'
+      },
+      {
+        id: 'wallet-004',
+        type: '提现',
+        title: '提现至银行卡',
+        subtitle: '支出 · 尾号 6228',
+        time: '10-15 10:00',
+        amount: '-¥100.00',
+        status: '提现成功',
+        iconType: 'withdraw'
+      },
+      {
+        id: 'wallet-005',
+        type: '充值',
+        title: '余额充值',
+        subtitle: '收入 · 微信支付',
+        time: '10-14 09:20',
+        amount: '+¥1,000.00',
+        status: '已完成',
+        iconType: 'recharge'
+      }
+    ]
+  }
+}
+
+export function getWalletTransactions(tab: string): Array<WalletTransaction> {
+  const all = getWalletSummary().transactions
+  if (tab == '全部') {
+    return all
+  }
+  if (tab == '收入') {
+    return all.filter((item: WalletTransaction) : boolean => item.type == '收入' || item.type == '充值')
+  }
+  if (tab == '支出') {
+    return all.filter((item: WalletTransaction) : boolean => item.type == '支出')
+  }
+  return all.filter((item: WalletTransaction) : boolean => item.type == '提现' || item.type == '充值')
+}

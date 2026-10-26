@@ -1,0 +1,512 @@
+<template>
+	<scroll-view class="page" direction="vertical" :show-scrollbar="false">
+		<view class="page-content">
+			<view class="nav-bar">
+				<view class="nav-button" @click="goBack">
+					<text class="nav-icon">‹</text>
+				</view>
+				<text class="nav-title">编辑资料</text>
+				<view class="save-button" @click="save">
+					<text class="save-text">保存</text>
+				</view>
+			</view>
+
+			<view class="avatar-card">
+				<view class="avatar-wrap">
+					<image class="avatar" :src="avatar" mode="aspectFill"></image>
+				</view>
+				<view class="avatar-copy">
+					<text class="avatar-title">更换头像</text>
+					<text class="avatar-desc">上传真实清晰的本人照片</text>
+					<view class="choose-button" @click="chooseAvatar">
+						<text class="choose-plus">＋</text>
+						<text class="choose-text">选择照片</text>
+					</view>
+				</view>
+			</view>
+
+			<view class="form-card">
+				<text class="field-label">昵称</text>
+				<input
+					class="field-input"
+					:value="nickname"
+					maxlength="20"
+					placeholder="请输入昵称"
+					placeholder-class="field-placeholder"
+					@input="onNicknameInput"
+				/>
+
+				<text class="field-label">性别</text>
+				<view class="select-field" @click="chooseGender">
+					<text class="select-text">{{ gender }}</text>
+					<text class="select-arrow">⌄</text>
+				</view>
+
+				<text class="field-label">年龄</text>
+				<view class="select-field" @click="chooseAge">
+					<text class="select-text">{{ age }}</text>
+					<text class="select-arrow">⌄</text>
+				</view>
+
+				<text class="field-label">所在城市</text>
+				<view class="select-field" @click="chooseCity">
+					<text class="select-text">{{ city }}</text>
+					<text class="select-arrow">⌄</text>
+				</view>
+
+				<text class="field-label">个性签名</text>
+				<input
+					class="field-input"
+					:value="bio"
+					maxlength="60"
+					placeholder="介绍一下自己吧"
+					placeholder-class="field-placeholder"
+					@input="onBioInput"
+				/>
+			</view>
+
+			<view class="tag-card">
+				<text class="tag-title">兴趣标签</text>
+				<text class="tag-desc">选择兴趣，让同城玩伴更了解你</text>
+
+				<view class="tag-group">
+					<text class="group-label">运动</text>
+					<view class="tag-list">
+						<view class="tag-button" :class="tagBilliards ? 'tag-button-active' : ''" @click="tagBilliards = !tagBilliards">
+							<text class="tag-text" :class="tagBilliards ? 'tag-text-active' : ''">台球</text>
+						</view>
+						<view class="tag-button" :class="tagBadminton ? 'tag-button-active' : ''" @click="tagBadminton = !tagBadminton">
+							<text class="tag-text" :class="tagBadminton ? 'tag-text-active' : ''">羽毛球</text>
+						</view>
+						<view class="tag-button" :class="tagRunning ? 'tag-button-active' : ''" @click="tagRunning = !tagRunning">
+							<text class="tag-text" :class="tagRunning ? 'tag-text-active' : ''">跑步</text>
+						</view>
+					</view>
+				</view>
+
+				<view class="tag-group">
+					<text class="group-label">娱乐</text>
+					<view class="tag-list">
+						<view class="tag-button" :class="tagMovie ? 'tag-button-active' : ''" @click="tagMovie = !tagMovie">
+							<text class="tag-text" :class="tagMovie ? 'tag-text-active' : ''">看电影</text>
+						</view>
+						<view class="tag-button" :class="tagBoardGame ? 'tag-button-active' : ''" @click="tagBoardGame = !tagBoardGame">
+							<text class="tag-text" :class="tagBoardGame ? 'tag-text-active' : ''">桌游</text>
+						</view>
+						<view class="tag-button" :class="tagMusic ? 'tag-button-active' : ''" @click="tagMusic = !tagMusic">
+							<text class="tag-text" :class="tagMusic ? 'tag-text-active' : ''">音乐</text>
+						</view>
+					</view>
+				</view>
+
+				<view class="tag-group">
+					<text class="group-label">休闲</text>
+					<view class="tag-list">
+						<view class="tag-button" :class="tagCoffee ? 'tag-button-active' : ''" @click="tagCoffee = !tagCoffee">
+							<text class="tag-text" :class="tagCoffee ? 'tag-text-active' : ''">咖啡</text>
+						</view>
+						<view class="tag-button" :class="tagWalk ? 'tag-button-active' : ''" @click="tagWalk = !tagWalk">
+							<text class="tag-text" :class="tagWalk ? 'tag-text-active' : ''">城市漫步</text>
+						</view>
+						<view class="tag-button" :class="tagFood ? 'tag-button-active' : ''" @click="tagFood = !tagFood">
+							<text class="tag-text" :class="tagFood ? 'tag-text-active' : ''">美食</text>
+						</view>
+					</view>
+				</view>
+			</view>
+
+			<view class="privacy-row">
+				<view class="privacy-check">✓</view>
+				<text class="privacy-text">资料仅用于完善个人主页，放心填写</text>
+			</view>
+			<text class="brand-footer">FaceTo · 见面聊，安心见</text>
+			<view class="bottom-space"></view>
+		</view>
+	</scroll-view>
+</template>
+
+<script setup lang="uts">
+	import { saveProfileDraft } from '../../services/service-container.uts'
+
+	const avatar = ref('/static/following/avatar-linchuan.png')
+	const nickname = ref('小林同学')
+	const gender = ref('男')
+	const age = ref('24 岁')
+	const city = ref('四川省 · 泸州市')
+	const bio = ref('喜欢台球、咖啡和城市漫步')
+
+	const tagBilliards = ref(true)
+	const tagBadminton = ref(false)
+	const tagRunning = ref(false)
+	const tagMovie = ref(false)
+	const tagBoardGame = ref(false)
+	const tagMusic = ref(false)
+	const tagCoffee = ref(true)
+	const tagWalk = ref(false)
+	const tagFood = ref(false)
+
+	function onNicknameInput(event: InputEvent) {
+		nickname.value = event.detail.value
+	}
+
+	function onBioInput(event: InputEvent) {
+		bio.value = event.detail.value
+	}
+
+	function chooseAvatar() {
+		uni.chooseImage({
+			count: 1,
+			success: (result) => {
+				if (result.tempFilePaths.length > 0) {
+					avatar.value = result.tempFilePaths[0]
+				}
+			}
+		})
+	}
+
+	function chooseGender() {
+		uni.showToast({
+			title: '性别选择将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function chooseAge() {
+		uni.showToast({
+			title: '年龄选择将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function chooseCity() {
+		uni.showToast({
+			title: '城市选择将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function buildTags(): Array<string> {
+		const result: Array<string> = []
+		if (tagBilliards.value) {
+			result.push('台球')
+		}
+		if (tagBadminton.value) {
+			result.push('羽毛球')
+		}
+		if (tagRunning.value) {
+			result.push('跑步')
+		}
+		if (tagMovie.value) {
+			result.push('看电影')
+		}
+		if (tagBoardGame.value) {
+			result.push('桌游')
+		}
+		if (tagMusic.value) {
+			result.push('音乐')
+		}
+		if (tagCoffee.value) {
+			result.push('咖啡')
+		}
+		if (tagWalk.value) {
+			result.push('城市漫步')
+		}
+		if (tagFood.value) {
+			result.push('美食')
+		}
+		return result
+	}
+
+	function save() {
+		const result = saveProfileDraft({
+			nickname: nickname.value,
+			gender: gender.value,
+			age: age.value,
+			city: city.value,
+			bio: bio.value,
+			avatar: avatar.value,
+			tags: buildTags()
+		})
+		uni.showToast({
+			title: result.message,
+			position: 'bottom',
+			icon: result.ok ? 'success' : 'error'
+		})
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/profile/profile'
+				})
+			}
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-content {
+		padding-bottom: 32rpx;
+	}
+
+	.nav-bar {
+		height: 128rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32rpx;
+		background-color: #FFF9F5;
+	}
+
+	.nav-button {
+		width: 76rpx;
+		height: 76rpx;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 60rpx;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.save-button {
+		height: 72rpx;
+		align-items: center;
+		justify-content: center;
+		padding: 0 24rpx;
+		background-color: $facetof-color-primary;
+		border-radius: 20rpx;
+	}
+
+	.save-text {
+		font-size: 26rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.avatar-card {
+		flex-direction: row;
+		align-items: center;
+		margin: 24rpx 32rpx;
+		padding: 28rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.avatar-wrap {
+		width: 128rpx;
+		height: 128rpx;
+		border: 3rpx solid $facetof-color-primary;
+		border-radius: 50%;
+	}
+
+	.avatar {
+		width: 122rpx;
+		height: 122rpx;
+		border-radius: 50%;
+	}
+
+	.avatar-copy {
+		flex: 1;
+		margin-left: 22rpx;
+	}
+
+	.avatar-title {
+		font-size: 36rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.avatar-desc {
+		margin-top: 10rpx;
+		font-size: 25rpx;
+		color: #8D817B;
+	}
+
+	.choose-button {
+		height: 64rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+		align-self: flex-start;
+		margin-top: 16rpx;
+		padding: 0 18rpx;
+		background-color: #FFF1F2;
+		border: 1rpx solid #FFD9DC;
+		border-radius: 999rpx;
+	}
+
+	.choose-plus {
+		margin-right: 8rpx;
+		font-size: 28rpx;
+		color: $facetof-color-primary;
+	}
+
+	.choose-text {
+		font-size: 23rpx;
+		color: $facetof-color-primary;
+	}
+
+	.form-card,
+	.tag-card {
+		margin: 0 32rpx 18rpx;
+		padding: 28rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.field-label {
+		margin-top: 24rpx;
+		font-size: 28rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.field-input,
+	.select-field {
+		height: 92rpx;
+		margin-top: 14rpx;
+		padding: 0 22rpx;
+		font-size: 28rpx;
+		color: #253047;
+		background-color: #FFF1E8;
+		border: 1rpx solid #F5DED5;
+		border-radius: 18rpx;
+	}
+
+	.field-input {
+	}
+
+	.field-placeholder {
+		font-size: 28rpx;
+		color: #B8ADA8;
+	}
+
+	.select-field {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.select-text {
+		font-size: 28rpx;
+		color: #253047;
+	}
+
+	.select-arrow {
+		font-size: 30rpx;
+		color: #8D817B;
+	}
+
+	.tag-title {
+		font-size: 38rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.tag-desc {
+		margin-top: 10rpx;
+		font-size: 25rpx;
+		color: #8D817B;
+	}
+
+	.tag-group {
+		flex-direction: row;
+		align-items: center;
+		margin-top: 22rpx;
+	}
+
+	.group-label {
+		width: 78rpx;
+		font-size: 24rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.tag-list {
+		flex: 1;
+		flex-direction: row;
+		flex-wrap: wrap;
+	}
+
+	.tag-button {
+		height: 58rpx;
+		align-items: center;
+		justify-content: center;
+		margin: 0 12rpx 12rpx 0;
+		padding: 0 18rpx;
+		background-color: #FFF1E8;
+		border: 1rpx solid #F5DED5;
+		border-radius: 999rpx;
+	}
+
+	.tag-button-active {
+		background-color: #FFF1F2;
+		border-color: $facetof-color-primary;
+	}
+
+	.tag-text {
+		font-size: 23rpx;
+		color: #253047;
+	}
+
+	.tag-text-active {
+		color: $facetof-color-primary;
+		font-weight: 700;
+	}
+
+	.privacy-row {
+		flex-direction: row;
+		align-items: center;
+		margin: 24rpx 40rpx 0;
+	}
+
+	.privacy-check {
+		width: 34rpx;
+		height: 34rpx;
+		align-items: center;
+		justify-content: center;
+		font-size: 20rpx;
+		color: #FFFFFF;
+		background-color: $facetof-color-primary;
+		border-radius: 50%;
+	}
+
+	.privacy-text {
+		margin-left: 12rpx;
+		font-size: 22rpx;
+		color: #8D817B;
+	}
+
+	.brand-footer {
+		margin-top: 34rpx;
+		text-align: center;
+		font-size: 24rpx;
+		color: #253047;
+	}
+
+	.bottom-space {
+		height: 32rpx;
+	}
+</style>

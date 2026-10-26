@@ -1,0 +1,207 @@
+<template>
+	<scroll-view class="page" direction="vertical" :show-scrollbar="false">
+		<view class="page-content">
+			<view class="nav-bar">
+				<view class="nav-button" @click="goBack">
+					<text class="nav-icon">‹</text>
+				</view>
+				<text class="nav-title">关于我们</text>
+				<view class="nav-placeholder"></view>
+			</view>
+
+			<view class="brand-card">
+				<image class="app-logo" src="/static/brand/app-logo.png" mode="aspectFit"></image>
+				<image class="wordmark" src="/static/brand/facetof-wordmark.png" mode="aspectFit"></image>
+				<text class="slogan">见面聊，安心见</text>
+				<text class="version">Version 1.0.0</text>
+			</view>
+
+			<view class="intro-card">
+				<text class="intro-title">让每一次见面，都多一份安心</text>
+				<text class="intro-desc">见面聊是一个真实、安心、友好的同城陪伴服务平台。我们希望用清晰的服务规则和可信的认证体系，让同城玩伴可以放心地认识、沟通和见面。</text>
+			</view>
+
+			<view class="menu-card">
+				<view class="menu-row" @click="openInfo('公司简介')">
+					<text class="menu-name">公司简介</text>
+					<text class="menu-arrow">›</text>
+				</view>
+				<view class="menu-row" @click="openInfo('用户协议')">
+					<text class="menu-name">用户协议</text>
+					<text class="menu-arrow">›</text>
+				</view>
+				<view class="menu-row" @click="openInfo('隐私政策')">
+					<text class="menu-name">隐私政策</text>
+					<text class="menu-arrow">›</text>
+				</view>
+				<view class="menu-row" @click="openInfo('营业执照')">
+					<text class="menu-name">营业执照</text>
+					<text class="menu-arrow">›</text>
+				</view>
+				<view class="menu-row" @click="openInfo('联系方式')">
+					<text class="menu-name">联系方式</text>
+					<text class="menu-arrow">›</text>
+				</view>
+			</view>
+
+			<text class="footer-brand">FaceTo · 见面聊，安心见</text>
+			<view class="bottom-space"></view>
+		</view>
+	</scroll-view>
+</template>
+
+<script setup lang="uts">
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/profile/profile'
+				})
+			}
+		})
+	}
+
+	function openInfo(name: string) {
+		uni.showToast({
+			title: name + '将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-content {
+		padding-bottom: 32rpx;
+	}
+
+	.nav-bar {
+		height: 128rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32rpx;
+		background-color: #FFF9F5;
+	}
+
+	.nav-button,
+	.nav-placeholder {
+		width: 76rpx;
+		height: 76rpx;
+	}
+
+	.nav-button {
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 60rpx;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.brand-card {
+		align-items: center;
+		margin: 26rpx 32rpx 0;
+		padding: 48rpx 20rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.app-logo {
+		width: 128rpx;
+		height: 128rpx;
+		margin-bottom: 18rpx;
+	}
+
+	.wordmark {
+		width: 320rpx;
+		height: 92rpx;
+	}
+
+	.slogan {
+		margin-top: 14rpx;
+		font-size: 26rpx;
+		font-weight: 600;
+		color: #253047;
+	}
+
+	.version {
+		margin-top: 10rpx;
+		font-size: 21rpx;
+		color: #8D817B;
+	}
+
+	.intro-card {
+		margin: 18rpx 32rpx 0;
+		padding: 28rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.intro-title {
+		font-size: 32rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.intro-desc {
+		margin-top: 14rpx;
+		font-size: 25rpx;
+		line-height: 42rpx;
+		color: #756B66;
+	}
+
+	.menu-card {
+		margin: 18rpx 32rpx 0;
+		padding: 0 24rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.menu-row {
+		height: 96rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		border-bottom: 1rpx solid #F5DED5;
+	}
+
+	.menu-name {
+		font-size: 28rpx;
+		color: #253047;
+	}
+
+	.menu-arrow {
+		font-size: 38rpx;
+		color: #8D817B;
+	}
+
+	.footer-brand {
+		margin-top: 32rpx;
+		text-align: center;
+		font-size: 25rpx;
+		color: #253047;
+	}
+
+	.bottom-space {
+		height: 32rpx;
+	}
+</style>

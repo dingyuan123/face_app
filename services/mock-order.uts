@@ -87,6 +87,19 @@ export function getOrderList(tab: string): Array<OrderListItem> {
       actionLabel: '查看订单'
     },
     {
+      id: 'order-006',
+      title: '咖啡陪伴 · 轻松交流',
+      providerName: '小禾',
+      avatar: '/static/avatars/qinghe.png',
+      verified: true,
+      status: '待评价',
+      time: '10月17日 周六 14:00-15:00',
+      location: '泸州万象汇 · 瑞幸咖啡',
+      amountLabel: '实付',
+      amount: '¥59.00',
+      actionLabel: '去评价'
+    },
+    {
       id: 'order-005',
       title: '羽毛球陪练 · 轻松出汗',
       providerName: '知夏',
