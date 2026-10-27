@@ -1,0 +1,117 @@
+import { ActionOutcome, ProviderReviewItem } from '../types/models.uts'
+
+const REVIEWS_KEY = 'faceto.provider.reviews.v1'
+let reviewsLoaded = false
+let reviews: Array<ProviderReviewItem> = []
+
+function copyReview(item: ProviderReviewItem): ProviderReviewItem {
+  return {
+    id: item.id,
+    userName: item.userName,
+    avatar: item.avatar,
+    rating: item.rating,
+    content: item.content,
+    createdAt: item.createdAt,
+    serviceTitle: item.serviceTitle,
+    reply: item.reply
+  }
+}
+
+function createDefaultReviews(): Array<ProviderReviewItem> {
+  return [
+    {
+      id: 'provider-review-001',
+      userName: '小满',
+      avatar: '/static/avatars/xiaoman.png',
+      rating: 5,
+      content: '讲解非常耐心，第一次打台球也完全不紧张，学到了很多实用的小技巧。',
+      createdAt: '今天 12:18',
+      serviceTitle: '台球助教 · 新手体验',
+      reply: ''
+    },
+    {
+      id: 'provider-review-002',
+      userName: '小禾',
+      avatar: '/static/avatars/qinghe.png',
+      rating: 5,
+      content: '交流很舒服，时间安排也准点，整体体验很轻松。',
+      createdAt: '昨天 19:36',
+      serviceTitle: '咖啡陪伴 · 轻松交流',
+      reply: '谢谢你的认可，期待下次见面。'
+    },
+    {
+      id: 'provider-review-003',
+      userName: '林川',
+      avatar: '/static/avatars/linxiao.png',
+      rating: 4,
+      content: '路线安排不错，如果能再多介绍一点老建筑的历史就更好了。',
+      createdAt: '10月24日 17:42',
+      serviceTitle: '城市漫步 · 老城慢行',
+      reply: ''
+    }
+  ]
+}
+
+function persistReviews() {
+  const next: Array<ProviderReviewItem> = []
+  for (let i = 0; i < reviews.length; i++) {
+    next.push(copyReview(reviews[i]))
+  }
+  uni.setStorageSync(REVIEWS_KEY, JSON.stringify(next))
+}
+
+function ensureReviewsLoaded() {
+  if (reviewsLoaded) {
+    return
+  }
+  reviewsLoaded = true
+  const raw = uni.getStorageSync(REVIEWS_KEY)
+  if (typeof raw == 'string' && raw.length > 0) {
+    try {
+      const saved = JSON.parse(raw) as Array<ProviderReviewItem>
+      if (saved.length > 0) {
+        reviews = saved
+        return
+      }
+    } catch (e) {
+      uni.removeStorageSync(REVIEWS_KEY)
+    }
+  }
+  reviews = createDefaultReviews()
+  persistReviews()
+}
+
+export function getProviderReviewItems(): Array<ProviderReviewItem> {
+  ensureReviewsLoaded()
+  const result: Array<ProviderReviewItem> = []
+  for (let i = 0; i < reviews.length; i++) {
+    result.push(copyReview(reviews[i]))
+  }
+  return result
+}
+
+export function replyProviderReview(id: string, reply: string): ActionOutcome {
+  ensureReviewsLoaded()
+  if (reply.trim().length == 0) {
+    return {
+      ok: false,
+      code: 'REVIEW_REPLY_REQUIRED',
+      message: '请填写回复内容'
+    }
+  }
+  const next: Array<ProviderReviewItem> = []
+  for (let i = 0; i < reviews.length; i++) {
+    const item = copyReview(reviews[i])
+    if (item.id == id) {
+      item.reply = reply.trim()
+    }
+    next.push(item)
+  }
+  reviews = next
+  persistReviews()
+  return {
+    ok: true,
+    code: 'REVIEW_REPLIED',
+    message: '回复已发布（开发 Mock）'
+  }
+}

@@ -1,0 +1,53 @@
+import { ActionOutcome, ProviderMomentManageItem } from '../types/models.uts'
+
+let items: Array<ProviderMomentManageItem> = [
+  {
+    id: 'provider-moment-001',
+    title: '在泸州，练好第一杆',
+    coverImage: '/static/following/moment-billiards.png',
+    publishedAt: '今天 12:10',
+    viewCount: 128,
+    likeCount: 18,
+    commentCount: 3,
+    status: '已发布'
+  },
+  {
+    id: 'provider-moment-002',
+    title: '一杯手冲的慢时光',
+    coverImage: '/static/following/moment-coffee.png',
+    publishedAt: '昨天 10:35',
+    viewCount: 96,
+    likeCount: 12,
+    commentCount: 2,
+    status: '已发布'
+  },
+  {
+    id: 'provider-moment-003',
+    title: '沿着江边，走进老城',
+    coverImage: '/static/following/moment-city.png',
+    publishedAt: '10月14日 16:20',
+    viewCount: 86,
+    likeCount: 26,
+    commentCount: 4,
+    status: '已发布'
+  }
+]
+
+export function getProviderMomentItems(): Array<ProviderMomentManageItem> {
+  return items.slice()
+}
+
+export function removeProviderMoment(id: string): ActionOutcome {
+  const next: Array<ProviderMomentManageItem> = []
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].id != id) {
+      next.push(items[i])
+    }
+  }
+  items = next
+  return {
+    ok: true,
+    code: 'MOMENT_REMOVED',
+    message: '动态已删除（开发 Mock）'
+  }
+}

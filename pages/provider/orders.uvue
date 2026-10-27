@@ -1,0 +1,662 @@
+<template>
+	<scroll-view class="page" direction="vertical" :show-scrollbar="false">
+		<view class="page-content">
+			<view class="nav-bar">
+				<view class="nav-button" @click="goBack">
+					<text class="nav-icon">‹</text>
+				</view>
+				<text class="nav-title">订单管理</text>
+				<view class="nav-placeholder"></view>
+			</view>
+
+			<view class="summary-card">
+				<view class="summary-copy">
+					<text class="summary-kicker">服务订单</text>
+					<text class="summary-title">及时确认每一次见面</text>
+					<text class="summary-desc">请认真核对时间、地点和用户需求</text>
+				</view>
+				<view class="summary-badge">
+					<text class="summary-badge-text">服务中</text>
+				</view>
+			</view>
+
+			<view class="stats-card">
+				<view class="stat-item">
+					<text class="stat-value stat-value-brand">{{ pendingCount }}</text>
+					<text class="stat-label">待接单</text>
+				</view>
+				<view class="stat-line"></view>
+				<view class="stat-item">
+					<text class="stat-value stat-value-warm">{{ todayCount }}</text>
+					<text class="stat-label">今日预约</text>
+				</view>
+				<view class="stat-line"></view>
+				<view class="stat-item">
+					<text class="stat-value stat-value-success">{{ completedCount }}</text>
+					<text class="stat-label">已完成</text>
+				</view>
+			</view>
+
+			<view class="safety-banner">
+				<text class="safety-icon">✓</text>
+				<text class="safety-text">安心见面，请优先选择公共经营场所</text>
+			</view>
+
+			<segment-tabs
+				class="order-tabs"
+				:items="tabs"
+				:active="activeTab"
+				variant="underline"
+				@change="changeTab"
+			></segment-tabs>
+
+			<view v-if="orders.length == 0" class="empty-state">
+				<text class="empty-title">暂无相关订单</text>
+				<text class="empty-desc">换个状态看看吧</text>
+			</view>
+
+			<view v-else class="order-list">
+				<view v-for="order in orders" :key="order.id" class="order-card">
+					<view class="order-head">
+						<image class="customer-avatar" :src="order.customerAvatar" mode="aspectFill"></image>
+						<view class="customer-main">
+							<view class="customer-name-row">
+								<text class="customer-name">{{ order.customerName }}</text>
+								<view v-if="order.customerVerified" class="verified-pill">
+									<text class="verified-text">✓ 已认证</text>
+								</view>
+							</view>
+							<text class="order-number">订单号 {{ order.orderNo }}</text>
+						</view>
+						<view class="status-pill" :class="statusClass(order.status)">
+							<text class="status-text" :class="statusTextClass(order.status)">{{ order.status }}</text>
+						</view>
+					</view>
+
+					<view class="service-row">
+						<text class="service-title">{{ order.serviceTitle }}</text>
+						<text class="service-duration">{{ order.duration }}</text>
+					</view>
+
+					<view class="info-card">
+						<view class="info-row">
+							<text class="info-icon">◷</text>
+							<text class="info-text">{{ order.appointmentDate }} · {{ order.appointmentTime }}</text>
+						</view>
+						<view class="info-row">
+							<text class="info-icon">⌖</text>
+							<text class="info-text">{{ order.location }}</text>
+						</view>
+					</view>
+
+					<view class="note-card">
+						<text class="note-label">用户留言</text>
+						<text class="note-text">{{ order.note }}</text>
+					</view>
+
+					<view class="order-bottom">
+						<view class="amount-wrap">
+							<text class="amount-label">订单金额</text>
+							<text class="amount-value">{{ order.amount }}</text>
+						</view>
+						<view class="action-wrap">
+							<view v-if="order.status == '待接单'" class="action-button action-outline" @click="handleAction(order, 'reject')">
+								<text class="action-outline-text">拒单</text>
+							</view>
+							<view v-if="order.status == '待接单'" class="action-button action-primary" @click="handleAction(order, 'accept')">
+								<text class="action-primary-text">接单</text>
+							</view>
+							<view v-if="order.status == '待履约' || order.status == '进行中'" class="action-button action-primary" @click="handleAction(order, 'complete')">
+								<text class="action-primary-text">确认完成</text>
+							</view>
+							<view v-if="order.status == '已完成' || order.status == '已取消'" class="action-button action-outline" @click="handleAction(order, 'detail')">
+								<text class="action-outline-text">查看详情</text>
+							</view>
+						</view>
+					</view>
+				</view>
+			</view>
+
+			<view class="brand-footer">
+				<text class="brand-text">FaceTo · 见面聊，安心见</text>
+			</view>
+			<view class="bottom-space"></view>
+		</view>
+	</scroll-view>
+</template>
+
+<script setup lang="uts">
+	import SegmentTabs from '../../components/segment-tabs.uvue'
+	import {
+		acceptProviderOrder,
+		completeProviderOrder,
+		getProviderOrderItems,
+		rejectProviderOrder
+	} from '../../services/service-container.uts'
+	import type { ProviderOrderItem } from '../../types/models.uts'
+
+	const tabs = ['全部', '待接单', '待履约', '进行中', '已完成']
+	const activeTab = ref('全部')
+	const orders = ref<ProviderOrderItem[]>(getProviderOrderItems('全部'))
+	const pendingCount = ref(0)
+	const todayCount = ref(0)
+	const completedCount = ref(0)
+
+	function refreshStats() {
+		const all = getProviderOrderItems('全部')
+		let pending = 0
+		let today = 0
+		let completed = 0
+		for (let i = 0; i < all.length; i++) {
+			if (all[i].status == '待接单') {
+				pending++
+			}
+			if (all[i].appointmentDate == '今天') {
+				today++
+			}
+			if (all[i].status == '已完成') {
+				completed++
+			}
+		}
+		pendingCount.value = pending
+		todayCount.value = today
+		completedCount.value = completed
+	}
+
+	function refreshOrders() {
+		orders.value = getProviderOrderItems(activeTab.value)
+		refreshStats()
+	}
+
+	refreshStats()
+
+	function changeTab(tab: string) {
+		activeTab.value = tab
+		refreshOrders()
+	}
+
+	function statusClass(status: string): string {
+		if (status == '已完成') {
+			return 'status-success-bg'
+		}
+		if (status == '待接单' || status == '待履约' || status == '进行中') {
+			return 'status-warning-bg'
+		}
+		return 'status-muted-bg'
+	}
+
+	function statusTextClass(status: string): string {
+		if (status == '已完成') {
+			return 'status-success-text'
+		}
+		if (status == '待接单' || status == '待履约' || status == '进行中') {
+			return 'status-warning-text'
+		}
+		return 'status-muted-text'
+	}
+
+	function showToast(resultOk: boolean, message: string) {
+		uni.showToast({
+			title: message,
+			position: 'bottom',
+			icon: resultOk ? 'success' : 'error'
+		})
+	}
+
+	function handleAction(order: ProviderOrderItem, action: string) {
+		if (action == 'accept') {
+			const result = acceptProviderOrder(order.id)
+			refreshOrders()
+			showToast(result.ok, result.message)
+			return
+		}
+		if (action == 'complete') {
+			const result = completeProviderOrder(order.id)
+			refreshOrders()
+			showToast(result.ok, result.message)
+			return
+		}
+		if (action == 'reject') {
+			uni.showModal({
+				title: '确认拒绝订单',
+				content: '拒绝后订单将变为已取消，是否继续？',
+				confirmText: '确认拒绝',
+				cancelText: '再想想',
+				success: (result) => {
+					if (result.confirm) {
+						const outcome = rejectProviderOrder(order.id)
+						refreshOrders()
+						showToast(outcome.ok, outcome.message)
+					}
+				}
+			})
+			return
+		}
+		uni.navigateTo({
+			url: '/pages/provider/order-detail?orderId=' + encodeURIComponent(order.id)
+		})
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/provider/dashboard'
+				})
+			}
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-content {
+		padding-bottom: 32rpx;
+	}
+
+	.nav-bar {
+		height: 128rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32rpx;
+		background-color: #FFF9F5;
+	}
+
+	.nav-button,
+	.nav-placeholder {
+		width: 76rpx;
+		height: 76rpx;
+	}
+
+	.nav-button {
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 60rpx;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.summary-card {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		margin: 22rpx 32rpx 0;
+		padding: 28rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.summary-copy {
+		flex: 1;
+	}
+
+	.summary-kicker {
+		font-size: 22rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.summary-title {
+		margin-top: 8rpx;
+		font-size: 36rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.summary-desc {
+		margin-top: 8rpx;
+		font-size: 22rpx;
+		color: #8D817B;
+	}
+
+	.summary-badge {
+		margin-left: 18rpx;
+		padding: 10rpx 16rpx;
+		background-color: #FFF1F2;
+		border-radius: 999rpx;
+	}
+
+	.summary-badge-text {
+		font-size: 21rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.stats-card {
+		flex-direction: row;
+		align-items: center;
+		margin: 18rpx 32rpx 0;
+		padding: 24rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.stat-item {
+		flex: 1;
+		align-items: center;
+	}
+
+	.stat-value {
+		font-size: 38rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.stat-value-brand {
+		color: $facetof-color-primary;
+	}
+
+	.stat-value-warm {
+		color: #E98A39;
+	}
+
+	.stat-value-success {
+		color: #10B981;
+	}
+
+	.stat-label {
+		margin-top: 6rpx;
+		font-size: 22rpx;
+		color: #8D817B;
+	}
+
+	.stat-line {
+		width: 1rpx;
+		height: 48rpx;
+		background-color: #F5DED5;
+	}
+
+	.safety-banner {
+		flex-direction: row;
+		align-items: center;
+		margin: 18rpx 32rpx 0;
+		padding: 18rpx 22rpx;
+		background-color: #FFF7E8;
+		border: 1rpx solid #F8DCA7;
+		border-radius: 20rpx;
+	}
+
+	.safety-icon {
+		margin-right: 10rpx;
+		font-size: 24rpx;
+		font-weight: 700;
+		color: #B87916;
+	}
+
+	.safety-text {
+		font-size: 22rpx;
+		color: #8B641F;
+	}
+
+	.order-tabs {
+		margin: 14rpx 32rpx 0;
+		background-color: #FFF9F5;
+	}
+
+	.empty-state {
+		min-height: 560rpx;
+		margin: 22rpx 32rpx 0;
+		align-items: center;
+		justify-content: center;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.empty-title {
+		font-size: 32rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.empty-desc {
+		margin-top: 10rpx;
+		font-size: 23rpx;
+		color: #8D817B;
+	}
+
+	.order-list {
+		margin: 22rpx 32rpx 0;
+	}
+
+	.order-card {
+		margin-bottom: 18rpx;
+		padding: 24rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.order-head {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.customer-avatar {
+		width: 82rpx;
+		height: 82rpx;
+		border-radius: 50%;
+	}
+
+	.customer-main {
+		flex: 1;
+		margin-left: 16rpx;
+	}
+
+	.customer-name-row {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.customer-name {
+		font-size: 29rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.verified-pill {
+		margin-left: 10rpx;
+		padding: 6rpx 10rpx;
+		background-color: #E7F8F2;
+		border-radius: 999rpx;
+	}
+
+	.verified-text {
+		font-size: 18rpx;
+		font-weight: 700;
+		color: #15966D;
+	}
+
+	.order-number {
+		margin-top: 6rpx;
+		font-size: 19rpx;
+		color: #A1958F;
+	}
+
+	.status-pill {
+		margin-left: 12rpx;
+		padding: 9rpx 13rpx;
+		border-radius: 999rpx;
+	}
+
+	.status-warning-bg {
+		background-color: #FFF0D7;
+	}
+
+	.status-success-bg {
+		background-color: #E7F8F2;
+	}
+
+	.status-muted-bg {
+		background-color: #F1E9E5;
+	}
+
+	.status-text {
+		font-size: 20rpx;
+		font-weight: 700;
+	}
+
+	.status-warning-text {
+		color: #B87916;
+	}
+
+	.status-success-text {
+		color: #15966D;
+	}
+
+	.status-muted-text {
+		color: #8D817B;
+	}
+
+	.service-row {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		margin-top: 22rpx;
+	}
+
+	.service-title {
+		flex: 1;
+		font-size: 28rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.service-duration {
+		margin-left: 16rpx;
+		font-size: 22rpx;
+		color: #8D817B;
+	}
+
+	.info-card,
+	.note-card {
+		margin-top: 16rpx;
+		padding: 18rpx;
+		background-color: #FFF9F5;
+		border-radius: 18rpx;
+	}
+
+	.info-row {
+		flex-direction: row;
+		align-items: flex-start;
+		margin-bottom: 10rpx;
+	}
+
+	.info-icon {
+		width: 34rpx;
+		font-size: 23rpx;
+		color: $facetof-color-primary;
+	}
+
+	.info-text {
+		flex: 1;
+		font-size: 23rpx;
+		line-height: 34rpx;
+		color: #5F554F;
+	}
+
+	.note-label {
+		font-size: 20rpx;
+		font-weight: 700;
+		color: #A1958F;
+	}
+
+	.note-text {
+		margin-top: 6rpx;
+		font-size: 22rpx;
+		line-height: 34rpx;
+		color: #5F554F;
+	}
+
+	.order-bottom {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		margin-top: 20rpx;
+		padding-top: 18rpx;
+		border-top: 1rpx solid #F5DED5;
+	}
+
+	.amount-wrap {
+		flex: 1;
+	}
+
+	.amount-label {
+		font-size: 20rpx;
+		color: #A1958F;
+	}
+
+	.amount-value {
+		margin-top: 4rpx;
+		font-size: 31rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.action-wrap {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.action-button {
+		height: 66rpx;
+		align-items: center;
+		justify-content: center;
+		margin-left: 12rpx;
+		padding: 0 22rpx;
+		border-radius: 999rpx;
+	}
+
+	.action-outline {
+		background-color: #FFFFFF;
+		border: 1rpx solid #E4DAD4;
+	}
+
+	.action-primary {
+		background-color: $facetof-color-primary;
+	}
+
+	.action-outline-text {
+		font-size: 22rpx;
+		font-weight: 700;
+		color: #756B66;
+	}
+
+	.action-primary-text {
+		font-size: 22rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.brand-footer {
+		padding: 20rpx 0 4rpx;
+		align-items: center;
+	}
+
+	.brand-text {
+		font-size: 25rpx;
+		color: #253047;
+	}
+
+	.bottom-space {
+		height: 32rpx;
+	}
+</style>

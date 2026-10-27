@@ -44,7 +44,7 @@ function loadSession() {
     sessionState.displayName = saved.displayName
     sessionState.identity = saved.identity
     sessionState.applicationStatus = saved.applicationStatus
-    sessionState.providerPermission = saved.providerPermission && saved.userId.startsWith('test-')
+    sessionState.providerPermission = saved.providerPermission && (saved.userId.startsWith('test-') || saved.userId.startsWith('mock-'))
     sessionState.rejectionReason = saved.rejectionReason
     sessionState.pendingAction = saved.pendingAction
     sessionState.pendingRoute = saved.pendingRoute

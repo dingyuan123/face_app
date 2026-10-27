@@ -1,0 +1,16 @@
+import { ActionOutcome, ProviderServiceDraft } from '../types/models.uts'
+
+export function saveProviderService(draft: ProviderServiceDraft, submitReview: boolean): ActionOutcome {
+  if (draft.title.trim().length == 0) {
+    return {
+      ok: false,
+      code: 'SERVICE_TITLE_REQUIRED',
+      message: '请填写服务名称'
+    }
+  }
+  return {
+    ok: true,
+    code: submitReview ? 'SERVICE_SUBMITTED' : 'SERVICE_DRAFT_SAVED',
+    message: submitReview ? '服务已提交审核（开发 Mock）' : '服务草稿已保存（开发 Mock）'
+  }
+}

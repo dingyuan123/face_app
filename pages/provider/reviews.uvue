@@ -1,0 +1,499 @@
+<template>
+	<scroll-view class="page" direction="vertical" :show-scrollbar="false">
+		<view class="page-content">
+			<view class="nav-bar">
+				<view class="nav-button" @click="goBack">
+					<text class="nav-icon">‹</text>
+				</view>
+				<text class="nav-title">评价管理</text>
+				<view class="nav-placeholder"></view>
+			</view>
+
+			<view class="rating-card">
+				<view class="rating-main">
+					<text class="rating-value">4.9</text>
+					<text class="rating-stars">★★★★★</text>
+					<text class="rating-count">累计 126 条评价</text>
+				</view>
+				<view class="rating-divider"></view>
+				<view class="rating-bars">
+					<view class="rating-row">
+						<text class="rating-label">5星</text>
+						<view class="rating-track"><view class="rating-fill fill-5"></view></view>
+						<text class="rating-percent">86%</text>
+					</view>
+					<view class="rating-row">
+						<text class="rating-label">4星</text>
+						<view class="rating-track"><view class="rating-fill fill-4"></view></view>
+						<text class="rating-percent">10%</text>
+					</view>
+					<view class="rating-row">
+						<text class="rating-label">3星</text>
+						<view class="rating-track"><view class="rating-fill fill-3"></view></view>
+						<text class="rating-percent">3%</text>
+					</view>
+					<view class="rating-row">
+						<text class="rating-label">2星</text>
+						<view class="rating-track"><view class="rating-fill fill-2"></view></view>
+						<text class="rating-percent">1%</text>
+					</view>
+					<view class="rating-row">
+						<text class="rating-label">1星</text>
+						<view class="rating-track"><view class="rating-fill fill-1"></view></view>
+						<text class="rating-percent">0%</text>
+					</view>
+				</view>
+			</view>
+
+			<view class="notice-card">
+				<text class="notice-icon">✓</text>
+				<text class="notice-text">真诚回复每一条评价，有助于建立用户信任。</text>
+			</view>
+
+			<view class="review-list">
+				<view v-for="review in reviews" :key="review.id" class="review-card">
+					<view class="review-head">
+						<image class="review-avatar" :src="review.avatar" mode="aspectFill"></image>
+						<view class="review-user">
+							<text class="review-name">{{ review.userName }}</text>
+							<text class="review-service">{{ review.serviceTitle }}</text>
+						</view>
+						<view class="review-rating">
+							<text class="review-stars">{{ ratingStars(review.rating) }}</text>
+							<text class="review-time">{{ review.createdAt }}</text>
+						</view>
+					</view>
+					<text class="review-content">{{ review.content }}</text>
+					<view v-if="review.reply.length > 0" class="reply-box">
+						<text class="reply-label">我的回复</text>
+						<text class="reply-text">{{ review.reply }}</text>
+					</view>
+					<view class="review-actions">
+						<view class="reply-button" @click="openReply(review)">
+							<text class="reply-button-text">{{ review.reply.length > 0 ? '修改回复' : '回复评价' }}</text>
+						</view>
+					</view>
+
+					<view v-if="replyingId == review.id" class="reply-editor">
+						<textarea
+							class="reply-input"
+							:value="replyContent"
+							maxlength="120"
+							placeholder="感谢你的评价，期待再次见面..."
+							placeholder-class="reply-placeholder"
+							@input="onReplyInput"
+						></textarea>
+						<view class="editor-actions">
+							<view class="cancel-button" @click="closeReply">
+								<text class="cancel-text">取消</text>
+							</view>
+							<view class="submit-button" @click="submitReply">
+								<text class="submit-text">发布回复</text>
+							</view>
+						</view>
+					</view>
+				</view>
+			</view>
+
+			<view class="brand-footer">
+				<text class="brand-text">FaceTo · 见面聊，安心见</text>
+			</view>
+			<view class="bottom-space"></view>
+		</view>
+	</scroll-view>
+</template>
+
+<script setup lang="uts">
+	import { getProviderReviewItems, replyProviderReview } from '../../services/service-container.uts'
+	import type { ProviderReviewItem } from '../../types/models.uts'
+
+	const reviews = ref<ProviderReviewItem[]>(getProviderReviewItems())
+	const replyingId = ref('')
+	const replyContent = ref('')
+
+	function ratingStars(rating: number): string {
+		if (rating >= 5) {
+			return '★★★★★'
+		}
+		if (rating >= 4) {
+			return '★★★★☆'
+		}
+		if (rating >= 3) {
+			return '★★★☆☆'
+		}
+		return '★★☆☆☆'
+	}
+
+	function openReply(review: ProviderReviewItem) {
+		replyingId.value = review.id
+		replyContent.value = review.reply
+	}
+
+	function closeReply() {
+		replyingId.value = ''
+		replyContent.value = ''
+	}
+
+	function onReplyInput(event: InputEvent) {
+		replyContent.value = event.detail.value
+	}
+
+	function submitReply() {
+		const result = replyProviderReview(replyingId.value, replyContent.value)
+		if (result.ok) {
+			reviews.value = getProviderReviewItems()
+			closeReply()
+		}
+		uni.showToast({
+			title: result.message,
+			position: 'bottom',
+			icon: result.ok ? 'success' : 'error'
+		})
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/provider/dashboard'
+				})
+			}
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-content {
+		padding-bottom: 32rpx;
+	}
+
+	.nav-bar {
+		height: 128rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32rpx;
+		background-color: #FFF9F5;
+	}
+
+	.nav-button,
+	.nav-placeholder {
+		width: 76rpx;
+		height: 76rpx;
+	}
+
+	.nav-button {
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 60rpx;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.rating-card {
+		flex-direction: row;
+		align-items: center;
+		margin: 22rpx 32rpx 0;
+		padding: 28rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.rating-main {
+		width: 210rpx;
+		align-items: center;
+	}
+
+	.rating-value {
+		font-size: 62rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.rating-stars {
+		margin-top: 4rpx;
+		font-size: 25rpx;
+		color: #F5A800;
+	}
+
+	.rating-count {
+		margin-top: 8rpx;
+		font-size: 19rpx;
+		color: #A1958F;
+	}
+
+	.rating-divider {
+		width: 1rpx;
+		height: 170rpx;
+		margin: 0 24rpx;
+		background-color: #F5DED5;
+	}
+
+	.rating-bars {
+		flex: 1;
+	}
+
+	.rating-row {
+		flex-direction: row;
+		align-items: center;
+		margin-bottom: 8rpx;
+	}
+
+	.rating-label,
+	.rating-percent {
+		width: 58rpx;
+		font-size: 18rpx;
+		color: #8D817B;
+	}
+
+	.rating-percent {
+		text-align: right;
+	}
+
+	.rating-track {
+		flex: 1;
+		height: 10rpx;
+		margin: 0 10rpx;
+		background-color: #F1E9E5;
+		border-radius: 999rpx;
+	}
+
+	.rating-fill {
+		height: 10rpx;
+		background-color: #F5A800;
+		border-radius: 999rpx;
+	}
+
+	.fill-5 {
+		width: 86%;
+	}
+
+	.fill-4 {
+		width: 10%;
+	}
+
+	.fill-3 {
+		width: 3%;
+	}
+
+	.fill-2 {
+		width: 1%;
+	}
+
+	.fill-1 {
+		width: 1%;
+	}
+
+	.notice-card {
+		flex-direction: row;
+		align-items: center;
+		margin: 18rpx 32rpx 0;
+		padding: 18rpx 22rpx;
+		background-color: #FFF7E8;
+		border: 1rpx solid #F8DCA7;
+		border-radius: 20rpx;
+	}
+
+	.notice-icon {
+		margin-right: 10rpx;
+		font-size: 23rpx;
+		font-weight: 700;
+		color: #B87916;
+	}
+
+	.notice-text {
+		font-size: 21rpx;
+		color: #8B641F;
+	}
+
+	.review-list {
+		margin: 20rpx 32rpx 0;
+	}
+
+	.review-card {
+		margin-bottom: 18rpx;
+		padding: 24rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.review-head {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.review-avatar {
+		width: 76rpx;
+		height: 76rpx;
+		border-radius: 50%;
+	}
+
+	.review-user {
+		flex: 1;
+		margin-left: 16rpx;
+	}
+
+	.review-name {
+		font-size: 27rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.review-service {
+		margin-top: 5rpx;
+		font-size: 20rpx;
+		color: #8D817B;
+	}
+
+	.review-rating {
+		align-items: flex-end;
+	}
+
+	.review-stars {
+		font-size: 22rpx;
+		color: #F5A800;
+	}
+
+	.review-time {
+		margin-top: 5rpx;
+		font-size: 18rpx;
+		color: #A1958F;
+	}
+
+	.review-content {
+		margin-top: 20rpx;
+		font-size: 25rpx;
+		line-height: 39rpx;
+		color: #5F554F;
+	}
+
+	.reply-box {
+		margin-top: 18rpx;
+		padding: 18rpx;
+		background-color: #FFF9F5;
+		border-radius: 18rpx;
+	}
+
+	.reply-label {
+		font-size: 19rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.reply-text {
+		margin-top: 6rpx;
+		font-size: 22rpx;
+		line-height: 34rpx;
+		color: #5F554F;
+	}
+
+	.review-actions {
+		flex-direction: row;
+		justify-content: flex-end;
+		margin-top: 18rpx;
+	}
+
+	.reply-button {
+		height: 58rpx;
+		align-items: center;
+		justify-content: center;
+		padding: 0 20rpx;
+		background-color: #FFF1F2;
+		border-radius: 999rpx;
+	}
+
+	.reply-button-text {
+		font-size: 21rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.reply-editor {
+		margin-top: 18rpx;
+	}
+
+	.reply-input {
+		height: 160rpx;
+		padding: 18rpx;
+		font-size: 23rpx;
+		line-height: 35rpx;
+		color: #253047;
+		background-color: #FFF9F5;
+		border: 1rpx solid #F5DED5;
+		border-radius: 18rpx;
+	}
+
+	.reply-placeholder {
+		font-size: 23rpx;
+		color: #B8ADA8;
+	}
+
+	.editor-actions {
+		flex-direction: row;
+		justify-content: flex-end;
+		margin-top: 14rpx;
+	}
+
+	.cancel-button,
+	.submit-button {
+		height: 66rpx;
+		align-items: center;
+		justify-content: center;
+		margin-left: 12rpx;
+		padding: 0 22rpx;
+		border-radius: 999rpx;
+	}
+
+	.cancel-button {
+		background-color: #FFFFFF;
+		border: 1rpx solid #E4DAD4;
+	}
+
+	.submit-button {
+		background-color: $facetof-color-primary;
+	}
+
+	.cancel-text {
+		font-size: 22rpx;
+		font-weight: 700;
+		color: #756B66;
+	}
+
+	.submit-text {
+		font-size: 22rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.brand-footer {
+		padding: 20rpx 0 4rpx;
+		align-items: center;
+	}
+
+	.brand-text {
+		font-size: 25rpx;
+		color: #253047;
+	}
+
+	.bottom-space {
+		height: 32rpx;
+	}
+</style>

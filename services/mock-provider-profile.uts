@@ -1,0 +1,16 @@
+import { ActionOutcome, ProviderProfileDraft } from '../types/models.uts'
+
+export function saveProviderProfile(draft: ProviderProfileDraft): ActionOutcome {
+  if (draft.nickname.trim().length == 0) {
+    return {
+      ok: false,
+      code: 'NICKNAME_REQUIRED',
+      message: '请填写服务者昵称'
+    }
+  }
+  return {
+    ok: true,
+    code: 'PROVIDER_PROFILE_SAVED',
+    message: '服务者资料已保存（开发 Mock）'
+  }
+}

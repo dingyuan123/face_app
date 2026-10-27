@@ -1,0 +1,447 @@
+<template>
+	<scroll-view class="page" direction="vertical" :show-scrollbar="false">
+		<view class="page-content">
+			<view class="nav-bar">
+				<view class="nav-button" @click="goBack">
+					<text class="nav-icon">‹</text>
+				</view>
+				<text class="nav-title">认证中心</text>
+				<view class="nav-placeholder"></view>
+			</view>
+
+			<view class="summary-card">
+				<view class="summary-icon">
+					<text class="summary-icon-text">✓</text>
+				</view>
+				<view class="summary-copy">
+					<text class="summary-title">认证状态良好</text>
+					<text class="summary-desc">完成认证可以提高用户信任和服务曝光</text>
+				</view>
+				<view class="summary-pill">
+					<text class="summary-pill-text">3/4 已通过</text>
+				</view>
+			</view>
+
+			<view class="notice-card">
+				<text class="notice-icon">i</text>
+				<text class="notice-text">认证材料仅用于身份和服务能力核验，平台会按隐私规范妥善保护。</text>
+			</view>
+
+			<view class="cert-list">
+				<view v-for="item in certifications" :key="item.id" class="cert-card">
+					<view class="cert-icon" :class="certIconClass(item.status)">
+						<text class="cert-icon-text">{{ certIcon(item.status) }}</text>
+					</view>
+					<view class="cert-main">
+						<view class="cert-title-row">
+							<text class="cert-title">{{ item.title }}</text>
+							<view class="cert-status" :class="certStatusClass(item.status)">
+								<text class="cert-status-text" :class="certStatusTextClass(item.status)">{{ item.status }}</text>
+							</view>
+						</view>
+						<text class="cert-desc">{{ item.description }}</text>
+					</view>
+					<view class="cert-action" @click="handleCertification(item.id, item.status)">
+						<text class="cert-action-text">{{ item.actionLabel }}</text>
+					</view>
+				</view>
+			</view>
+
+			<view class="help-card">
+				<text class="help-title">认证遇到问题？</text>
+				<text class="help-desc">如材料审核未通过，请根据提示补充真实、清晰的资料。</text>
+				<view class="help-button" @click="openHelp">
+					<text class="help-button-text">联系客服</text>
+				</view>
+			</view>
+
+			<view class="brand-footer">
+				<text class="brand-text">FaceTo · 见面聊，安心见</text>
+			</view>
+			<view class="bottom-space"></view>
+		</view>
+	</scroll-view>
+</template>
+
+<script setup lang="uts">
+	import { getProviderCertifications } from '../../services/service-container.uts'
+	import type { ProviderCertificationItem } from '../../types/models.uts'
+
+	const certifications = ref<ProviderCertificationItem[]>(getProviderCertifications())
+
+	function certIcon(status: string): string {
+		if (status == '已通过') {
+			return '✓'
+		}
+		if (status == '待审核') {
+			return '◷'
+		}
+		return '!'
+	}
+
+	function certIconClass(status: string): string {
+		if (status == '已通过') {
+			return 'cert-icon-success'
+		}
+		if (status == '待审核' || status == '未通过') {
+			return 'cert-icon-warning'
+		}
+		return 'cert-icon-error'
+	}
+
+	function certStatusClass(status: string): string {
+		if (status == '已通过') {
+			return 'cert-status-success'
+		}
+		if (status == '待审核' || status == '未通过') {
+			return 'cert-status-warning'
+		}
+		return 'cert-status-error'
+	}
+
+	function certStatusTextClass(status: string): string {
+		if (status == '已通过') {
+			return 'cert-status-success-text'
+		}
+		if (status == '待审核' || status == '未通过') {
+			return 'cert-status-warning-text'
+		}
+		return 'cert-status-error-text'
+	}
+
+	function handleCertification(id: string, status: string) {
+		if (id == 'real-name') {
+			uni.navigateTo({
+				url: '/pages/verification/id-verify'
+			})
+			return
+		}
+		if (status == '待审核') {
+			uni.showToast({
+				title: '认证材料正在审核中',
+				position: 'bottom',
+				icon: 'none'
+			})
+			return
+		}
+		if (status == '未通过') {
+			uni.navigateTo({
+				url: '/pages/provider/profile'
+			})
+			return
+		}
+		uni.showToast({
+			title: '认证详情将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function openHelp() {
+		uni.navigateTo({
+			url: '/pages/help/help'
+		})
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/provider/dashboard'
+				})
+			}
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-content {
+		padding-bottom: 32rpx;
+	}
+
+	.nav-bar {
+		height: 128rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32rpx;
+		background-color: #FFF9F5;
+	}
+
+	.nav-button,
+	.nav-placeholder {
+		width: 76rpx;
+		height: 76rpx;
+	}
+
+	.nav-button {
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 60rpx;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.summary-card {
+		flex-direction: row;
+		align-items: center;
+		margin: 22rpx 32rpx 0;
+		padding: 28rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.summary-icon {
+		width: 78rpx;
+		height: 78rpx;
+		align-items: center;
+		justify-content: center;
+		background-color: #E7F8F2;
+		border-radius: 22rpx;
+	}
+
+	.summary-icon-text {
+		font-size: 36rpx;
+		font-weight: 700;
+		color: #15966D;
+	}
+
+	.summary-copy {
+		flex: 1;
+		margin-left: 18rpx;
+	}
+
+	.summary-title {
+		font-size: 32rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.summary-desc {
+		margin-top: 7rpx;
+		font-size: 21rpx;
+		color: #8D817B;
+	}
+
+	.summary-pill {
+		margin-left: 14rpx;
+		padding: 9rpx 13rpx;
+		background-color: #E7F8F2;
+		border-radius: 999rpx;
+	}
+
+	.summary-pill-text {
+		font-size: 19rpx;
+		font-weight: 700;
+		color: #15966D;
+	}
+
+	.notice-card {
+		flex-direction: row;
+		align-items: center;
+		margin: 18rpx 32rpx 0;
+		padding: 18rpx 22rpx;
+		background-color: #FFF7E8;
+		border: 1rpx solid #F8DCA7;
+		border-radius: 20rpx;
+	}
+
+	.notice-icon {
+		width: 34rpx;
+		height: 34rpx;
+		align-items: center;
+		justify-content: center;
+		margin-right: 12rpx;
+		background-color: #F59E0B;
+		border-radius: 50%;
+		font-size: 20rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.notice-text {
+		flex: 1;
+		font-size: 20rpx;
+		line-height: 31rpx;
+		color: #8B641F;
+	}
+
+	.cert-list {
+		margin: 20rpx 32rpx 0;
+	}
+
+	.cert-card {
+		flex-direction: row;
+		align-items: center;
+		margin-bottom: 16rpx;
+		padding: 24rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 26rpx;
+	}
+
+	.cert-icon {
+		width: 72rpx;
+		height: 72rpx;
+		align-items: center;
+		justify-content: center;
+		border-radius: 20rpx;
+	}
+
+	.cert-icon-success {
+		background-color: #E7F8F2;
+	}
+
+	.cert-icon-warning {
+		background-color: #FFF0D7;
+	}
+
+	.cert-icon-error {
+		background-color: #FDECEC;
+	}
+
+	.cert-icon-text {
+		font-size: 30rpx;
+		font-weight: 700;
+		color: #15966D;
+	}
+
+	.cert-main {
+		flex: 1;
+		margin-left: 16rpx;
+	}
+
+	.cert-title-row {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.cert-title {
+		font-size: 28rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.cert-status {
+		margin-left: 12rpx;
+		padding: 7rpx 11rpx;
+		border-radius: 999rpx;
+	}
+
+	.cert-status-success {
+		background-color: #E7F8F2;
+	}
+
+	.cert-status-warning {
+		background-color: #FFF0D7;
+	}
+
+	.cert-status-error {
+		background-color: #FDECEC;
+	}
+
+	.cert-status-text {
+		font-size: 18rpx;
+		font-weight: 700;
+	}
+
+	.cert-status-success-text {
+		color: #15966D;
+	}
+
+	.cert-status-warning-text {
+		color: #B87916;
+	}
+
+	.cert-status-error-text {
+		color: #D64545;
+	}
+
+	.cert-desc {
+		margin-top: 8rpx;
+		font-size: 21rpx;
+		line-height: 32rpx;
+		color: #8D817B;
+	}
+
+	.cert-action {
+		margin-left: 12rpx;
+		padding: 10rpx 15rpx;
+		background-color: #FFF1F2;
+		border-radius: 999rpx;
+	}
+
+	.cert-action-text {
+		font-size: 19rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.help-card {
+		margin: 18rpx 32rpx 0;
+		padding: 26rpx;
+		background-color: #FFF7E8;
+		border: 1rpx solid #F8DCA7;
+		border-radius: 24rpx;
+	}
+
+	.help-title {
+		font-size: 28rpx;
+		font-weight: 700;
+		color: #8B641F;
+	}
+
+	.help-desc {
+		margin-top: 8rpx;
+		font-size: 21rpx;
+		line-height: 32rpx;
+		color: #8B641F;
+	}
+
+	.help-button {
+		height: 68rpx;
+		align-items: center;
+		justify-content: center;
+		margin-top: 18rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F8DCA7;
+		border-radius: 18rpx;
+	}
+
+	.help-button-text {
+		font-size: 23rpx;
+		font-weight: 700;
+		color: #8B641F;
+	}
+
+	.brand-footer {
+		padding: 24rpx 0 4rpx;
+		align-items: center;
+	}
+
+	.brand-text {
+		font-size: 25rpx;
+		color: #253047;
+	}
+
+	.bottom-space {
+		height: 32rpx;
+	}
+</style>

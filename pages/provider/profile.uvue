@@ -1,0 +1,579 @@
+<template>
+	<view class="page">
+		<scroll-view class="page-scroll" direction="vertical" :show-scrollbar="false">
+		<view class="page-content">
+			<view class="nav-bar">
+				<view class="nav-button" @click="goBack">
+					<text class="nav-icon">‹</text>
+				</view>
+				<text class="nav-title">资料管理</text>
+				<view class="nav-placeholder"></view>
+			</view>
+
+			<view class="provider-card">
+				<image class="provider-avatar" :src="avatar" mode="aspectFill"></image>
+				<view class="provider-main">
+					<text class="provider-name">阿哲</text>
+					<view class="verified-pill">
+						<text class="verified-text">✓ 已认证</text>
+					</view>
+					<text class="provider-meta">台球助教 · 泸州江阳区</text>
+				</view>
+				<view class="status-pill">
+					<text class="status-text">生效中</text>
+				</view>
+			</view>
+
+			<view class="section-card">
+				<view class="section-head">
+					<text class="section-title">照片墙</text>
+					<text class="section-desc">展示真实、清晰的服务照片</text>
+				</view>
+				<view class="photo-grid">
+					<view v-for="(photo, index) in photos" :key="photo" class="photo-item">
+						<image class="photo-image" :src="photo" mode="aspectFill"></image>
+						<view class="photo-remove" @click="removePhoto(index)">
+							<text class="remove-text">×</text>
+						</view>
+					</view>
+					<view v-if="photos.length < 6" class="photo-add" @click="addPhoto">
+						<text class="add-plus">＋</text>
+						<text class="add-text">添加照片</text>
+					</view>
+				</view>
+			</view>
+
+			<view class="section-card">
+				<text class="section-title">基础资料</text>
+				<text class="field-label">昵称</text>
+				<input
+					class="field-input"
+					:value="nickname"
+					maxlength="20"
+					placeholder="请输入服务者昵称"
+					placeholder-class="field-placeholder"
+					@input="onNicknameInput"
+				/>
+				<text class="field-label">签名</text>
+				<input
+					class="field-input"
+					:value="signature"
+					maxlength="50"
+					placeholder="一句话介绍你的服务"
+					placeholder-class="field-placeholder"
+					@input="onSignatureInput"
+				/>
+				<text class="field-label">个人介绍</text>
+				<textarea
+					class="intro-input"
+					:value="introduction"
+					maxlength="200"
+					placeholder="让客户更了解你的服务风格和擅长领域"
+					placeholder-class="field-placeholder"
+					@input="onIntroductionInput"
+				></textarea>
+			</view>
+
+			<view class="section-card">
+				<text class="section-title">服务类目</text>
+				<text class="section-desc">选择你主要提供的服务类型</text>
+				<view class="tag-wrap">
+					<view class="tag-button" :class="categorySports ? 'tag-active' : ''" @click="categorySports = !categorySports">
+						<text class="tag-text" :class="categorySports ? 'tag-text-active' : ''">运动</text>
+					</view>
+					<view class="tag-button" :class="categoryEntertainment ? 'tag-active' : ''" @click="categoryEntertainment = !categoryEntertainment">
+						<text class="tag-text" :class="categoryEntertainment ? 'tag-text-active' : ''">娱乐</text>
+					</view>
+					<view class="tag-button" :class="categoryLeisure ? 'tag-active' : ''" @click="categoryLeisure = !categoryLeisure">
+						<text class="tag-text" :class="categoryLeisure ? 'tag-text-active' : ''">休闲</text>
+					</view>
+					<view class="tag-button" :class="categoryTravel ? 'tag-active' : ''" @click="categoryTravel = !categoryTravel">
+						<text class="tag-text" :class="categoryTravel ? 'tag-text-active' : ''">旅游</text>
+					</view>
+				</view>
+			</view>
+
+			<view class="section-card">
+				<text class="section-title">服务标签</text>
+				<text class="section-desc">帮助用户快速了解你的优势</text>
+				<view class="tag-wrap">
+					<view class="tag-button" :class="tagPatient ? 'tag-active' : ''" @click="tagPatient = !tagPatient">
+						<text class="tag-text" :class="tagPatient ? 'tag-text-active' : ''">耐心教学</text>
+					</view>
+					<view class="tag-button" :class="tagAtmosphere ? 'tag-active' : ''" @click="tagAtmosphere = !tagAtmosphere">
+						<text class="tag-text" :class="tagAtmosphere ? 'tag-text-active' : ''">气氛组</text>
+					</view>
+					<view class="tag-button" :class="tagPhoto ? 'tag-active' : ''" @click="tagPhoto = !tagPhoto">
+						<text class="tag-text" :class="tagPhoto ? 'tag-text-active' : ''">拍照好看</text>
+					</view>
+					<view class="tag-button" :class="tagFriendly ? 'tag-active' : ''" @click="tagFriendly = !tagFriendly">
+						<text class="tag-text" :class="tagFriendly ? 'tag-text-active' : ''">新手友好</text>
+					</view>
+				</view>
+			</view>
+
+			<view class="certification-card">
+				<view class="certification-copy">
+					<text class="certification-title">认证状态</text>
+					<text class="certification-desc">实名认证已完成，资料将用于服务展示。</text>
+				</view>
+				<view class="certification-pill">
+					<text class="certification-pill-text">✓ 已认证</text>
+				</view>
+			</view>
+
+			<view class="bottom-space"></view>
+		</view>
+		</scroll-view>
+
+		<view class="action-bar">
+			<view class="save-button" :class="nickname.trim().length > 0 ? '' : 'save-disabled'" @click="save">
+				<text class="save-text">保存资料</text>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { saveProviderProfile } from '../../services/service-container.uts'
+
+	const avatar = ref('/static/following/avatar-zhe.png')
+	const photos = ref<string[]>([
+		'/static/following/moment-billiards.png',
+		'/static/following/moment-coffee.png',
+		'/static/following/moment-city.png'
+	])
+	const nickname = ref('阿哲')
+	const signature = ref('耐心细致，新手也能轻松上手')
+	const introduction = ref('擅长台球基础教学和轻松陪练，帮助你快速找到运动的乐趣。')
+
+	const categorySports = ref(true)
+	const categoryEntertainment = ref(false)
+	const categoryLeisure = ref(true)
+	const categoryTravel = ref(false)
+	const tagPatient = ref(true)
+	const tagAtmosphere = ref(true)
+	const tagPhoto = ref(false)
+	const tagFriendly = ref(true)
+
+	function onNicknameInput(event: InputEvent) {
+		nickname.value = event.detail.value
+	}
+
+	function onSignatureInput(event: InputEvent) {
+		signature.value = event.detail.value
+	}
+
+	function onIntroductionInput(event: InputEvent) {
+		introduction.value = event.detail.value
+	}
+
+	function addPhoto() {
+		uni.chooseImage({
+			count: 6,
+			success: (result) => {
+				const next: Array<string> = []
+				for (let i = 0; i < result.tempFilePaths.length && i < 6; i++) {
+					next.push(result.tempFilePaths[i])
+				}
+				photos.value = next
+			}
+		})
+	}
+
+	function removePhoto(index: number) {
+		const next: Array<string> = []
+		for (let i = 0; i < photos.value.length; i++) {
+			if (i != index) {
+				next.push(photos.value[i])
+			}
+		}
+		photos.value = next
+	}
+
+	function buildCategories(): Array<string> {
+		const result: Array<string> = []
+		if (categorySports.value) {
+			result.push('运动')
+		}
+		if (categoryEntertainment.value) {
+			result.push('娱乐')
+		}
+		if (categoryLeisure.value) {
+			result.push('休闲')
+		}
+		if (categoryTravel.value) {
+			result.push('旅游')
+		}
+		return result
+	}
+
+	function buildTags(): Array<string> {
+		const result: Array<string> = []
+		if (tagPatient.value) {
+			result.push('耐心教学')
+		}
+		if (tagAtmosphere.value) {
+			result.push('气氛组')
+		}
+		if (tagPhoto.value) {
+			result.push('拍照好看')
+		}
+		if (tagFriendly.value) {
+			result.push('新手友好')
+		}
+		return result
+	}
+
+	function save() {
+		const result = saveProviderProfile({
+			avatar: avatar.value,
+			photos: photos.value,
+			nickname: nickname.value,
+			signature: signature.value,
+			categories: buildCategories(),
+			tags: buildTags(),
+			introduction: introduction.value
+		})
+		uni.showToast({
+			title: result.message,
+			position: 'bottom',
+			icon: result.ok ? 'success' : 'error'
+		})
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/provider/dashboard'
+				})
+			}
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-scroll {
+		flex: 1;
+		min-height: 0;
+	}
+
+	.page-content {
+		padding-bottom: 150rpx;
+	}
+
+	.nav-bar {
+		height: 128rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32rpx;
+		background-color: #FFF9F5;
+	}
+
+	.nav-button,
+	.nav-placeholder {
+		width: 76rpx;
+		height: 76rpx;
+	}
+
+	.nav-button {
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 60rpx;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.provider-card {
+		flex-direction: row;
+		align-items: center;
+		margin: 22rpx 32rpx 0;
+		padding: 24rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.provider-avatar {
+		width: 82rpx;
+		height: 82rpx;
+		border-radius: 50%;
+	}
+
+	.provider-main {
+		flex: 1;
+		margin-left: 16rpx;
+	}
+
+	.provider-name {
+		font-size: 34rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.verified-pill {
+		align-self: flex-start;
+		margin-top: 8rpx;
+		padding: 5rpx 9rpx;
+		background-color: #FFC768;
+		border-radius: 999rpx;
+	}
+
+	.verified-text {
+		font-size: 20rpx;
+		font-weight: 700;
+		color: #704713;
+	}
+
+	.provider-meta {
+		margin-top: 9rpx;
+		font-size: 22rpx;
+		color: #8D817B;
+	}
+
+	.status-pill {
+		padding: 8rpx 12rpx;
+		background-color: #E7F8F2;
+		border-radius: 999rpx;
+	}
+
+	.status-text {
+		font-size: 20rpx;
+		font-weight: 700;
+		color: #10B981;
+	}
+
+	.section-card,
+	.certification-card {
+		margin: 18rpx 32rpx 0;
+		padding: 26rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.section-head {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.section-title {
+		font-size: 34rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.section-desc {
+		font-size: 21rpx;
+		color: #8D817B;
+	}
+
+	.photo-grid {
+		flex-direction: row;
+		flex-wrap: wrap;
+		margin-top: 18rpx;
+	}
+
+	.photo-item,
+	.photo-add {
+		position: relative;
+		width: 196rpx;
+		height: 156rpx;
+		margin: 0 12rpx 12rpx 0;
+		border-radius: 18rpx;
+		overflow: hidden;
+	}
+
+	.photo-image {
+		width: 196rpx;
+		height: 156rpx;
+	}
+
+	.photo-remove {
+		position: absolute;
+		top: 8rpx;
+		right: 8rpx;
+		width: 30rpx;
+		height: 30rpx;
+		align-items: center;
+		justify-content: center;
+		background-color: rgba(31, 26, 23, 0.58);
+		border-radius: 50%;
+	}
+
+	.remove-text {
+		font-size: 22rpx;
+		color: #FFFFFF;
+	}
+
+	.photo-add {
+		align-items: center;
+		justify-content: center;
+		background-color: #FFF1E8;
+		border: 1rpx dashed #F1B8BE;
+	}
+
+	.add-plus {
+		font-size: 38rpx;
+		color: $facetof-color-primary;
+	}
+
+	.add-text {
+		margin-top: 6rpx;
+		font-size: 21rpx;
+		color: $facetof-color-primary;
+	}
+
+	.field-label {
+		margin-top: 22rpx;
+		font-size: 27rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.field-input,
+	.intro-input {
+		margin-top: 14rpx;
+		padding: 0 22rpx;
+		font-size: 27rpx;
+		color: #253047;
+		background-color: #FFF1E8;
+		border: 1rpx solid #F5DED5;
+		border-radius: 18rpx;
+	}
+
+	.field-input {
+		height: 92rpx;
+	}
+
+	.intro-input {
+		height: 170rpx;
+		padding-top: 18rpx;
+		line-height: 42rpx;
+	}
+
+	.field-placeholder {
+		font-size: 27rpx;
+		color: #B8ADA8;
+	}
+
+	.tag-wrap {
+		flex-direction: row;
+		flex-wrap: wrap;
+		margin-top: 18rpx;
+	}
+
+	.tag-button {
+		height: 64rpx;
+		align-items: center;
+		justify-content: center;
+		margin: 0 12rpx 12rpx 0;
+		padding: 0 20rpx;
+		background-color: #FFF1E8;
+		border: 1rpx solid #F5DED5;
+		border-radius: 999rpx;
+	}
+
+	.tag-active {
+		background-color: #FFF1F2;
+		border-color: $facetof-color-primary;
+	}
+
+	.tag-text {
+		font-size: 23rpx;
+		color: #253047;
+	}
+
+	.tag-text-active {
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.certification-card {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.certification-copy {
+		flex: 1;
+		margin-right: 18rpx;
+	}
+
+	.certification-title {
+		font-size: 30rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.certification-desc {
+		margin-top: 8rpx;
+		font-size: 22rpx;
+		line-height: 34rpx;
+		color: #8D817B;
+	}
+
+	.certification-pill {
+		padding: 10rpx 14rpx;
+		background-color: #E7F8F2;
+		border-radius: 999rpx;
+	}
+
+	.certification-pill-text {
+		font-size: 21rpx;
+		font-weight: 700;
+		color: #10B981;
+	}
+
+	.action-bar {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		padding: 18rpx 32rpx;
+		padding-bottom: var(--uni-safe-area-inset-bottom);
+		background-color: #FFFFFF;
+		border-top: 1rpx solid #F5DED5;
+	}
+
+	.save-button {
+		height: 92rpx;
+		align-items: center;
+		justify-content: center;
+		background-color: $facetof-color-primary;
+		border-radius: 18rpx;
+	}
+
+	.save-disabled {
+		background-color: #EFE6E1;
+	}
+
+	.save-text {
+		font-size: 32rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.bottom-space {
+		height: 16rpx;
+	}
+</style>

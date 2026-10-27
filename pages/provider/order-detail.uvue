@@ -1,0 +1,672 @@
+<template>
+	<view class="page">
+		<scroll-view class="page-scroll" direction="vertical" :show-scrollbar="false">
+			<view class="page-content">
+				<view class="nav-bar">
+					<view class="nav-button" @click="goBack">
+						<text class="nav-icon">‹</text>
+					</view>
+					<text class="nav-title">订单详情</text>
+					<view class="nav-placeholder"></view>
+				</view>
+
+				<view class="status-card">
+					<view class="status-icon" :class="statusIconClass(detail.order.status)">
+						<text class="status-icon-text">{{ statusIcon(detail.order.status) }}</text>
+					</view>
+					<view class="status-copy">
+						<text class="status-title">{{ detail.order.status }}</text>
+						<text class="status-desc">{{ statusDescription(detail.order.status) }}</text>
+					</view>
+					<text class="order-no">{{ detail.order.orderNo }}</text>
+				</view>
+
+				<view class="section-card">
+					<text class="section-title">用户信息</text>
+					<view class="user-row">
+						<image class="user-avatar" :src="detail.order.customerAvatar" mode="aspectFill"></image>
+						<view class="user-main">
+							<view class="user-name-row">
+								<text class="user-name">{{ detail.order.customerName }}</text>
+								<view v-if="detail.order.customerVerified" class="verified-pill">
+									<text class="verified-text">✓ 已认证</text>
+								</view>
+							</view>
+							<text class="user-meta">已完成实名核验</text>
+						</view>
+						<view class="contact-button" @click="contactUser">
+							<text class="contact-text">联系</text>
+						</view>
+					</view>
+				</view>
+
+				<view class="section-card">
+					<text class="section-title">服务信息</text>
+					<view class="service-row">
+						<view class="service-icon">
+							<text class="service-icon-text">服</text>
+						</view>
+						<view class="service-main">
+							<text class="service-title">{{ detail.order.serviceTitle }}</text>
+							<text class="service-meta">{{ detail.order.duration }} · 公共场所服务</text>
+						</view>
+						<text class="service-amount">{{ detail.order.amount }}</text>
+					</view>
+				</view>
+
+				<view class="section-card">
+					<text class="section-title">预约信息</text>
+					<view class="info-row">
+						<text class="info-icon">◷</text>
+						<view class="info-copy">
+							<text class="info-title">{{ detail.order.appointmentDate }}</text>
+							<text class="info-desc">{{ detail.order.appointmentTime }}</text>
+						</view>
+					</view>
+					<view class="info-row">
+						<text class="info-icon">⌖</text>
+						<view class="info-copy">
+							<text class="info-title">{{ detail.order.location }}</text>
+							<text class="info-desc">请在公共经营场所完成本次服务</text>
+						</view>
+					</view>
+					<view class="note-box">
+						<text class="note-label">用户留言</text>
+						<text class="note-text">{{ detail.order.note }}</text>
+					</view>
+				</view>
+
+				<view class="section-card">
+					<text class="section-title">金额明细</text>
+					<view class="amount-row">
+						<text class="amount-label">服务金额</text>
+						<text class="amount-value">{{ detail.order.amount }}</text>
+					</view>
+					<view class="amount-row">
+						<text class="amount-label">平台服务费</text>
+						<text class="amount-value">¥0.00</text>
+					</view>
+					<view class="amount-divider"></view>
+					<view class="amount-row">
+						<text class="total-label">订单金额</text>
+						<text class="total-value">{{ detail.order.amount }}</text>
+					</view>
+				</view>
+
+				<view class="section-card">
+					<text class="section-title">订单进度</text>
+					<view class="timeline">
+						<view v-for="(item, index) in detail.timeline" :key="item.title" class="timeline-item">
+							<view class="timeline-marker-wrap">
+								<view class="timeline-marker" :class="timelineMarkerClass(item.state)"></view>
+								<view v-if="index < detail.timeline.length - 1" class="timeline-line"></view>
+							</view>
+							<view class="timeline-copy">
+								<text class="timeline-title">{{ item.title }}</text>
+								<text class="timeline-desc">{{ item.description }}</text>
+								<text v-if="item.time.length > 0" class="timeline-time">{{ item.time }}</text>
+							</view>
+						</view>
+					</view>
+				</view>
+
+				<view class="brand-footer">
+					<text class="brand-text">FaceTo · 见面聊，安心见</text>
+				</view>
+				<view class="bottom-space"></view>
+			</view>
+		</scroll-view>
+
+		<view class="action-bar">
+			<view v-if="detail.order.status == '待接单'" class="action-button action-outline" @click="rejectOrder">
+				<text class="action-outline-text">拒单</text>
+			</view>
+			<view v-if="detail.order.status == '待接单'" class="action-button action-primary" @click="acceptOrder">
+				<text class="action-primary-text">接单</text>
+			</view>
+			<view v-if="detail.order.status == '待履约'" class="action-button action-outline" @click="changeSchedule">
+				<text class="action-outline-text">改期</text>
+			</view>
+			<view v-if="detail.order.status == '待履约' || detail.order.status == '进行中'" class="action-button action-primary" @click="completeOrder">
+				<text class="action-primary-text">确认完成</text>
+			</view>
+			<view v-if="detail.order.status == '已完成' || detail.order.status == '已取消'" class="action-button action-outline" @click="contactUser">
+				<text class="action-outline-text">联系用户</text>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import {
+		acceptProviderOrder,
+		completeProviderOrder,
+		getProviderOrderDetail,
+		rejectProviderOrder
+	} from '../../services/service-container.uts'
+	import type { ProviderOrderDetail } from '../../types/models.uts'
+
+	const orderId = ref('provider-order-001')
+	const detail = ref<ProviderOrderDetail>(getProviderOrderDetail('provider-order-001'))
+
+	onLoad((options) => {
+		if (options == null) {
+			return
+		}
+		const value = options['orderId'] as string
+		if (value != null && value.length > 0) {
+			orderId.value = decodeURIComponent(value)
+		}
+		detail.value = getProviderOrderDetail(orderId.value)
+	})
+
+	function refreshDetail() {
+		detail.value = getProviderOrderDetail(orderId.value)
+	}
+
+	function statusIcon(status: string): string {
+		if (status == '已完成') {
+			return '✓'
+		}
+		if (status == '已取消') {
+			return '×'
+		}
+		if (status == '进行中') {
+			return '●'
+		}
+		return '◷'
+	}
+
+	function statusIconClass(status: string): string {
+		if (status == '已完成') {
+			return 'status-icon-success'
+		}
+		if (status == '已取消') {
+			return 'status-icon-muted'
+		}
+		return 'status-icon-warning'
+	}
+
+	function statusDescription(status: string): string {
+		if (status == '待接单') {
+			return '用户已预约，请确认是否接单'
+		}
+		if (status == '待履约') {
+			return '已接单，请按预约时间完成服务'
+		}
+		if (status == '进行中') {
+			return '服务进行中，完成后请确认订单'
+		}
+		if (status == '已完成') {
+			return '本次服务已完成'
+		}
+		return '订单已取消'
+	}
+
+	function timelineMarkerClass(state: string): string {
+		if (state == 'done') {
+			return 'marker-done'
+		}
+		if (state == 'current') {
+			return 'marker-current'
+		}
+		return 'marker-future'
+	}
+
+	function showResult(ok: boolean, message: string) {
+		uni.showToast({
+			title: message,
+			position: 'bottom',
+			icon: ok ? 'success' : 'error'
+		})
+	}
+
+	function acceptOrder() {
+		const result = acceptProviderOrder(orderId.value)
+		refreshDetail()
+		showResult(result.ok, result.message)
+	}
+
+	function completeOrder() {
+		const result = completeProviderOrder(orderId.value)
+		refreshDetail()
+		showResult(result.ok, result.message)
+	}
+
+	function rejectOrder() {
+		uni.showModal({
+			title: '确认拒绝订单',
+			content: '拒绝后订单将变为已取消，是否继续？',
+			confirmText: '确认拒绝',
+			cancelText: '再想想',
+			success: (result) => {
+				if (result.confirm) {
+					const outcome = rejectProviderOrder(orderId.value)
+					refreshDetail()
+					showResult(outcome.ok, outcome.message)
+				}
+			}
+		})
+	}
+
+	function changeSchedule() {
+		uni.showToast({
+			title: '订单改期将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function contactUser() {
+		uni.navigateTo({
+			url: '/pages/chat/detail?threadId=' + encodeURIComponent(orderId.value)
+		})
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/provider/orders'
+				})
+			}
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-scroll {
+		flex: 1;
+		min-height: 0;
+	}
+
+	.page-content {
+		padding-bottom: 150rpx;
+	}
+
+	.nav-bar {
+		height: 128rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32rpx;
+		background-color: #FFF9F5;
+	}
+
+	.nav-button,
+	.nav-placeholder {
+		width: 76rpx;
+		height: 76rpx;
+	}
+
+	.nav-button {
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 60rpx;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.status-card,
+	.section-card {
+		margin: 22rpx 32rpx 0;
+		padding: 26rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.status-card {
+		flex-direction: row;
+		align-items: center;
+		background-color: #FFF7F3;
+	}
+
+	.status-icon {
+		width: 78rpx;
+		height: 78rpx;
+		align-items: center;
+		justify-content: center;
+		border-radius: 50%;
+	}
+
+	.status-icon-warning {
+		background-color: #FFF0D7;
+	}
+
+	.status-icon-success {
+		background-color: #E7F8F2;
+	}
+
+	.status-icon-muted {
+		background-color: #F1E9E5;
+	}
+
+	.status-icon-text {
+		font-size: 34rpx;
+		font-weight: 700;
+		color: #B87916;
+	}
+
+	.status-copy {
+		flex: 1;
+		margin-left: 18rpx;
+	}
+
+	.status-title {
+		font-size: 34rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.status-desc {
+		margin-top: 6rpx;
+		font-size: 22rpx;
+		color: #8D817B;
+	}
+
+	.order-no {
+		font-size: 18rpx;
+		color: #A1958F;
+	}
+
+	.section-title {
+		font-size: 32rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.user-row,
+	.service-row,
+	.info-row {
+		flex-direction: row;
+		align-items: center;
+		margin-top: 22rpx;
+	}
+
+	.user-avatar {
+		width: 88rpx;
+		height: 88rpx;
+		border-radius: 50%;
+	}
+
+	.user-main,
+	.service-main,
+	.info-copy {
+		flex: 1;
+		margin-left: 16rpx;
+	}
+
+	.user-name-row {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.user-name {
+		font-size: 29rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.verified-pill {
+		margin-left: 10rpx;
+		padding: 6rpx 10rpx;
+		background-color: #E7F8F2;
+		border-radius: 999rpx;
+	}
+
+	.verified-text {
+		font-size: 18rpx;
+		font-weight: 700;
+		color: #15966D;
+	}
+
+	.user-meta,
+	.service-meta,
+	.info-desc {
+		margin-top: 6rpx;
+		font-size: 21rpx;
+		color: #8D817B;
+	}
+
+	.contact-button {
+		height: 62rpx;
+		align-items: center;
+		justify-content: center;
+		padding: 0 20rpx;
+		background-color: #FFF1F2;
+		border-radius: 999rpx;
+	}
+
+	.contact-text {
+		font-size: 22rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.service-icon {
+		width: 72rpx;
+		height: 72rpx;
+		align-items: center;
+		justify-content: center;
+		background-color: #FFF1E8;
+		border-radius: 18rpx;
+	}
+
+	.service-icon-text {
+		font-size: 25rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.service-title,
+	.info-title {
+		font-size: 27rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.service-amount {
+		margin-left: 14rpx;
+		font-size: 29rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.info-icon {
+		width: 38rpx;
+		font-size: 25rpx;
+		color: $facetof-color-primary;
+	}
+
+	.note-box {
+		margin-top: 18rpx;
+		padding: 18rpx;
+		background-color: #FFF9F5;
+		border-radius: 18rpx;
+	}
+
+	.note-label {
+		font-size: 20rpx;
+		font-weight: 700;
+		color: #A1958F;
+	}
+
+	.note-text {
+		margin-top: 6rpx;
+		font-size: 23rpx;
+		line-height: 35rpx;
+		color: #5F554F;
+	}
+
+	.amount-row {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		margin-top: 18rpx;
+	}
+
+	.amount-label {
+		font-size: 23rpx;
+		color: #8D817B;
+	}
+
+	.amount-value {
+		font-size: 24rpx;
+		color: #253047;
+	}
+
+	.amount-divider {
+		height: 1rpx;
+		margin-top: 18rpx;
+		background-color: #F5DED5;
+	}
+
+	.total-label {
+		font-size: 25rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.total-value {
+		font-size: 32rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.timeline {
+		margin-top: 24rpx;
+	}
+
+	.timeline-item {
+		flex-direction: row;
+		min-height: 92rpx;
+	}
+
+	.timeline-marker-wrap {
+		width: 38rpx;
+		align-items: center;
+	}
+
+	.timeline-marker {
+		width: 18rpx;
+		height: 18rpx;
+		border-radius: 50%;
+	}
+
+	.marker-done {
+		background-color: #10B981;
+	}
+
+	.marker-current {
+		background-color: $facetof-color-primary;
+	}
+
+	.marker-future {
+		background-color: #D7CCC6;
+	}
+
+	.timeline-line {
+		width: 2rpx;
+		flex: 1;
+		margin-top: 6rpx;
+		background-color: #E4DAD4;
+	}
+
+	.timeline-copy {
+		flex: 1;
+		margin-left: 14rpx;
+		padding-bottom: 20rpx;
+	}
+
+	.timeline-title {
+		font-size: 25rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.timeline-desc {
+		margin-top: 5rpx;
+		font-size: 21rpx;
+		color: #8D817B;
+	}
+
+	.timeline-time {
+		margin-top: 5rpx;
+		font-size: 19rpx;
+		color: #A1958F;
+	}
+
+	.action-bar {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		flex-direction: row;
+		justify-content: flex-end;
+		padding: 18rpx 32rpx;
+		padding-bottom: var(--uni-safe-area-inset-bottom);
+		background-color: #FFFFFF;
+		border-top: 1rpx solid #F5DED5;
+	}
+
+	.action-button {
+		height: 84rpx;
+		align-items: center;
+		justify-content: center;
+		margin-left: 14rpx;
+		padding: 0 28rpx;
+		border-radius: 999rpx;
+	}
+
+	.action-outline {
+		background-color: #FFFFFF;
+		border: 1rpx solid #E4DAD4;
+	}
+
+	.action-primary {
+		background-color: $facetof-color-primary;
+	}
+
+	.action-outline-text {
+		font-size: 25rpx;
+		font-weight: 700;
+		color: #756B66;
+	}
+
+	.action-primary-text {
+		font-size: 25rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.brand-footer {
+		padding: 22rpx 0 4rpx;
+		align-items: center;
+	}
+
+	.brand-text {
+		font-size: 25rpx;
+		color: #253047;
+	}
+
+	.bottom-space {
+		height: 24rpx;
+	}
+</style>

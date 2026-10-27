@@ -1,0 +1,409 @@
+<template>
+	<scroll-view class="page" direction="vertical" :show-scrollbar="false">
+		<view class="page-content">
+			<view class="nav-bar">
+				<view class="nav-button" @click="goBack">
+					<text class="nav-icon">‹</text>
+				</view>
+				<text class="nav-title">服务管理</text>
+				<view class="create-button" @click="createService">
+					<text class="create-plus">＋</text>
+					<text class="create-text">创建服务</text>
+				</view>
+			</view>
+
+			<view class="summary-card">
+				<view class="summary-item">
+					<text class="summary-value">{{ services.length }}</text>
+					<text class="summary-label">全部服务</text>
+				</view>
+				<view class="summary-line"></view>
+				<view class="summary-item">
+					<text class="summary-value">{{ onlineCount }}</text>
+					<text class="summary-label">已上架</text>
+				</view>
+				<view class="summary-line"></view>
+				<view class="summary-item">
+					<text class="summary-value">{{ totalSold }}</text>
+					<text class="summary-label">累计已售</text>
+				</view>
+			</view>
+
+			<view v-if="services.length == 0" class="empty-state">
+				<image class="empty-image" src="/static/moments/empty.png" mode="aspectFit"></image>
+				<text class="empty-title">还没有服务项目</text>
+				<text class="empty-desc">创建服务后，用户才能预约你的服务。</text>
+				<view class="empty-button" @click="createService">
+					<text class="empty-button-text">创建服务</text>
+				</view>
+			</view>
+
+			<view v-else class="service-list">
+				<view v-for="service in services" :key="service.id" class="service-card">
+					<view class="service-main-row">
+						<image class="service-cover" :src="service.coverImage" mode="aspectFill"></image>
+						<view class="service-main">
+							<view class="service-head">
+								<text class="service-title">{{ service.title }}</text>
+								<view class="status-pill" :class="statusClass(service.status)">
+									<text class="status-text" :class="service.status == '审核中' ? 'status-text-pending' : service.status == '下架' ? 'status-text-offline' : ''">{{ service.status }}</text>
+								</view>
+							</view>
+							<text class="service-meta">{{ service.duration }} · 已售 {{ service.soldCount }} 次</text>
+							<text class="service-price">{{ service.price }}</text>
+						</view>
+					</view>
+					<view class="service-action-row">
+						<view class="action-button" @click="editService(service.id)">
+							<text class="action-text">编辑</text>
+						</view>
+						<view class="action-button" @click="toggleStatus(service.id)">
+							<text class="action-text">{{ service.status == '上架' ? '下架' : '上架' }}</text>
+						</view>
+					</view>
+				</view>
+			</view>
+
+			<view class="brand-footer">
+				<text class="brand-text">FaceTo · 见面聊，安心见</text>
+			</view>
+			<view class="bottom-space"></view>
+		</view>
+	</scroll-view>
+</template>
+
+<script setup lang="uts">
+	import { getProviderManageServices, toggleProviderService } from '../../services/service-container.uts'
+	import type { ProviderManageServiceItem } from '../../types/models.uts'
+
+	const services = ref<ProviderManageServiceItem[]>(getProviderManageServices())
+
+	const onlineCount = ref(0)
+	const totalSold = ref(0)
+
+	function refreshStats() {
+		let online = 0
+		let sold = 0
+		for (let i = 0; i < services.value.length; i++) {
+			if (services.value[i].status == '上架') {
+				online++
+			}
+			sold += services.value[i].soldCount
+		}
+		onlineCount.value = online
+		totalSold.value = sold
+	}
+
+	refreshStats()
+
+	function statusClass(status: string): string {
+		if (status == '上架') {
+			return 'status-online'
+		}
+		if (status == '审核中') {
+			return 'status-pending'
+		}
+		return 'status-offline'
+	}
+
+	function createService() {
+		uni.navigateTo({
+			url: '/pages/provider/service-edit'
+		})
+	}
+
+	function editService(id: string) {
+		uni.navigateTo({
+			url: '/pages/provider/service-edit?serviceId=' + encodeURIComponent(id)
+		})
+	}
+
+	function toggleStatus(id: string) {
+		const result = toggleProviderService(id)
+		services.value = getProviderManageServices()
+		refreshStats()
+		uni.showToast({
+			title: result.message,
+			position: 'bottom',
+			icon: result.ok ? 'success' : 'error'
+		})
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/provider/dashboard'
+				})
+			}
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-content {
+		padding-bottom: 32rpx;
+	}
+
+	.nav-bar {
+		height: 128rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32rpx;
+		background-color: #FFF9F5;
+	}
+
+	.nav-button {
+		width: 76rpx;
+		height: 76rpx;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 60rpx;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.create-button {
+		height: 72rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+		padding: 0 20rpx;
+		background-color: $facetof-color-primary;
+		border-radius: 20rpx;
+	}
+
+	.create-plus {
+		margin-right: 7rpx;
+		font-size: 28rpx;
+		color: #FFFFFF;
+	}
+
+	.create-text {
+		font-size: 24rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.summary-card {
+		flex-direction: row;
+		align-items: center;
+		margin: 22rpx 32rpx 0;
+		padding: 22rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 26rpx;
+	}
+
+	.summary-item {
+		flex: 1;
+		align-items: center;
+	}
+
+	.summary-value {
+		font-size: 38rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.summary-label {
+		margin-top: 8rpx;
+		font-size: 22rpx;
+		color: #8D817B;
+	}
+
+	.summary-line {
+		width: 1rpx;
+		height: 42rpx;
+		background-color: #F5DED5;
+	}
+
+	.service-list {
+		margin: 22rpx 32rpx 0;
+	}
+
+	.service-card {
+		margin-bottom: 18rpx;
+		padding: 18rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 24rpx;
+	}
+
+	.service-main-row {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.service-cover {
+		width: 142rpx;
+		height: 142rpx;
+		border-radius: 18rpx;
+	}
+
+	.service-main {
+		flex: 1;
+		margin-left: 16rpx;
+	}
+
+	.service-head {
+		flex-direction: row;
+		align-items: flex-start;
+		justify-content: space-between;
+	}
+
+	.service-title {
+		flex: 1;
+		font-size: 27rpx;
+		font-weight: 700;
+		line-height: 38rpx;
+		color: #253047;
+	}
+
+	.status-pill {
+		margin-left: 10rpx;
+		padding: 7rpx 10rpx;
+		border-radius: 999rpx;
+	}
+
+	.status-online {
+		background-color: #E7F8F2;
+	}
+
+	.status-pending {
+		background-color: #FFF0D7;
+	}
+
+	.status-offline {
+		background-color: #F1E9E5;
+	}
+
+	.status-text {
+		font-size: 19rpx;
+		font-weight: 700;
+		color: #10B981;
+	}
+
+	.status-text-pending {
+		color: #B87916;
+	}
+
+	.status-text-offline {
+		color: #8D817B;
+	}
+
+	.service-meta {
+		margin-top: 10rpx;
+		font-size: 21rpx;
+		color: #8D817B;
+	}
+
+	.service-price {
+		margin-top: 8rpx;
+		font-size: 28rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.service-action-row {
+		flex-direction: row;
+		justify-content: flex-end;
+		margin-top: 16rpx;
+		padding-top: 14rpx;
+		border-top: 1rpx solid #F5DED5;
+	}
+
+	.action-button {
+		height: 56rpx;
+		align-items: center;
+		justify-content: center;
+		margin-left: 10rpx;
+		padding: 0 18rpx;
+		background-color: #FFF1F2;
+		border: 1rpx solid #FFD9DC;
+		border-radius: 999rpx;
+	}
+
+	.action-text {
+		font-size: 21rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.empty-state {
+		min-height: 700rpx;
+		margin: 22rpx 32rpx 0;
+		padding: 60rpx 28rpx;
+		align-items: center;
+		justify-content: center;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.empty-image {
+		width: 320rpx;
+		height: 238rpx;
+	}
+
+	.empty-title {
+		margin-top: 22rpx;
+		font-size: 32rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.empty-desc {
+		margin-top: 10rpx;
+		text-align: center;
+		font-size: 23rpx;
+		color: #8D817B;
+	}
+
+	.empty-button {
+		height: 78rpx;
+		align-items: center;
+		justify-content: center;
+		margin-top: 24rpx;
+		padding: 0 28rpx;
+		background-color: $facetof-color-primary;
+		border-radius: 18rpx;
+	}
+
+	.empty-button-text {
+		font-size: 27rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.brand-footer {
+		padding: 20rpx 0 4rpx;
+		align-items: center;
+	}
+
+	.brand-text {
+		font-size: 25rpx;
+		color: #253047;
+	}
+
+	.bottom-space {
+		height: 32rpx;
+	}
+</style>

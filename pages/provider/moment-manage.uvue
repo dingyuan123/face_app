@@ -1,0 +1,405 @@
+<template>
+	<scroll-view class="page" direction="vertical" :show-scrollbar="false">
+		<view class="page-content">
+			<view class="nav-bar">
+				<view class="nav-button" @click="goBack">
+					<text class="nav-icon">‹</text>
+				</view>
+				<text class="nav-title">动态管理</text>
+				<view class="publish-button" @click="publishMoment">
+					<text class="publish-plus">＋</text>
+					<text class="publish-text">发布动态</text>
+				</view>
+			</view>
+
+			<view class="stats-card">
+				<view class="stat-item">
+					<text class="stat-value">{{ moments.length }}</text>
+					<text class="stat-label">已发布</text>
+				</view>
+				<view class="stat-line"></view>
+				<view class="stat-item">
+					<text class="stat-value">{{ totalLikes }}</text>
+					<text class="stat-label">获赞</text>
+				</view>
+				<view class="stat-line"></view>
+				<view class="stat-item">
+					<text class="stat-value">{{ totalComments }}</text>
+					<text class="stat-label">评论</text>
+				</view>
+			</view>
+
+			<view v-if="moments.length == 0" class="empty-state">
+				<image class="empty-image" src="/static/moments/empty.png" mode="aspectFit"></image>
+				<text class="empty-title">还没有发布动态</text>
+				<text class="empty-desc">发布第一条动态，让更多人看到你的服务。</text>
+				<view class="empty-button" @click="publishMoment">
+					<text class="empty-button-text">发布动态</text>
+				</view>
+			</view>
+
+			<view v-else class="moment-list">
+				<view v-for="moment in moments" :key="moment.id" class="moment-card">
+					<view class="moment-main">
+						<image class="moment-cover" :src="moment.coverImage" mode="aspectFill"></image>
+						<view class="moment-copy">
+							<view class="moment-head">
+								<text class="moment-title">{{ moment.title }}</text>
+								<view class="moment-status">
+									<text class="moment-status-text">{{ moment.status }}</text>
+								</view>
+							</view>
+							<text class="moment-time">{{ moment.publishedAt }}</text>
+							<view class="moment-data">
+								<text class="data-text">浏览 {{ moment.viewCount }}</text>
+								<text class="data-text">赞 {{ moment.likeCount }}</text>
+								<text class="data-text">评论 {{ moment.commentCount }}</text>
+							</view>
+						</view>
+					</view>
+					<view class="moment-actions">
+						<view class="action-button" @click="editMoment(moment.id)">
+							<text class="action-text">编辑</text>
+						</view>
+						<view class="action-button" @click="showData(moment.id)">
+							<text class="action-text">数据</text>
+						</view>
+						<view class="action-button danger" @click="removeMoment(moment.id)">
+							<text class="action-text danger-text">删除</text>
+						</view>
+					</view>
+				</view>
+			</view>
+
+			<view class="brand-footer">
+				<text class="brand-text">FaceTo · 见面聊，安心见</text>
+			</view>
+			<view class="bottom-space"></view>
+		</view>
+	</scroll-view>
+</template>
+
+<script setup lang="uts">
+	import { getProviderMomentItems, removeProviderMoment } from '../../services/service-container.uts'
+	import type { ProviderMomentManageItem } from '../../types/models.uts'
+
+	const moments = ref<ProviderMomentManageItem[]>(getProviderMomentItems())
+
+	const totalLikes = ref(0)
+	const totalComments = ref(0)
+
+	function refreshStats() {
+		let likes = 0
+		let comments = 0
+		for (let i = 0; i < moments.value.length; i++) {
+			likes += moments.value[i].likeCount
+			comments += moments.value[i].commentCount
+		}
+		totalLikes.value = likes
+		totalComments.value = comments
+	}
+
+	refreshStats()
+
+	function publishMoment() {
+		uni.navigateTo({
+			url: '/pages/moment/publish'
+		})
+	}
+
+	function editMoment(id: string) {
+		uni.showToast({
+			title: '动态编辑将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function showData(id: string) {
+		uni.showToast({
+			title: '动态数据将在后续阶段接入',
+			position: 'bottom',
+			icon: 'none'
+		})
+	}
+
+	function removeMoment(id: string) {
+		const result = removeProviderMoment(id)
+		moments.value = getProviderMomentItems()
+		refreshStats()
+		uni.showToast({
+			title: result.message,
+			position: 'bottom',
+			icon: result.ok ? 'success' : 'error'
+		})
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/provider/dashboard'
+				})
+			}
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-content {
+		padding-bottom: 32rpx;
+	}
+
+	.nav-bar {
+		height: 128rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32rpx;
+		background-color: #FFF9F5;
+	}
+
+	.nav-button {
+		width: 76rpx;
+		height: 76rpx;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 60rpx;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.publish-button {
+		height: 72rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+		padding: 0 20rpx;
+		background-color: $facetof-color-primary;
+		border-radius: 20rpx;
+	}
+
+	.publish-plus {
+		margin-right: 7rpx;
+		font-size: 28rpx;
+		color: #FFFFFF;
+	}
+
+	.publish-text {
+		font-size: 24rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.stats-card {
+		flex-direction: row;
+		align-items: center;
+		margin: 22rpx 32rpx 0;
+		padding: 22rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 26rpx;
+	}
+
+	.stat-item {
+		flex: 1;
+		align-items: center;
+	}
+
+	.stat-value {
+		font-size: 40rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.stat-label {
+		margin-top: 8rpx;
+		font-size: 22rpx;
+		color: #8D817B;
+	}
+
+	.stat-line {
+		width: 1rpx;
+		height: 42rpx;
+		background-color: #F5DED5;
+	}
+
+	.moment-list {
+		margin: 22rpx 32rpx 0;
+	}
+
+	.moment-card {
+		margin-bottom: 18rpx;
+		padding: 18rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 24rpx;
+	}
+
+	.moment-main {
+		flex-direction: row;
+	}
+
+	.moment-cover {
+		width: 176rpx;
+		height: 132rpx;
+		border-radius: 16rpx;
+	}
+
+	.moment-copy {
+		flex: 1;
+		margin-left: 16rpx;
+	}
+
+	.moment-head {
+		flex-direction: row;
+		align-items: flex-start;
+		justify-content: space-between;
+	}
+
+	.moment-title {
+		flex: 1;
+		font-size: 28rpx;
+		font-weight: 700;
+		line-height: 38rpx;
+		color: #253047;
+	}
+
+	.moment-status {
+		margin-left: 10rpx;
+		padding: 6rpx 10rpx;
+		background-color: #E7F8F2;
+		border-radius: 999rpx;
+	}
+
+	.moment-status-text {
+		font-size: 19rpx;
+		font-weight: 700;
+		color: #10B981;
+	}
+
+	.moment-time {
+		margin-top: 10rpx;
+		font-size: 21rpx;
+		color: #8D817B;
+	}
+
+	.moment-data {
+		flex-direction: row;
+		margin-top: 12rpx;
+	}
+
+	.data-text {
+		margin-right: 18rpx;
+		font-size: 20rpx;
+		color: #8D817B;
+	}
+
+	.moment-actions {
+		flex-direction: row;
+		justify-content: flex-end;
+		margin-top: 16rpx;
+	}
+
+	.action-button {
+		height: 58rpx;
+		align-items: center;
+		justify-content: center;
+		margin-left: 12rpx;
+		padding: 0 18rpx;
+		background-color: #FFF1F2;
+		border: 1rpx solid #FFD9DC;
+		border-radius: 999rpx;
+	}
+
+	.action-text {
+		font-size: 22rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.danger {
+		background-color: #FFF1F2;
+		border-color: #F1B8BE;
+	}
+
+	.danger-text {
+		color: #EF4444;
+	}
+
+	.empty-state {
+		min-height: 700rpx;
+		margin: 22rpx 32rpx 0;
+		padding: 60rpx 28rpx;
+		align-items: center;
+		justify-content: center;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.empty-image {
+		width: 320rpx;
+		height: 238rpx;
+	}
+
+	.empty-title {
+		margin-top: 22rpx;
+		font-size: 32rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.empty-desc {
+		margin-top: 10rpx;
+		text-align: center;
+		font-size: 23rpx;
+		color: #8D817B;
+	}
+
+	.empty-button {
+		height: 78rpx;
+		align-items: center;
+		justify-content: center;
+		margin-top: 24rpx;
+		padding: 0 28rpx;
+		background-color: $facetof-color-primary;
+		border-radius: 18rpx;
+	}
+
+	.empty-button-text {
+		font-size: 27rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.brand-footer {
+		padding: 20rpx 0 4rpx;
+		align-items: center;
+	}
+
+	.brand-text {
+		font-size: 25rpx;
+		color: #253047;
+	}
+
+	.bottom-space {
+		height: 32rpx;
+	}
+</style>

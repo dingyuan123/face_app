@@ -92,6 +92,13 @@
 			}
 		},
 		{
+			"path": "pages/common/document",
+			"style": {
+				"navigationBarTitleText": "内容详情",
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/help/help",
 			"style": {
 				"navigationBarTitleText": "客服帮助",
@@ -130,6 +137,97 @@
 			"path": "pages/chat/detail",
 			"style": {
 				"navigationBarTitleText": "消息",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/provider/service-edit",
+			"style": {
+				"navigationBarTitleText": "服务创建",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/provider/services",
+			"style": {
+				"navigationBarTitleText": "服务管理",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/provider/schedule",
+			"style": {
+				"navigationBarTitleText": "排期管理",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/provider/orders",
+			"style": {
+				"navigationBarTitleText": "订单管理",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/provider/order-detail",
+			"style": {
+				"navigationBarTitleText": "订单详情",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/provider/earnings",
+			"style": {
+				"navigationBarTitleText": "收入提现",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/provider/withdrawal",
+			"style": {
+				"navigationBarTitleText": "申请提现",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/provider/reviews",
+			"style": {
+				"navigationBarTitleText": "评价管理",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/provider/analytics",
+			"style": {
+				"navigationBarTitleText": "数据看板",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/provider/certification",
+			"style": {
+				"navigationBarTitleText": "认证中心",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/provider/moment-manage",
+			"style": {
+				"navigationBarTitleText": "动态管理",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/provider/profile",
+			"style": {
+				"navigationBarTitleText": "资料管理",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/provider/dashboard",
+			"style": {
+				"navigationBarTitleText": "服务者工作台",
 				"navigationStyle": "custom"
 			}
 		},

@@ -1,0 +1,309 @@
+import {
+  ActionOutcome,
+  ProviderOrderDetail,
+  ProviderOrderItem,
+  ProviderOrderTimelineItem
+} from '../types/models.uts'
+
+const ORDERS_KEY = 'faceto.provider.orders.v1'
+let ordersLoaded = false
+let orders: Array<ProviderOrderItem> = []
+
+function copyOrder(item: ProviderOrderItem): ProviderOrderItem {
+  return {
+    id: item.id,
+    orderNo: item.orderNo,
+    customerName: item.customerName,
+    customerAvatar: item.customerAvatar,
+    customerVerified: item.customerVerified,
+    serviceTitle: item.serviceTitle,
+    duration: item.duration,
+    appointmentDate: item.appointmentDate,
+    appointmentTime: item.appointmentTime,
+    location: item.location,
+    amount: item.amount,
+    status: item.status,
+    note: item.note
+  }
+}
+
+function createDefaultOrders(): Array<ProviderOrderItem> {
+  return [
+    {
+      id: 'provider-order-001',
+      orderNo: 'FT202610270018',
+      customerName: '小满',
+      customerAvatar: '/static/avatars/xiaoman.png',
+      customerVerified: true,
+      serviceTitle: '台球助教 · 新手体验',
+      duration: '60 分钟',
+      appointmentDate: '今天',
+      appointmentTime: '15:30 - 16:30',
+      location: '星牌台球俱乐部（万象汇店）',
+      amount: '¥68.00',
+      status: '待接单',
+      note: '第一次接触台球，希望从握杆和站姿开始学习。'
+    },
+    {
+      id: 'provider-order-002',
+      orderNo: 'FT202610270026',
+      customerName: '知夏',
+      customerAvatar: '/static/avatars/zhixia.png',
+      customerVerified: true,
+      serviceTitle: '咖啡陪伴 · 轻松交流',
+      duration: '60 分钟',
+      appointmentDate: '明天',
+      appointmentTime: '14:00 - 15:00',
+      location: '瑞幸咖啡（泸州万象汇店）',
+      amount: '¥55.00',
+      status: '待接单',
+      note: '想聊聊最近的工作和生活，轻松一点就好。'
+    },
+    {
+      id: 'provider-order-003',
+      orderNo: 'FT202610260112',
+      customerName: '林川',
+      customerAvatar: '/static/avatars/linxiao.png',
+      customerVerified: true,
+      serviceTitle: '城市漫步 · 老城慢行',
+      duration: '90 分钟',
+      appointmentDate: '10月29日 周四',
+      appointmentTime: '16:00 - 17:30',
+      location: '水井沟商业步行街 · 南门',
+      amount: '¥88.00',
+      status: '待履约',
+      note: '想看看泸州老城的街道和小吃，路线可以由你安排。'
+    },
+    {
+      id: 'provider-order-004',
+      orderNo: 'FT202610270031',
+      customerName: '小禾',
+      customerAvatar: '/static/avatars/qinghe.png',
+      customerVerified: true,
+      serviceTitle: '桌游陪玩 · 欢乐组局',
+      duration: '120 分钟',
+      appointmentDate: '今天',
+      appointmentTime: '19:00 - 21:00',
+      location: '万象汇桌游馆',
+      amount: '¥120.00',
+      status: '进行中',
+      note: '三个人，想玩轻松一点的策略游戏。'
+    },
+    {
+      id: 'provider-order-005',
+      orderNo: 'FT202610230088',
+      customerName: '阿成',
+      customerAvatar: '/static/avatars/acheng.png',
+      customerVerified: true,
+      serviceTitle: '羽毛球陪练 · 轻松出汗',
+      duration: '60 分钟',
+      appointmentDate: '10月23日 周五',
+      appointmentTime: '18:00 - 19:00',
+      location: '泸州市民运动中心',
+      amount: '¥75.00',
+      status: '已完成',
+      note: '希望练习高远球和基础步法。'
+    },
+    {
+      id: 'provider-order-006',
+      orderNo: 'FT202610220046',
+      customerName: '清和',
+      customerAvatar: '/static/avatars/achuan.png',
+      customerVerified: true,
+      serviceTitle: '咖啡陪伴 · 轻松交流',
+      duration: '60 分钟',
+      appointmentDate: '10月22日 周四',
+      appointmentTime: '10:00 - 11:00',
+      location: '瑞幸咖啡（泸州万象汇店）',
+      amount: '¥55.00',
+      status: '已取消',
+      note: '临时有事，已经和用户说明。'
+    }
+  ]
+}
+
+function persistOrders() {
+  const next: Array<ProviderOrderItem> = []
+  for (let i = 0; i < orders.length; i++) {
+    next.push(copyOrder(orders[i]))
+  }
+  uni.setStorageSync(ORDERS_KEY, JSON.stringify(next))
+}
+
+function ensureOrdersLoaded() {
+  if (ordersLoaded) {
+    return
+  }
+  ordersLoaded = true
+  const raw = uni.getStorageSync(ORDERS_KEY)
+  if (typeof raw == 'string' && raw.length > 0) {
+    try {
+      const saved = JSON.parse(raw) as Array<ProviderOrderItem>
+      if (saved.length > 0) {
+        orders = saved
+        return
+      }
+    } catch (e) {
+      uni.removeStorageSync(ORDERS_KEY)
+    }
+  }
+  orders = createDefaultOrders()
+  persistOrders()
+}
+
+function findOrderIndex(id: string): number {
+  for (let i = 0; i < orders.length; i++) {
+    if (orders[i].id == id) {
+      return i
+    }
+  }
+  return -1
+}
+
+function replaceStatus(id: string, status: string) {
+  const next: Array<ProviderOrderItem> = []
+  for (let i = 0; i < orders.length; i++) {
+    const item = copyOrder(orders[i])
+    if (item.id == id) {
+      item.status = status
+    }
+    next.push(item)
+  }
+  orders = next
+  persistOrders()
+}
+
+export function getProviderOrderItems(tab: string): Array<ProviderOrderItem> {
+  ensureOrdersLoaded()
+  const result: Array<ProviderOrderItem> = []
+  for (let i = 0; i < orders.length; i++) {
+    if (tab == '全部' || orders[i].status == tab) {
+      result.push(copyOrder(orders[i]))
+    }
+  }
+  return result
+}
+
+export function acceptProviderOrder(id: string): ActionOutcome {
+  ensureOrdersLoaded()
+  const index = findOrderIndex(id)
+  if (index < 0) {
+    return {
+      ok: false,
+      code: 'PROVIDER_ORDER_NOT_FOUND',
+      message: '未找到该订单'
+    }
+  }
+  if (orders[index].status != '待接单') {
+    return {
+      ok: false,
+      code: 'PROVIDER_ORDER_INVALID_STATUS',
+      message: '当前订单不能接单'
+    }
+  }
+  replaceStatus(id, '待履约')
+  return {
+    ok: true,
+    code: 'PROVIDER_ORDER_ACCEPTED',
+    message: '已接单，请按预约时间履约'
+  }
+}
+
+export function rejectProviderOrder(id: string): ActionOutcome {
+  ensureOrdersLoaded()
+  const index = findOrderIndex(id)
+  if (index < 0) {
+    return {
+      ok: false,
+      code: 'PROVIDER_ORDER_NOT_FOUND',
+      message: '未找到该订单'
+    }
+  }
+  if (orders[index].status != '待接单') {
+    return {
+      ok: false,
+      code: 'PROVIDER_ORDER_INVALID_STATUS',
+      message: '当前订单不能拒绝'
+    }
+  }
+  replaceStatus(id, '已取消')
+  return {
+    ok: true,
+    code: 'PROVIDER_ORDER_REJECTED',
+    message: '已拒绝该订单'
+  }
+}
+
+export function completeProviderOrder(id: string): ActionOutcome {
+  ensureOrdersLoaded()
+  const index = findOrderIndex(id)
+  if (index < 0) {
+    return {
+      ok: false,
+      code: 'PROVIDER_ORDER_NOT_FOUND',
+      message: '未找到该订单'
+    }
+  }
+  if (orders[index].status != '待履约' && orders[index].status != '进行中') {
+    return {
+      ok: false,
+      code: 'PROVIDER_ORDER_INVALID_STATUS',
+      message: '当前订单不能确认完成'
+    }
+  }
+  replaceStatus(id, '已完成')
+  return {
+    ok: true,
+    code: 'PROVIDER_ORDER_COMPLETED',
+    message: '订单已确认完成'
+  }
+}
+
+export function getProviderOrderDetail(id: string): ProviderOrderDetail {
+  ensureOrdersLoaded()
+  let order = copyOrder(orders[0])
+  for (let i = 0; i < orders.length; i++) {
+    if (orders[i].id == id) {
+      order = copyOrder(orders[i])
+      break
+    }
+  }
+
+  const timeline: Array<ProviderOrderTimelineItem> = [
+    {
+      title: '用户提交预约',
+      description: '订单已创建并完成支付',
+      time: '10月27日 13:26',
+      state: 'done'
+    },
+    {
+      title: '等待服务者接单',
+      description: '请确认时间、地点和服务内容',
+      time: order.status == '待接单' ? '当前节点' : '10月27日 13:28',
+      state: order.status == '待接单' ? 'current' : 'done'
+    },
+    {
+      title: '等待履约',
+      description: '按预约时间到达公共经营场所',
+      time: order.status == '待接单' ? '' : order.status == '待履约' ? '当前节点' : '10月27日 13:30',
+      state: order.status == '待接单' ? 'future' : order.status == '待履约' ? 'current' : 'done'
+    },
+    {
+      title: '服务进行中',
+      description: '见面后开始提供服务',
+      time: order.status == '进行中' ? '当前节点' : order.status == '已完成' ? '10月27日 15:31' : '',
+      state: order.status == '进行中' ? 'current' : order.status == '已完成' ? 'done' : 'future'
+    },
+    {
+      title: '订单完成',
+      description: '服务完成并确认订单结果',
+      time: order.status == '已完成' ? '已完成' : '',
+      state: order.status == '已完成' ? 'done' : 'future'
+    }
+  ]
+
+  return {
+    order: order,
+    timeline: timeline
+  }
+}

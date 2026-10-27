@@ -75,31 +75,30 @@
 </template>
 
 <script setup lang="uts">
-	import { computed } from 'vue'
 	import { getMyMomentItems } from '../../services/service-container.uts'
 	import type { MyMomentItem } from '../../types/models.uts'
 
 	const items = ref<MyMomentItem[]>(getMyMomentItems(false))
+	const likeTotal = ref(0)
+	const commentTotal = ref(0)
+
+	function refreshStats() {
+		let likes = 0
+		let comments = 0
+		for (let i = 0; i < items.value.length; i++) {
+			likes += items.value[i].likeCount
+			comments += items.value[i].commentCount
+		}
+		likeTotal.value = likes
+		commentTotal.value = comments
+	}
+
+	refreshStats()
 
 	onLoad((options) => {
 		const emptyValue = options['empty'] as string
 		items.value = getMyMomentItems(emptyValue == '1' || emptyValue == 'true')
-	})
-
-	const likeTotal = computed(() : number => {
-		let total = 0
-		for (let i = 0; i < items.value.length; i++) {
-			total += items.value[i].likeCount
-		}
-		return total
-	})
-
-	const commentTotal = computed(() : number => {
-		let total = 0
-		for (let i = 0; i < items.value.length; i++) {
-			total += items.value[i].commentCount
-		}
-		return total
+		refreshStats()
 	})
 
 	function goBack() {

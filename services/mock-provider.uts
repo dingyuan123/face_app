@@ -78,7 +78,7 @@ export function submitProviderApplication(draft: ProviderApplicationDraft): Prov
   const record: ProviderApplicationRecord = {
     id: 'application-' + Date.now().toString(),
     submittedAt: new Date().toISOString(),
-    status: 'pending',
+    status: 'approved',
     rejectionReason: '',
     avatarAsset: 'mock://avatar-submitted',
     lifePhotoAsset: 'mock://life-photo-submitted',
@@ -87,9 +87,10 @@ export function submitProviderApplication(draft: ProviderApplicationDraft): Prov
     idCardMasked: maskIdCard(draft.idCardNumber.trim())
   }
   addRecord(record)
-  setApplicationStatus('pending')
-  setProviderPermission(false)
-  return { ok: true, code: 'APPLICATION_SUBMITTED', message: '申请已提交，等待审核', record: record }
+  // 开发 Mock：提交后直接进入可测试的服务者状态，不代表真实审核通过。
+  setApplicationStatus('approved')
+  setProviderPermission(true)
+  return { ok: true, code: 'APPLICATION_SUBMITTED_MOCK_APPROVED', message: '申请已提交，Mock 审核已通过，可测试服务者功能', record: record }
 }
 
 export function seedTestApplication(kind: string) {

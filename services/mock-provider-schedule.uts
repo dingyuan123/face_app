@@ -1,0 +1,410 @@
+import {
+  ActionOutcome,
+  ProviderScheduleDay,
+  ProviderScheduleSlot,
+  ProviderScheduleSnapshot
+} from '../types/models.uts'
+
+const SCHEDULE_KEY = 'faceto.provider.schedule.v1'
+let scheduleLoaded = false
+let days: Array<ProviderScheduleDay> = []
+let slots: Array<ProviderScheduleSlot> = []
+
+function padDay(value: number): string {
+  return value < 10 ? '0' + value.toString() : value.toString()
+}
+
+function isLeapYear(year: number): boolean {
+  return year % 400 == 0 || (year % 4 == 0 && year % 100 != 0)
+}
+
+function daysInMonth(year: number, month: number): number {
+  if (month == 2) {
+    return isLeapYear(year) ? 29 : 28
+  }
+  if (month == 4 || month == 6 || month == 9 || month == 11) {
+    return 30
+  }
+  return 31
+}
+
+function weekdayIndex(year: number, month: number, day: number): number {
+  const weights = [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4]
+  const adjustedYear = month < 3 ? year - 1 : year
+  const sundayIndex = adjustedYear + Math.floor(adjustedYear / 4) -
+    Math.floor(adjustedYear / 100) + Math.floor(adjustedYear / 400) +
+    weights[month - 1] + day
+  return (sundayIndex + 6) % 7
+}
+
+function weekdayName(year: number, month: number, day: number): string {
+  const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+  return weekdays[weekdayIndex(year, month, day)]
+}
+
+function dateString(year: number, month: number, day: number): string {
+  return year.toString() + '-' + padDay(month) + '-' + padDay(day)
+}
+
+function appendMonth(year: number, month: number) {
+  const totalDays = daysInMonth(year, month)
+  for (let dayNumber = 1; dayNumber <= totalDays; dayNumber++) {
+    const date = dateString(year, month, dayNumber)
+    let exists = false
+    for (let i = 0; i < days.length; i++) {
+      if (days[i].date == date) {
+        exists = true
+        break
+      }
+    }
+    if (exists) {
+      continue
+    }
+
+    const weekday = weekdayName(year, month, dayNumber)
+    const isRest = weekday == '周日' && dayNumber % 2 == 1
+    days.push({
+      id: date,
+      date: date,
+      dayLabel: dayNumber.toString(),
+      weekday: weekday,
+      isToday: year == 2026 && month == 10 && dayNumber == 27,
+      isRest: isRest,
+      status: isRest ? '休息' : '可约'
+    })
+
+    const times = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '19:00', '20:00']
+    const periods = ['上午', '上午', '上午', '下午', '下午', '下午', '晚上', '晚上']
+    for (let slotIndex = 0; slotIndex < times.length; slotIndex++) {
+      const booked = (dayNumber + month + slotIndex) % 9 == 0 ||
+        (weekday == '周六' && slotIndex == 2)
+      let status = '可约'
+      if (booked) {
+        status = '已预约'
+      } else if (isRest) {
+        status = '不可约'
+      }
+      slots.push({
+        id: date + '-' + padDay(slotIndex + 1),
+        date: date,
+        time: times[slotIndex],
+        period: periods[slotIndex],
+        status: status
+      })
+    }
+  }
+
+  rebuildDays(slots)
+}
+
+function createDefaultSnapshot(): ProviderScheduleSnapshot {
+  appendMonth(2026, 10)
+  return snapshot()
+}
+
+function copyDay(item: ProviderScheduleDay): ProviderScheduleDay {
+  return {
+    id: item.id,
+    date: item.date,
+    dayLabel: item.dayLabel,
+    weekday: item.weekday,
+    isToday: item.isToday,
+    isRest: item.isRest,
+    status: item.status
+  }
+}
+
+function copySlot(item: ProviderScheduleSlot): ProviderScheduleSlot {
+  return {
+    id: item.id,
+    date: item.date,
+    time: item.time,
+    period: item.period,
+    status: item.status
+  }
+}
+
+function snapshot(): ProviderScheduleSnapshot {
+  const nextDays: Array<ProviderScheduleDay> = []
+  const nextSlots: Array<ProviderScheduleSlot> = []
+  for (let i = 0; i < days.length; i++) {
+    nextDays.push(copyDay(days[i]))
+  }
+  for (let i = 0; i < slots.length; i++) {
+    nextSlots.push(copySlot(slots[i]))
+  }
+  return {
+    days: nextDays,
+    slots: nextSlots
+  }
+}
+
+function persistSchedule() {
+  uni.setStorageSync(SCHEDULE_KEY, JSON.stringify(snapshot()))
+}
+
+function ensureScheduleLoaded() {
+  if (scheduleLoaded) {
+    return
+  }
+  scheduleLoaded = true
+  const raw = uni.getStorageSync(SCHEDULE_KEY)
+  if (typeof raw == 'string' && raw.length > 0) {
+    try {
+      const saved = JSON.parse(raw) as ProviderScheduleSnapshot
+      if (saved.days.length > 0 && saved.slots.length > 0) {
+        days = saved.days
+        slots = saved.slots
+        return
+      }
+    } catch (e) {
+      uni.removeStorageSync(SCHEDULE_KEY)
+    }
+  }
+  const initial = createDefaultSnapshot()
+  days = initial.days
+  slots = initial.slots
+  persistSchedule()
+}
+
+function findDayIndex(date: string): number {
+  for (let i = 0; i < days.length; i++) {
+    if (days[i].date == date) {
+      return i
+    }
+  }
+  return -1
+}
+
+function findSlotIndex(id: string): number {
+  for (let i = 0; i < slots.length; i++) {
+    if (slots[i].id == id) {
+      return i
+    }
+  }
+  return -1
+}
+
+function dayStatusForDate(date: string, source: Array<ProviderScheduleSlot>): string {
+  let available = 0
+  let booked = 0
+  let unavailable = 0
+  for (let i = 0; i < source.length; i++) {
+    if (source[i].date != date) {
+      continue
+    }
+    if (source[i].status == '可约') {
+      available++
+    } else if (source[i].status == '已预约') {
+      booked++
+    } else {
+      unavailable++
+    }
+  }
+  if (available == 0 && booked == 0) {
+    return '休息'
+  }
+  if (available == 0) {
+    return '已约满'
+  }
+  if (unavailable > 0 || booked > 0) {
+    return '部分可约'
+  }
+  return '可约'
+}
+
+function rebuildDays(source: Array<ProviderScheduleSlot>) {
+  const next: Array<ProviderScheduleDay> = []
+  for (let i = 0; i < days.length; i++) {
+    const item = copyDay(days[i])
+    item.status = dayStatusForDate(item.date, source)
+    item.isRest = item.status == '休息'
+    next.push(item)
+  }
+  days = next
+}
+
+function replaceSlot(id: string, status: string) {
+  const next: Array<ProviderScheduleSlot> = []
+  for (let i = 0; i < slots.length; i++) {
+    const item = copySlot(slots[i])
+    if (item.id == id) {
+      item.status = status
+    }
+    next.push(item)
+  }
+  slots = next
+}
+
+function applyModeToSlots(date: string, mode: string) {
+  const next: Array<ProviderScheduleSlot> = []
+  for (let i = 0; i < slots.length; i++) {
+    const item = copySlot(slots[i])
+    if (item.date == date && item.status != '已预约') {
+      item.status = mode == 'rest' ? '不可约' : '可约'
+    }
+    next.push(item)
+  }
+  slots = next
+}
+
+function scopeMatches(day: ProviderScheduleDay, scope: string): boolean {
+  if (scope == 'all') {
+    return true
+  }
+  if (scope == 'weekend') {
+    return day.weekday == '周六' || day.weekday == '周日'
+  }
+  return day.weekday != '周六' && day.weekday != '周日'
+}
+
+export function getProviderScheduleSnapshot(): ProviderScheduleSnapshot {
+  ensureScheduleLoaded()
+  return snapshot()
+}
+
+export function getProviderScheduleMonth(year: number, month: number): Array<ProviderScheduleDay> {
+  ensureScheduleLoaded()
+  appendMonth(year, month)
+  persistSchedule()
+  const prefix = year.toString() + '-' + padDay(month)
+  const result: Array<ProviderScheduleDay> = []
+  for (let i = 0; i < days.length; i++) {
+    if (days[i].date.indexOf(prefix) == 0) {
+      result.push(copyDay(days[i]))
+    }
+  }
+  return result
+}
+
+export function getProviderScheduleWeek(date: string): Array<ProviderScheduleDay> {
+  ensureScheduleLoaded()
+  const prefix = date.substring(0, 7)
+  const monthDays: Array<ProviderScheduleDay> = []
+  let selectedIndex = 0
+  for (let i = 0; i < days.length; i++) {
+    if (days[i].date.indexOf(prefix) == 0) {
+      if (days[i].date == date) {
+        selectedIndex = monthDays.length
+      }
+      monthDays.push(copyDay(days[i]))
+    }
+  }
+  let start = selectedIndex - 6
+  if (start < 0) {
+    start = 0
+  }
+  let end = start + 14
+  if (end > monthDays.length) {
+    end = monthDays.length
+  }
+  start = end - 14
+  if (start < 0) {
+    start = 0
+  }
+  const result: Array<ProviderScheduleDay> = []
+  for (let i = start; i < end; i++) {
+    result.push(monthDays[i])
+  }
+  return result
+}
+
+export function getProviderScheduleSlots(date: string): Array<ProviderScheduleSlot> {
+  ensureScheduleLoaded()
+  const result: Array<ProviderScheduleSlot> = []
+  for (let i = 0; i < slots.length; i++) {
+    if (slots[i].date == date) {
+      result.push(copySlot(slots[i]))
+    }
+  }
+  return result
+}
+
+export function toggleProviderScheduleSlot(id: string): ActionOutcome {
+  ensureScheduleLoaded()
+  const index = findSlotIndex(id)
+  if (index < 0) {
+    return {
+      ok: false,
+      code: 'SCHEDULE_SLOT_NOT_FOUND',
+      message: '未找到该排期时段'
+    }
+  }
+  if (slots[index].status == '已预约') {
+    return {
+      ok: false,
+      code: 'SCHEDULE_SLOT_BOOKED',
+      message: '已预约时段不能修改'
+    }
+  }
+  const nextStatus = slots[index].status == '可约' ? '不可约' : '可约'
+  replaceSlot(id, nextStatus)
+  rebuildDays(slots)
+  persistSchedule()
+  return {
+    ok: true,
+    code: 'SCHEDULE_SLOT_UPDATED',
+    message: nextStatus == '可约' ? '时段已设为可约' : '时段已设为不可约'
+  }
+}
+
+export function setProviderScheduleDayMode(date: string, mode: string): ActionOutcome {
+  ensureScheduleLoaded()
+  const dayIndex = findDayIndex(date)
+  if (dayIndex < 0) {
+    return {
+      ok: false,
+      code: 'SCHEDULE_DAY_NOT_FOUND',
+      message: '未找到该日期'
+    }
+  }
+  applyModeToSlots(date, mode)
+  rebuildDays(slots)
+  persistSchedule()
+  let booked = 0
+  for (let i = 0; i < slots.length; i++) {
+    if (slots[i].date == date && slots[i].status == '已预约') {
+      booked++
+    }
+  }
+  let message = mode == 'rest' ? '当天已设为休息' : '当天已恢复可约'
+  if (mode == 'rest' && booked > 0) {
+    message = '已保留 ' + booked.toString() + ' 个预约，其余时段设为休息'
+  }
+  return {
+    ok: true,
+    code: 'SCHEDULE_DAY_UPDATED',
+    message: message
+  }
+}
+
+export function applyProviderScheduleBatch(year: number, month: number, scope: string, mode: string): ActionOutcome {
+  ensureScheduleLoaded()
+  const prefix = year.toString() + '-' + padDay(month)
+  let changed = 0
+  for (let dayIndex = 0; dayIndex < days.length; dayIndex++) {
+    const day = days[dayIndex]
+    if (day.date.indexOf(prefix) != 0 || !scopeMatches(day, scope)) {
+      continue
+    }
+    applyModeToSlots(day.date, mode)
+    changed++
+  }
+  rebuildDays(slots)
+  persistSchedule()
+  return {
+    ok: true,
+    code: 'SCHEDULE_BATCH_UPDATED',
+    message: '已更新 ' + changed.toString() + ' 天排期（开发 Mock）'
+  }
+}
+
+export function saveProviderSchedule(): ActionOutcome {
+  ensureScheduleLoaded()
+  persistSchedule()
+  return {
+    ok: true,
+    code: 'SCHEDULE_SAVED',
+    message: '排期已保存（开发 Mock）'
+  }
+}

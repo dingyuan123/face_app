@@ -1,0 +1,546 @@
+<template>
+	<view class="page">
+		<scroll-view class="page-scroll" direction="vertical" :show-scrollbar="false">
+			<view class="page-content">
+				<view class="nav-bar">
+					<view class="nav-button" @click="goBack">
+						<text class="nav-icon">‹</text>
+					</view>
+					<text class="nav-title">{{ pageTitle }}</text>
+					<view class="nav-placeholder"></view>
+				</view>
+
+				<view class="cover-card">
+					<view class="cover-preview" @click="chooseCover">
+						<image v-if="coverImage.length > 0" class="cover-image" :src="coverImage" mode="aspectFill"></image>
+						<view v-else class="cover-empty">
+							<text class="cover-plus">＋</text>
+							<text class="cover-text">上传服务封面</text>
+						</view>
+					</view>
+					<text class="cover-hint">建议使用能展示服务场景的清晰图片</text>
+				</view>
+
+				<view class="form-card">
+					<text class="section-title">基础信息</text>
+					<text class="field-label">服务名称</text>
+					<input
+						class="field-input"
+						:value="title"
+						maxlength="30"
+						placeholder="例如：台球助教 · 新手体验"
+						placeholder-class="field-placeholder"
+						@input="onTitleInput"
+					/>
+
+					<text class="field-label">服务类目</text>
+					<view class="tag-wrap">
+						<view class="tag-button" :class="category == '运动' ? 'tag-active' : ''" @click="selectCategory('运动')">
+							<text class="tag-text">运动</text>
+						</view>
+						<view class="tag-button" :class="category == '娱乐' ? 'tag-active' : ''" @click="selectCategory('娱乐')">
+							<text class="tag-text">娱乐</text>
+						</view>
+						<view class="tag-button" :class="category == '休闲' ? 'tag-active' : ''" @click="selectCategory('休闲')">
+							<text class="tag-text">休闲</text>
+						</view>
+						<view class="tag-button" :class="category == '旅游' ? 'tag-active' : ''" @click="selectCategory('旅游')">
+							<text class="tag-text">旅游</text>
+						</view>
+						<view class="tag-button" :class="category == '学习' ? 'tag-active' : ''" @click="selectCategory('学习')">
+							<text class="tag-text">学习</text>
+						</view>
+					</view>
+
+					<view class="form-row">
+						<view class="form-column">
+							<text class="field-label">价格</text>
+							<input
+								class="field-input"
+								:value="price"
+								type="number"
+								maxlength="8"
+								placeholder="¥68"
+								placeholder-class="field-placeholder"
+								@input="onPriceInput"
+							/>
+						</view>
+						<view class="form-column">
+							<text class="field-label">服务时长</text>
+							<input
+								class="field-input"
+								:value="duration"
+								maxlength="12"
+								placeholder="60 分钟"
+								placeholder-class="field-placeholder"
+								@input="onDurationInput"
+							/>
+						</view>
+					</view>
+
+					<text class="field-label">服务介绍</text>
+					<textarea
+						class="intro-input"
+						:value="introduction"
+						maxlength="300"
+						placeholder="介绍你的服务内容、适合人群和见面安排"
+						placeholder-class="field-placeholder"
+						@input="onIntroductionInput"
+					></textarea>
+				</view>
+
+				<view class="form-card">
+					<text class="section-title">服务标签</text>
+					<text class="section-desc">帮助用户快速了解你的服务特点</text>
+					<view class="tag-wrap">
+						<view class="tag-button" :class="tagNewbie ? 'tag-active' : ''" @click="tagNewbie = !tagNewbie">
+							<text class="tag-text">新手友好</text>
+						</view>
+						<view class="tag-button" :class="tagPatient ? 'tag-active' : ''" @click="tagPatient = !tagPatient">
+							<text class="tag-text">耐心教学</text>
+						</view>
+						<view class="tag-button" :class="tagPro ? 'tag-active' : ''" @click="tagPro = !tagPro">
+							<text class="tag-text">专业指导</text>
+						</view>
+						<view class="tag-button" :class="tagEasy ? 'tag-active' : ''" @click="tagEasy = !tagEasy">
+							<text class="tag-text">轻松交流</text>
+						</view>
+						<view class="tag-button" :class="tagPublic ? 'tag-active' : ''" @click="tagPublic = !tagPublic">
+							<text class="tag-text">公共场所</text>
+						</view>
+					</view>
+				</view>
+
+				<view class="setting-card">
+					<view class="setting-row">
+						<text class="setting-label">可约地点类型</text>
+						<view class="location-pill">
+							<text class="location-text">仅限公共场所</text>
+						</view>
+					</view>
+					<view class="setting-divider"></view>
+					<text class="setting-hint">请遵守平台安全规范，仅在正规公共场所提供服务。</text>
+				</view>
+
+				<view class="bottom-space"></view>
+			</view>
+		</scroll-view>
+
+		<view class="action-bar">
+			<view class="draft-button" @click="saveDraft">
+				<text class="draft-text">保存草稿</text>
+			</view>
+			<view class="submit-button" :class="title.trim().length > 0 ? '' : 'submit-disabled'" @click="submitReview">
+				<text class="submit-text">提交审核</text>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { getProviderManageService, saveProviderService } from '../../services/service-container.uts'
+
+	const editId = ref('')
+	const pageTitle = ref('创建服务')
+	const title = ref('')
+	const category = ref('运动')
+	const price = ref('')
+	const duration = ref('')
+	const coverImage = ref('')
+	const introduction = ref('')
+	const tagNewbie = ref(false)
+	const tagPatient = ref(false)
+	const tagPro = ref(false)
+	const tagEasy = ref(false)
+	const tagPublic = ref(false)
+	onLoad((options) => {
+		if (options == null) {
+			return
+		}
+		const serviceId = options['serviceId'] as string
+		if (serviceId != null && serviceId.length > 0) {
+			editId.value = decodeURIComponent(serviceId)
+			pageTitle.value = '编辑服务'
+			const service = getProviderManageService(editId.value)
+			title.value = service.title
+			coverImage.value = service.coverImage
+			price.value = service.price.replace('¥', '').replace('/小时', '')
+			duration.value = service.duration
+		}
+	})
+
+	function selectCategory(value: string) {
+		category.value = value
+	}
+
+	function onTitleInput(event: InputEvent) {
+		title.value = event.detail.value
+	}
+
+	function onPriceInput(event: InputEvent) {
+		price.value = event.detail.value
+	}
+
+	function onDurationInput(event: InputEvent) {
+		duration.value = event.detail.value
+	}
+
+	function onIntroductionInput(event: InputEvent) {
+		introduction.value = event.detail.value
+	}
+
+	function chooseCover() {
+		uni.chooseImage({
+			count: 1,
+			success: (result) => {
+				if (result.tempFilePaths.length > 0) {
+					coverImage.value = result.tempFilePaths[0]
+				}
+			}
+		})
+	}
+
+	function buildTags(): Array<string> {
+		const result: Array<string> = []
+		if (tagNewbie.value) {
+			result.push('新手友好')
+		}
+		if (tagPatient.value) {
+			result.push('耐心教学')
+		}
+		if (tagPro.value) {
+			result.push('专业指导')
+		}
+		if (tagEasy.value) {
+			result.push('轻松交流')
+		}
+		if (tagPublic.value) {
+			result.push('公共场所')
+		}
+		return result
+	}
+
+	function buildDraft() {
+		return {
+			id: editId.value,
+			title: title.value,
+			category: category.value,
+			price: price.value,
+			duration: duration.value,
+			coverImage: coverImage.value,
+			introduction: introduction.value,
+			locationType: '仅限公共场所',
+			tags: buildTags()
+		}
+	}
+
+	function saveDraft() {
+		const result = saveProviderService(buildDraft(), false)
+		uni.showToast({
+			title: result.message,
+			position: 'bottom',
+			icon: result.ok ? 'success' : 'error'
+		})
+	}
+
+	function submitReview() {
+		if (title.value.trim().length == 0) {
+			uni.showToast({
+				title: '请填写服务名称',
+				position: 'bottom',
+				icon: 'error'
+			})
+			return
+		}
+		const result = saveProviderService(buildDraft(), true)
+		uni.showToast({
+			title: result.message,
+			position: 'bottom',
+			icon: result.ok ? 'success' : 'error'
+		})
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/provider/services'
+				})
+			}
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-scroll {
+		flex: 1;
+		min-height: 0;
+	}
+
+	.page-content {
+		padding-bottom: 150rpx;
+	}
+
+	.nav-bar {
+		height: 128rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32rpx;
+		background-color: #FFF9F5;
+	}
+
+	.nav-button,
+	.nav-placeholder {
+		width: 76rpx;
+		height: 76rpx;
+	}
+
+	.nav-button {
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 60rpx;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.cover-card {
+		margin: 22rpx 32rpx 0;
+		padding: 22rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.cover-preview {
+		height: 240rpx;
+		align-items: center;
+		justify-content: center;
+		background-color: #FFF1E8;
+		border: 1rpx dashed #F1B8BE;
+		border-radius: 20rpx;
+	}
+
+	.cover-image {
+		width: 100%;
+		height: 240rpx;
+		border-radius: 20rpx;
+	}
+
+	.cover-empty {
+		align-items: center;
+	}
+
+	.cover-plus {
+		font-size: 52rpx;
+		color: $facetof-color-primary;
+	}
+
+	.cover-text {
+		margin-top: 8rpx;
+		font-size: 24rpx;
+		color: $facetof-color-primary;
+	}
+
+	.cover-hint {
+		margin-top: 12rpx;
+		font-size: 21rpx;
+		color: #8D817B;
+	}
+
+	.form-card,
+	.setting-card {
+		margin: 18rpx 32rpx 0;
+		padding: 26rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.section-title {
+		font-size: 34rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.section-desc {
+		margin-top: 8rpx;
+		font-size: 22rpx;
+		color: #8D817B;
+	}
+
+	.field-label {
+		margin-top: 22rpx;
+		font-size: 27rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.field-input,
+	.intro-input {
+		margin-top: 14rpx;
+		padding: 0 22rpx;
+		font-size: 27rpx;
+		color: #253047;
+		background-color: #FFF1E8;
+		border: 1rpx solid #F5DED5;
+		border-radius: 18rpx;
+	}
+
+	.field-input {
+		height: 92rpx;
+	}
+
+	.intro-input {
+		height: 190rpx;
+		padding-top: 18rpx;
+		line-height: 42rpx;
+	}
+
+	.field-placeholder {
+		font-size: 27rpx;
+		color: #B8ADA8;
+	}
+
+	.form-row {
+		flex-direction: row;
+	}
+
+	.form-column {
+		flex: 1;
+		margin-right: 14rpx;
+	}
+
+
+
+	.tag-wrap {
+		flex-direction: row;
+		flex-wrap: wrap;
+		margin-top: 14rpx;
+	}
+
+	.tag-button {
+		height: 62rpx;
+		align-items: center;
+		justify-content: center;
+		margin: 0 12rpx 12rpx 0;
+		padding: 0 18rpx;
+		background-color: #FFF1E8;
+		border: 1rpx solid #F5DED5;
+		border-radius: 999rpx;
+	}
+
+	.tag-active {
+		background-color: #FFF1F2;
+		border-color: $facetof-color-primary;
+	}
+
+	.tag-text {
+		font-size: 23rpx;
+		color: #253047;
+	}
+
+	.setting-row {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.setting-label {
+		font-size: 27rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.location-pill {
+		padding: 8rpx 12rpx;
+		background-color: #FFF1F2;
+		border-radius: 999rpx;
+	}
+
+	.location-text {
+		font-size: 21rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.setting-divider {
+		height: 1rpx;
+		margin: 16rpx 0;
+		background-color: #F5DED5;
+	}
+
+	.setting-hint {
+		font-size: 21rpx;
+		line-height: 32rpx;
+		color: #8D817B;
+	}
+
+	.action-bar {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		flex-direction: row;
+		padding: 18rpx 32rpx;
+		padding-bottom: var(--uni-safe-area-inset-bottom);
+		background-color: #FFFFFF;
+		border-top: 1rpx solid #F5DED5;
+	}
+
+	.draft-button,
+	.submit-button {
+		height: 88rpx;
+		align-items: center;
+		justify-content: center;
+		border-radius: 18rpx;
+	}
+
+	.draft-button {
+		width: 32%;
+		margin-right: 14rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F1B8BE;
+	}
+
+	.submit-button {
+		flex: 1;
+		background-color: $facetof-color-primary;
+	}
+
+	.submit-disabled {
+		background-color: #EFE6E1;
+	}
+
+	.draft-text {
+		font-size: 27rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.submit-text {
+		font-size: 29rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.bottom-space {
+		height: 16rpx;
+	}
+</style>

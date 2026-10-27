@@ -1,0 +1,45 @@
+import { ProviderDashboardSummary } from '../types/models.uts'
+
+export function getProviderDashboard(): ProviderDashboardSummary {
+  return {
+    todayIncome: '¥268.00',
+    todayOrders: 3,
+    tasks: [
+      {
+        id: 'task-new-order',
+        title: '新订单',
+        description: '有用户提交了新的预约',
+        count: 2,
+        status: '待处理'
+      },
+      {
+        id: 'task-confirm',
+        title: '待确认',
+        description: '请确认预约时间和服务地点',
+        count: 1,
+        status: '待确认'
+      },
+      {
+        id: 'task-review',
+        title: '待评价',
+        description: '服务完成后邀请用户评价',
+        count: 3,
+        status: '待评价'
+      }
+    ],
+    metrics: [
+      {
+        label: '浏览量',
+        value: '1,286'
+      },
+      {
+        label: '订单量',
+        value: '38'
+      },
+      {
+        label: '转化率',
+        value: '8.6%'
+      }
+    ]
+  }
+}

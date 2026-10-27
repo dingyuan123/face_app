@@ -63,6 +63,18 @@
 	}
 
 	function openInfo(name: string) {
+		if (name == '用户协议') {
+			uni.navigateTo({
+				url: '/pages/common/document?type=user-agreement'
+			})
+			return
+		}
+		if (name == '隐私政策') {
+			uni.navigateTo({
+				url: '/pages/common/document?type=privacy-policy'
+			})
+			return
+		}
 		uni.showToast({
 			title: name + '将在后续阶段接入',
 			position: 'bottom',

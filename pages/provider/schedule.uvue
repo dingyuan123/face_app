@@ -1,0 +1,1097 @@
+<template>
+	<view class="page">
+		<scroll-view class="page-scroll" direction="vertical" :show-scrollbar="false">
+			<view class="page-content">
+				<view class="nav-bar">
+					<view class="nav-button" @click="goBack">
+						<text class="nav-icon">‹</text>
+					</view>
+					<text class="nav-title">排期管理</text>
+					<view class="nav-placeholder"></view>
+				</view>
+
+				<view class="summary-card">
+					<view class="summary-copy">
+						<text class="summary-kicker">{{ monthLabel }}</text>
+						<text class="summary-title">安排你的可约时间</text>
+						<text class="summary-desc">清晰设置休息和可约时段，避免临时冲突</text>
+					</view>
+					<view class="summary-badge">
+						<text class="summary-badge-text">排期中</text>
+					</view>
+				</view>
+
+				<view class="stats-card">
+					<view class="stat-item">
+						<text class="stat-value stat-value-brand">{{ availableCount }}</text>
+						<text class="stat-label">可约时段</text>
+					</view>
+					<view class="stat-line"></view>
+					<view class="stat-item">
+						<text class="stat-value stat-value-warm">{{ bookedCount }}</text>
+						<text class="stat-label">已预约</text>
+					</view>
+					<view class="stat-line"></view>
+					<view class="stat-item">
+						<text class="stat-value">{{ restDayCount }}</text>
+						<text class="stat-label">休息日</text>
+					</view>
+				</view>
+
+				<view class="mode-card">
+					<view class="mode-button" :class="viewMode == '月历' ? 'mode-button-active' : ''" @click="changeViewMode('月历')">
+						<text class="mode-text" :class="viewMode == '月历' ? 'mode-text-active' : ''">月历</text>
+					</view>
+					<view class="mode-button" :class="viewMode == '周历' ? 'mode-button-active' : ''" @click="changeViewMode('周历')">
+						<text class="mode-text" :class="viewMode == '周历' ? 'mode-text-active' : ''">周历</text>
+					</view>
+				</view>
+
+				<view v-if="viewMode == '月历'" class="calendar-card">
+					<view class="calendar-head">
+						<view class="month-button" @click="changeMonth(-1)">
+							<text class="month-arrow">‹</text>
+						</view>
+						<text class="month-title">{{ monthLabel }}</text>
+						<view class="month-button" @click="changeMonth(1)">
+							<text class="month-arrow">›</text>
+						</view>
+					</view>
+
+					<view class="weekday-row">
+						<text class="weekday-text">一</text>
+						<text class="weekday-text">二</text>
+						<text class="weekday-text">三</text>
+						<text class="weekday-text">四</text>
+						<text class="weekday-text">五</text>
+						<text class="weekday-text">六</text>
+						<text class="weekday-text">日</text>
+					</view>
+					<view class="calendar-grid">
+						<view v-if="calendarBlankCount > 0" class="calendar-blank"></view>
+						<view v-if="calendarBlankCount > 1" class="calendar-blank"></view>
+						<view v-if="calendarBlankCount > 2" class="calendar-blank"></view>
+						<view v-if="calendarBlankCount > 3" class="calendar-blank"></view>
+						<view v-if="calendarBlankCount > 4" class="calendar-blank"></view>
+						<view v-if="calendarBlankCount > 5" class="calendar-blank"></view>
+						<view
+							v-for="day in calendarDays"
+							:key="day.id"
+							class="calendar-day"
+							:class="day.id == selectedDate ? 'calendar-day-selected' : day.isRest ? 'calendar-day-rest' : ''"
+							@click="selectDate(day)"
+						>
+							<text class="calendar-day-label" :class="day.id == selectedDate ? 'calendar-day-label-selected' : ''">{{ day.dayLabel }}</text>
+							<view class="day-dot" :class="dayStatusClass(day.status)"></view>
+						</view>
+					</view>
+				</view>
+
+				<scroll-view v-else class="week-scroll" direction="horizontal" :show-scrollbar="false">
+					<view class="week-row">
+						<view
+							v-for="day in calendarDays"
+							:key="day.id"
+							class="week-day"
+							:class="day.id == selectedDate ? 'week-day-selected' : day.isRest ? 'week-day-rest' : ''"
+							@click="selectDate(day)"
+						>
+							<text class="week-weekday">{{ day.weekday }}</text>
+							<text class="week-day-label">{{ day.dayLabel }}</text>
+							<view class="day-dot" :class="dayStatusClass(day.status)"></view>
+						</view>
+					</view>
+				</scroll-view>
+
+				<view class="legend-card">
+					<view class="legend-item">
+						<view class="legend-dot legend-dot-brand"></view>
+						<text class="legend-text">可约</text>
+					</view>
+					<view class="legend-item">
+						<view class="legend-dot legend-dot-muted"></view>
+						<text class="legend-text">不可约</text>
+					</view>
+					<view class="legend-item">
+						<view class="legend-dot legend-dot-warm"></view>
+						<text class="legend-text">已预约</text>
+					</view>
+				</view>
+
+				<view class="section-card">
+					<view class="section-head">
+						<view>
+							<text class="section-title">{{ selectedDayLabel }}</text>
+							<text class="section-subtitle">{{ selectedDayWeekday }} · 点击时段切换可约状态</text>
+						</view>
+						<view class="day-status-pill" :class="selectedDayStatus == '休息' ? 'day-status-rest' : selectedDayStatus == '已约满' ? 'day-status-full' : 'day-status-open'">
+							<text class="day-status-text">{{ selectedDayStatus }}</text>
+						</view>
+					</view>
+
+					<text class="period-title">上午</text>
+					<view class="slot-grid">
+						<view
+							v-for="slot in morningSlots"
+							:key="slot.id"
+							class="slot-item"
+							:class="slotStatusClass(slot.status)"
+							@click="toggleSlot(slot)"
+						>
+							<text class="slot-time">{{ slot.time }}</text>
+							<text class="slot-status">{{ slot.status }}</text>
+						</view>
+					</view>
+
+					<text class="period-title">下午</text>
+					<view class="slot-grid">
+						<view
+							v-for="slot in afternoonSlots"
+							:key="slot.id"
+							class="slot-item"
+							:class="slotStatusClass(slot.status)"
+							@click="toggleSlot(slot)"
+						>
+							<text class="slot-time">{{ slot.time }}</text>
+							<text class="slot-status">{{ slot.status }}</text>
+						</view>
+					</view>
+
+					<text class="period-title">晚上</text>
+					<view class="slot-grid">
+						<view
+							v-for="slot in eveningSlots"
+							:key="slot.id"
+							class="slot-item"
+							:class="slotStatusClass(slot.status)"
+							@click="toggleSlot(slot)"
+						>
+							<text class="slot-time">{{ slot.time }}</text>
+							<text class="slot-status">{{ slot.status }}</text>
+						</view>
+					</view>
+				</view>
+
+				<view class="day-actions">
+					<view class="day-action-button day-action-muted" @click="setDayMode('rest')">
+						<text class="day-action-text">设为休息</text>
+					</view>
+					<view class="day-action-button day-action-brand" @click="setDayMode('available')">
+						<text class="day-action-text day-action-text-brand">恢复可约</text>
+					</view>
+				</view>
+
+				<view v-if="showBatch" class="batch-card">
+					<view class="batch-head">
+						<text class="section-title">批量设置</text>
+						<text class="section-subtitle">将设置应用到 {{ monthLabel }}符合条件的日期</text>
+					</view>
+					<text class="batch-label">设置范围</text>
+					<view class="choice-row">
+						<view class="choice-button" :class="batchScope == 'weekday' ? 'choice-button-active' : ''" @click="batchScope = 'weekday'">
+							<text class="choice-text" :class="batchScope == 'weekday' ? 'choice-text-active' : ''">工作日</text>
+						</view>
+						<view class="choice-button" :class="batchScope == 'weekend' ? 'choice-button-active' : ''" @click="batchScope = 'weekend'">
+							<text class="choice-text" :class="batchScope == 'weekend' ? 'choice-text-active' : ''">周末</text>
+						</view>
+						<view class="choice-button" :class="batchScope == 'all' ? 'choice-button-active' : ''" @click="batchScope = 'all'">
+							<text class="choice-text" :class="batchScope == 'all' ? 'choice-text-active' : ''">全部日期</text>
+						</view>
+					</view>
+					<text class="batch-label">设置内容</text>
+					<view class="choice-row">
+						<view class="choice-button" :class="batchMode == 'available' ? 'choice-button-active' : ''" @click="batchMode = 'available'">
+							<text class="choice-text" :class="batchMode == 'available' ? 'choice-text-active' : ''">设为可约</text>
+						</view>
+						<view class="choice-button" :class="batchMode == 'rest' ? 'choice-button-active' : ''" @click="batchMode = 'rest'">
+							<text class="choice-text" :class="batchMode == 'rest' ? 'choice-text-active' : ''">设为休息</text>
+						</view>
+					</view>
+					<view class="batch-actions">
+						<view class="batch-cancel" @click="showBatch = false">
+							<text class="batch-cancel-text">取消</text>
+						</view>
+						<view class="batch-apply" @click="applyBatch">
+							<text class="batch-apply-text">应用设置</text>
+						</view>
+					</view>
+				</view>
+
+				<view class="brand-footer">
+					<text class="brand-text">FaceTo · 见面聊，安心见</text>
+				</view>
+				<view class="bottom-space"></view>
+			</view>
+		</scroll-view>
+
+		<view class="action-bar">
+			<view class="batch-button" @click="showBatch = !showBatch">
+				<text class="batch-button-text">批量设置</text>
+			</view>
+			<view class="save-button" @click="saveSchedule">
+				<text class="save-button-text">保存排期</text>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import {
+		applyProviderScheduleBatch,
+		getProviderScheduleMonth,
+		getProviderScheduleSnapshot,
+		getProviderScheduleSlots,
+		getProviderScheduleWeek,
+		saveProviderSchedule,
+		setProviderScheduleDayMode,
+		toggleProviderScheduleSlot
+	} from '../../services/service-container.uts'
+	import type { ProviderScheduleDay, ProviderScheduleSlot } from '../../types/models.uts'
+
+	const viewMode = ref('月历')
+	const currentYear = ref(2026)
+	const currentMonth = ref(10)
+	const monthLabel = ref('2026年10月')
+	const currentMonthPrefix = ref('2026-10')
+	const calendarBlankCount = ref(4)
+	const showBatch = ref(false)
+	const batchScope = ref('weekday')
+	const batchMode = ref('available')
+	const calendarDays = ref<ProviderScheduleDay[]>(getProviderScheduleMonth(2026, 10))
+	const selectedDate = ref('2026-10-27')
+	const selectedDayLabel = ref('10月27日')
+	const selectedDayWeekday = ref('周二')
+	const selectedDayStatus = ref('部分可约')
+	const morningSlots = ref<ProviderScheduleSlot[]>([])
+	const afternoonSlots = ref<ProviderScheduleSlot[]>([])
+	const eveningSlots = ref<ProviderScheduleSlot[]>([])
+	const availableCount = ref(0)
+	const bookedCount = ref(0)
+	const restDayCount = ref(0)
+
+	function refreshSlots() {
+		const source = getProviderScheduleSlots(selectedDate.value)
+		const morning: Array<ProviderScheduleSlot> = []
+		const afternoon: Array<ProviderScheduleSlot> = []
+		const evening: Array<ProviderScheduleSlot> = []
+		for (let i = 0; i < source.length; i++) {
+			if (source[i].period == '上午') {
+				morning.push(source[i])
+			} else if (source[i].period == '下午') {
+				afternoon.push(source[i])
+			} else {
+				evening.push(source[i])
+			}
+		}
+		morningSlots.value = morning
+		afternoonSlots.value = afternoon
+		eveningSlots.value = evening
+
+		let available = 0
+		let booked = 0
+		for (let i = 0; i < source.length; i++) {
+			if (source[i].status == '可约') {
+				available++
+			} else if (source[i].status == '已预约') {
+				booked++
+			}
+		}
+		selectedDayStatus.value = available == 0 && booked == 0 ? '休息' : available == 0 ? '已约满' : booked > 0 || available < source.length ? '部分可约' : '可约'
+	}
+
+	function refreshStats() {
+		const snapshot = getProviderScheduleSnapshot()
+		let available = 0
+		let booked = 0
+		let rest = 0
+		for (let i = 0; i < snapshot.slots.length; i++) {
+			if (snapshot.slots[i].date.indexOf(currentMonthPrefix.value) != 0) {
+				continue
+			}
+			if (snapshot.slots[i].status == '可约') {
+				available++
+			} else if (snapshot.slots[i].status == '已预约') {
+				booked++
+			}
+		}
+		for (let i = 0; i < snapshot.days.length; i++) {
+			if (snapshot.days[i].date.indexOf(currentMonthPrefix.value) == 0 && snapshot.days[i].isRest) {
+				rest++
+			}
+		}
+		availableCount.value = available
+		bookedCount.value = booked
+		restDayCount.value = rest
+	}
+
+	function leadingBlankCount(firstDay: ProviderScheduleDay): number {
+		if (firstDay.weekday == '周一') {
+			return 0
+		}
+		if (firstDay.weekday == '周二') {
+			return 1
+		}
+		if (firstDay.weekday == '周三') {
+			return 2
+		}
+		if (firstDay.weekday == '周四') {
+			return 3
+		}
+		if (firstDay.weekday == '周五') {
+			return 4
+		}
+		if (firstDay.weekday == '周六') {
+			return 5
+		}
+		return 6
+	}
+
+	function refreshCalendar() {
+		if (viewMode.value == '周历') {
+			calendarDays.value = getProviderScheduleWeek(selectedDate.value)
+			return
+		}
+		calendarDays.value = getProviderScheduleMonth(currentYear.value, currentMonth.value)
+		if (calendarDays.value.length > 0) {
+			calendarBlankCount.value = leadingBlankCount(calendarDays.value[0])
+		}
+	}
+
+	function refreshPage() {
+		refreshCalendar()
+		refreshSlots()
+		refreshStats()
+	}
+
+	refreshPage()
+
+	function changeViewMode(mode: string) {
+		viewMode.value = mode
+		refreshCalendar()
+	}
+
+	function changeMonth(offset: number) {
+		let year = currentYear.value
+		let month = currentMonth.value + offset
+		if (month < 1) {
+			year--
+			month = 12
+		} else if (month > 12) {
+			year++
+			month = 1
+		}
+		currentYear.value = year
+		currentMonth.value = month
+		monthLabel.value = year.toString() + '年' + month.toString() + '月'
+		currentMonthPrefix.value = year.toString() + '-' + (month < 10 ? '0' + month.toString() : month.toString())
+		const nextDays = getProviderScheduleMonth(year, month)
+		if (nextDays.length > 0) {
+			const firstDay = nextDays[0]
+			selectedDate.value = firstDay.id
+			selectedDayLabel.value = month.toString() + '月' + firstDay.dayLabel + '日'
+			selectedDayWeekday.value = firstDay.weekday
+		}
+		refreshPage()
+	}
+
+	function selectDate(day: ProviderScheduleDay) {
+		selectedDate.value = day.id
+		selectedDayLabel.value = '10月' + day.dayLabel + '日'
+		selectedDayWeekday.value = day.weekday
+		refreshSlots()
+	}
+
+	function dayStatusClass(status: string): string {
+		if (status == '休息') {
+			return 'day-dot-rest'
+		}
+		if (status == '已约满') {
+			return 'day-dot-full'
+		}
+		if (status == '部分可约') {
+			return 'day-dot-partial'
+		}
+		return 'day-dot-open'
+	}
+
+	function slotStatusClass(status: string): string {
+		if (status == '已预约') {
+			return 'slot-booked'
+		}
+		if (status == '不可约') {
+			return 'slot-unavailable'
+		}
+		return 'slot-available'
+	}
+
+	function toggleSlot(slot: ProviderScheduleSlot) {
+		const result = toggleProviderScheduleSlot(slot.id)
+		refreshPage()
+		uni.showToast({
+			title: result.message,
+			position: 'bottom',
+			icon: result.ok ? 'success' : 'error'
+		})
+	}
+
+	function setDayMode(mode: string) {
+		const result = setProviderScheduleDayMode(selectedDate.value, mode)
+		refreshPage()
+		uni.showToast({
+			title: result.message,
+			position: 'bottom',
+			icon: result.ok ? 'success' : 'error'
+		})
+	}
+
+	function applyBatch() {
+		const result = applyProviderScheduleBatch(currentYear.value, currentMonth.value, batchScope.value, batchMode.value)
+		showBatch.value = false
+		refreshPage()
+		uni.showToast({
+			title: result.message,
+			position: 'bottom',
+			icon: result.ok ? 'success' : 'error'
+		})
+	}
+
+	function saveSchedule() {
+		const result = saveProviderSchedule()
+		uni.showToast({
+			title: result.message,
+			position: 'bottom',
+			icon: result.ok ? 'success' : 'error'
+		})
+	}
+
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/provider/dashboard'
+				})
+			}
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-scroll {
+		flex: 1;
+		min-height: 0;
+	}
+
+	.page-content {
+		padding-bottom: 160rpx;
+	}
+
+	.nav-bar {
+		height: 128rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32rpx;
+		background-color: #FFF9F5;
+	}
+
+	.nav-button,
+	.nav-placeholder {
+		width: 76rpx;
+		height: 76rpx;
+	}
+
+	.nav-button {
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 60rpx;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.summary-card {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		margin: 22rpx 32rpx 0;
+		padding: 28rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.summary-copy {
+		flex: 1;
+	}
+
+	.summary-kicker {
+		font-size: 22rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.summary-title {
+		margin-top: 8rpx;
+		font-size: 36rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.summary-desc {
+		margin-top: 8rpx;
+		font-size: 22rpx;
+		color: #8D817B;
+	}
+
+	.summary-badge {
+		margin-left: 18rpx;
+		padding: 10rpx 16rpx;
+		background-color: #FFF1F2;
+		border-radius: 999rpx;
+	}
+
+	.summary-badge-text {
+		font-size: 21rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.stats-card,
+	.mode-card,
+	.calendar-card,
+	.section-card,
+	.batch-card {
+		margin: 18rpx 32rpx 0;
+		padding: 24rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.stats-card {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.stat-item {
+		flex: 1;
+		align-items: center;
+	}
+
+	.stat-value {
+		font-size: 38rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.stat-value-brand {
+		color: $facetof-color-primary;
+	}
+
+	.stat-value-warm {
+		color: #E98A39;
+	}
+
+	.stat-label {
+		margin-top: 6rpx;
+		font-size: 22rpx;
+		color: #8D817B;
+	}
+
+	.stat-line {
+		width: 1rpx;
+		height: 48rpx;
+		background-color: #F5DED5;
+	}
+
+	.mode-card {
+		flex-direction: row;
+		padding: 8rpx;
+		background-color: #FFF1E8;
+	}
+
+	.mode-button {
+		flex: 1;
+		height: 68rpx;
+		align-items: center;
+		justify-content: center;
+		border-radius: 18rpx;
+	}
+
+	.mode-button-active {
+		background-color: #FFFFFF;
+		border: 1rpx solid #FFD9DC;
+	}
+
+	.mode-text {
+		font-size: 25rpx;
+		font-weight: 700;
+		color: #8D817B;
+	}
+
+	.mode-text-active {
+		color: $facetof-color-primary;
+	}
+
+	.calendar-head {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 18rpx;
+	}
+
+	.month-button {
+		width: 68rpx;
+		height: 60rpx;
+		align-items: center;
+		justify-content: center;
+		background-color: #FFF1E8;
+		border-radius: 16rpx;
+	}
+
+	.month-arrow {
+		font-size: 42rpx;
+		color: #8D817B;
+	}
+
+	.month-title {
+		flex: 1;
+		text-align: center;
+		font-size: 30rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.weekday-row,
+	.calendar-grid {
+		flex-direction: row;
+		flex-wrap: wrap;
+	}
+
+	.weekday-text {
+		flex: 1;
+		text-align: center;
+		font-size: 21rpx;
+		color: #A1958F;
+	}
+
+	.calendar-day,
+	.calendar-blank {
+		width: 14.28%;
+		height: 82rpx;
+		align-items: center;
+		justify-content: center;
+		margin-top: 8rpx;
+	}
+
+	.calendar-day {
+		border-radius: 16rpx;
+	}
+
+	.calendar-day-selected {
+		background-color: #FFF1F2;
+		border: 1rpx solid #FFB8BE;
+	}
+
+	.calendar-day-rest {
+		background-color: #F5F1EE;
+	}
+
+	.calendar-day-label {
+		font-size: 25rpx;
+		color: #253047;
+	}
+
+	.calendar-day-label-selected {
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.day-dot {
+		width: 10rpx;
+		height: 10rpx;
+		margin-top: 6rpx;
+		border-radius: 50%;
+	}
+
+	.day-dot-open {
+		background-color: $facetof-color-primary;
+	}
+
+	.day-dot-partial {
+		background-color: #FCAE59;
+	}
+
+	.day-dot-full {
+		background-color: #E98A39;
+	}
+
+	.day-dot-rest {
+		background-color: #C8BDB7;
+	}
+
+	.week-scroll {
+		width: 686rpx;
+		height: 166rpx;
+		margin: 18rpx 32rpx 0;
+	}
+
+	.week-row {
+		width: 2240rpx;
+		height: 158rpx;
+		flex-direction: row;
+		flex-shrink: 0;
+	}
+
+	.week-day {
+		flex-shrink: 0;
+		width: 150rpx;
+		height: 142rpx;
+		align-items: center;
+		justify-content: center;
+		margin-right: 12rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 22rpx;
+	}
+
+	.week-day-selected {
+		background-color: #FFF1F2;
+		border-color: #FFB8BE;
+	}
+
+	.week-day-rest {
+		background-color: #F5F1EE;
+	}
+
+	.week-weekday {
+		font-size: 21rpx;
+		color: #8D817B;
+	}
+
+	.week-day-label {
+		margin-top: 8rpx;
+		font-size: 34rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.legend-card {
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+		margin: 18rpx 32rpx 0;
+		padding: 18rpx;
+		background-color: #FFF9F5;
+		border-radius: 20rpx;
+	}
+
+	.legend-item {
+		flex-direction: row;
+		align-items: center;
+		margin: 0 18rpx;
+	}
+
+	.legend-dot {
+		width: 14rpx;
+		height: 14rpx;
+		margin-right: 8rpx;
+		border-radius: 50%;
+	}
+
+	.legend-dot-brand {
+		background-color: $facetof-color-primary;
+	}
+
+	.legend-dot-muted {
+		background-color: #C8BDB7;
+	}
+
+	.legend-dot-warm {
+		background-color: #FCAE59;
+	}
+
+	.legend-text {
+		font-size: 21rpx;
+		color: #8D817B;
+	}
+
+	.section-head {
+		flex-direction: row;
+		align-items: flex-start;
+		justify-content: space-between;
+	}
+
+	.section-title {
+		font-size: 34rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.section-subtitle {
+		margin-top: 8rpx;
+		font-size: 22rpx;
+		color: #8D817B;
+	}
+
+	.day-status-pill {
+		padding: 9rpx 14rpx;
+		border-radius: 999rpx;
+	}
+
+	.day-status-open {
+		background-color: #FFF1F2;
+	}
+
+	.day-status-rest {
+		background-color: #F1E9E5;
+	}
+
+	.day-status-full {
+		background-color: #FFF0D7;
+	}
+
+	.day-status-text {
+		font-size: 20rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.period-title {
+		margin-top: 24rpx;
+		font-size: 24rpx;
+		font-weight: 700;
+		color: #8D817B;
+	}
+
+	.slot-grid {
+		flex-direction: row;
+		flex-wrap: wrap;
+		margin-top: 12rpx;
+	}
+
+	.slot-item {
+		width: 210rpx;
+		height: 82rpx;
+		align-items: center;
+		justify-content: center;
+		margin: 0 12rpx 12rpx 0;
+		border-radius: 18rpx;
+	}
+
+	.slot-available {
+		background-color: #FFF1F2;
+		border: 1rpx solid #FFB8BE;
+	}
+
+	.slot-unavailable {
+		background-color: #F3EFEC;
+		border: 1rpx solid #E4DAD4;
+	}
+
+	.slot-booked {
+		background-color: #FFF0D7;
+		border: 1rpx solid #F6D39C;
+	}
+
+	.slot-time {
+		font-size: 25rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.slot-status {
+		margin-top: 4rpx;
+		font-size: 19rpx;
+		color: #8D817B;
+	}
+
+	.day-actions,
+	.batch-actions {
+		flex-direction: row;
+		margin: 18rpx 32rpx 0;
+	}
+
+	.day-action-button {
+		flex: 1;
+		height: 82rpx;
+		align-items: center;
+		justify-content: center;
+		border-radius: 18rpx;
+	}
+
+	.day-action-muted {
+		margin-right: 12rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #E4DAD4;
+	}
+
+	.day-action-brand {
+		background-color: $facetof-color-primary;
+	}
+
+	.day-action-text {
+		font-size: 25rpx;
+		font-weight: 700;
+		color: #8D817B;
+	}
+
+	.day-action-text-brand {
+		color: #FFFFFF;
+	}
+
+	.batch-card {
+		margin-top: 18rpx;
+	}
+
+	.batch-head {
+		margin-bottom: 18rpx;
+	}
+
+	.batch-label {
+		margin-top: 18rpx;
+		font-size: 23rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.choice-row {
+		flex-direction: row;
+		margin-top: 12rpx;
+	}
+
+	.choice-button {
+		flex: 1;
+		height: 70rpx;
+		align-items: center;
+		justify-content: center;
+		margin-right: 10rpx;
+		background-color: #FFF9F5;
+		border: 1rpx solid #F5DED5;
+		border-radius: 16rpx;
+	}
+
+	.choice-button-active {
+		background-color: #FFF1F2;
+		border-color: #FFB8BE;
+	}
+
+	.choice-text {
+		font-size: 22rpx;
+		color: #8D817B;
+	}
+
+	.choice-text-active {
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.batch-actions {
+		margin: 22rpx 0 0;
+	}
+
+	.batch-cancel,
+	.batch-apply {
+		flex: 1;
+		height: 78rpx;
+		align-items: center;
+		justify-content: center;
+		border-radius: 18rpx;
+	}
+
+	.batch-cancel {
+		margin-right: 12rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #E4DAD4;
+	}
+
+	.batch-apply {
+		background-color: $facetof-color-primary;
+	}
+
+	.batch-cancel-text {
+		font-size: 24rpx;
+		font-weight: 700;
+		color: #8D817B;
+	}
+
+	.batch-apply-text {
+		font-size: 24rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.action-bar {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		flex-direction: row;
+		padding: 18rpx 32rpx;
+		padding-bottom: var(--uni-safe-area-inset-bottom);
+		background-color: #FFFFFF;
+		border-top: 1rpx solid #F5DED5;
+	}
+
+	.batch-button,
+	.save-button {
+		height: 88rpx;
+		align-items: center;
+		justify-content: center;
+		border-radius: 18rpx;
+	}
+
+	.batch-button {
+		width: 32%;
+		margin-right: 14rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F1B8BE;
+	}
+
+	.save-button {
+		flex: 1;
+		background-color: $facetof-color-primary;
+	}
+
+	.batch-button-text {
+		font-size: 25rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.save-button-text {
+		font-size: 27rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.brand-footer {
+		padding: 28rpx 0 4rpx;
+		align-items: center;
+	}
+
+	.brand-text {
+		font-size: 25rpx;
+		color: #253047;
+	}
+
+	.bottom-space {
+		height: 28rpx;
+	}
+</style>

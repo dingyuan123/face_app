@@ -1,0 +1,155 @@
+import {
+  ActionOutcome,
+  ProviderEarningsSummary,
+  ProviderFinanceTransaction
+} from '../types/models.uts'
+
+const FINANCE_KEY = 'faceto.provider.finance.v1'
+let financeLoaded = false
+let withdrawableAmount = 2860
+let totalIncome = 12860
+let pendingWithdrawal = 500
+let transactions: Array<ProviderFinanceTransaction> = []
+
+function copyTransaction(item: ProviderFinanceTransaction): ProviderFinanceTransaction {
+  return {
+    id: item.id,
+    type: item.type,
+    title: item.title,
+    time: item.time,
+    amount: item.amount,
+    status: item.status
+  }
+}
+
+function createDefaultTransactions(): Array<ProviderFinanceTransaction> {
+  return [
+    {
+      id: 'finance-001',
+      type: 'income',
+      title: '订单收入 · 台球助教',
+      time: '今天 16:32',
+      amount: '+¥68.00',
+      status: '已入账'
+    },
+    {
+      id: 'finance-002',
+      type: 'withdrawal',
+      title: '提现到银行卡',
+      time: '昨天 18:20',
+      amount: '-¥500.00',
+      status: '处理中'
+    },
+    {
+      id: 'finance-003',
+      type: 'income',
+      title: '订单收入 · 桌游陪玩',
+      time: '10月25日 21:18',
+      amount: '+¥120.00',
+      status: '已入账'
+    },
+    {
+      id: 'finance-004',
+      type: 'income',
+      title: '订单收入 · 咖啡陪伴',
+      time: '10月24日 15:06',
+      amount: '+¥55.00',
+      status: '已入账'
+    },
+    {
+      id: 'finance-005',
+      type: 'withdrawal',
+      title: '提现到支付宝',
+      time: '10月20日 10:35',
+      amount: '-¥800.00',
+      status: '已到账'
+    }
+  ]
+}
+
+function summary(): ProviderEarningsSummary {
+  const next: Array<ProviderFinanceTransaction> = []
+  for (let i = 0; i < transactions.length; i++) {
+    next.push(copyTransaction(transactions[i]))
+  }
+  return {
+    withdrawableAmount: '¥' + withdrawableAmount.toFixed(2),
+    totalIncome: '¥' + totalIncome.toFixed(2),
+    pendingWithdrawal: '¥' + pendingWithdrawal.toFixed(2),
+    transactions: next
+  }
+}
+
+function persistFinance() {
+  uni.setStorageSync(FINANCE_KEY, JSON.stringify(summary()))
+}
+
+function ensureFinanceLoaded() {
+  if (financeLoaded) {
+    return
+  }
+  financeLoaded = true
+  const raw = uni.getStorageSync(FINANCE_KEY)
+  if (typeof raw == 'string' && raw.length > 0) {
+    try {
+      const saved = JSON.parse(raw) as ProviderEarningsSummary
+      if (saved.transactions.length > 0) {
+        withdrawableAmount = parseFloat(saved.withdrawableAmount.replace('¥', ''))
+        totalIncome = parseFloat(saved.totalIncome.replace('¥', ''))
+        pendingWithdrawal = parseFloat(saved.pendingWithdrawal.replace('¥', ''))
+        transactions = saved.transactions
+        return
+      }
+    } catch (e) {
+      uni.removeStorageSync(FINANCE_KEY)
+    }
+  }
+  transactions = createDefaultTransactions()
+  persistFinance()
+}
+
+export function getProviderEarnings(): ProviderEarningsSummary {
+  ensureFinanceLoaded()
+  return summary()
+}
+
+export function submitProviderWithdrawal(amountText: string, method: string): ActionOutcome {
+  ensureFinanceLoaded()
+  const amount = parseFloat(amountText)
+  if (amountText.trim().length == 0 || amount != amount || amount < 10) {
+    return {
+      ok: false,
+      code: 'WITHDRAWAL_AMOUNT_INVALID',
+      message: '单笔最低提现金额为 ¥10.00'
+    }
+  }
+  if (amount > withdrawableAmount) {
+    return {
+      ok: false,
+      code: 'WITHDRAWAL_BALANCE_NOT_ENOUGH',
+      message: '提现金额不能超过可提现余额'
+    }
+  }
+  withdrawableAmount = withdrawableAmount - amount
+  pendingWithdrawal = pendingWithdrawal + amount
+  const next: Array<ProviderFinanceTransaction> = [
+    {
+      id: 'finance-' + Date.now().toString(),
+      type: 'withdrawal',
+      title: '提现到' + method,
+      time: '刚刚',
+      amount: '-¥' + amount.toFixed(2),
+      status: '处理中'
+    }
+  ]
+  for (let i = 0; i < transactions.length; i++) {
+    next.push(copyTransaction(transactions[i]))
+  }
+  transactions = next
+  persistFinance()
+  return {
+    ok: true,
+    code: 'WITHDRAWAL_SUBMITTED',
+    message: '提现申请已提交（开发 Mock）'
+  }
+}

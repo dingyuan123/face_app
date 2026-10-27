@@ -1,0 +1,477 @@
+<template>
+	<scroll-view class="page" direction="vertical" :show-scrollbar="false">
+		<view class="page-content">
+			<view class="nav-bar">
+				<view class="nav-button" @click="goBack">
+					<text class="nav-icon">‹</text>
+				</view>
+				<text class="nav-title">数据看板</text>
+				<view class="nav-placeholder"></view>
+			</view>
+
+			<view class="period-card">
+				<view class="period-button" :class="period == '近7天' ? 'period-active' : ''" @click="changePeriod('近7天')">
+					<text class="period-text" :class="period == '近7天' ? 'period-text-active' : ''">近7天</text>
+				</view>
+				<view class="period-button" :class="period == '近30天' ? 'period-active' : ''" @click="changePeriod('近30天')">
+					<text class="period-text" :class="period == '近30天' ? 'period-text-active' : ''">近30天</text>
+				</view>
+			</view>
+
+			<view class="metric-grid">
+				<view v-for="metric in summary.metrics" :key="metric.label" class="metric-card">
+					<text class="metric-label">{{ metric.label }}</text>
+					<text class="metric-value">{{ metric.value }}</text>
+					<text class="metric-delta">{{ metric.delta }} 较上期</text>
+				</view>
+			</view>
+
+			<view class="section-card">
+				<view class="section-head">
+					<view>
+						<text class="section-title">收入趋势</text>
+						<text class="section-subtitle">{{ period }}服务收入变化</text>
+					</view>
+					<view class="trend-total">
+						<text class="trend-total-label">合计</text>
+						<text class="trend-total-value">¥12,860</text>
+					</view>
+				</view>
+				<view class="chart-area">
+					<view class="chart-line line-one"></view>
+					<view class="chart-line line-two"></view>
+					<view class="chart-line line-three"></view>
+					<view class="trend-row">
+						<view v-for="point in summary.trend" :key="point.label" class="trend-column">
+							<text class="trend-value">{{ point.value }}</text>
+							<view class="trend-bar" :class="barClass(point.level)">
+								<view class="trend-dot"></view>
+							</view>
+							<text class="trend-label">{{ point.label }}</text>
+						</view>
+					</view>
+				</view>
+			</view>
+
+			<view class="section-card">
+				<view class="section-head">
+					<view>
+						<text class="section-title">转化漏斗</text>
+						<text class="section-subtitle">从浏览到完成订单的转化</text>
+					</view>
+				</view>
+				<view class="funnel-list">
+					<view v-for="item in summary.funnel" :key="item.label" class="funnel-row">
+						<text class="funnel-label">{{ item.label }}</text>
+						<view class="funnel-track">
+							<view class="funnel-fill" :class="funnelClass(item.ratio)"></view>
+						</view>
+						<text class="funnel-value">{{ item.value }}</text>
+					</view>
+				</view>
+			</view>
+
+			<view class="insight-card">
+				<text class="insight-title">经营建议</text>
+				<text class="insight-text">周末订单转化率较高，可适当增加周末可约时段；服务详情页访问到预约仍有提升空间。</text>
+			</view>
+
+			<view class="brand-footer">
+				<text class="brand-text">FaceTo · 见面聊，安心见</text>
+			</view>
+			<view class="bottom-space"></view>
+		</view>
+	</scroll-view>
+</template>
+
+<script setup lang="uts">
+	import { getProviderAnalytics } from '../../services/service-container.uts'
+	import type { ProviderAnalyticsSummary } from '../../types/models.uts'
+
+	const period = ref('近7天')
+	const summary = ref<ProviderAnalyticsSummary>(getProviderAnalytics())
+
+	function changePeriod(value: string) {
+		period.value = value
+	}
+
+	function barClass(level: number): string {
+		if (level >= 7) {
+			return 'trend-height-7'
+		}
+		if (level == 6) {
+			return 'trend-height-6'
+		}
+		if (level == 5) {
+			return 'trend-height-5'
+		}
+		if (level == 4) {
+			return 'trend-height-4'
+		}
+		if (level == 3) {
+			return 'trend-height-3'
+		}
+		return 'trend-height-2'
+	}
+
+	function funnelClass(ratio: number): string {
+		if (ratio >= 90) {
+			return 'funnel-width-100'
+		}
+		if (ratio >= 70) {
+			return 'funnel-width-80'
+		}
+		if (ratio >= 50) {
+			return 'funnel-width-60'
+		}
+		if (ratio >= 35) {
+			return 'funnel-width-45'
+		}
+		return 'funnel-width-35'
+	}
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/provider/dashboard'
+				})
+			}
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-content {
+		padding-bottom: 32rpx;
+	}
+
+	.nav-bar {
+		height: 128rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32rpx;
+		background-color: #FFF9F5;
+	}
+
+	.nav-button,
+	.nav-placeholder {
+		width: 76rpx;
+		height: 76rpx;
+	}
+
+	.nav-button {
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 60rpx;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.period-card {
+		flex-direction: row;
+		margin: 22rpx 32rpx 0;
+		padding: 8rpx;
+		background-color: #FFF1E8;
+		border-radius: 20rpx;
+	}
+
+	.period-button {
+		flex: 1;
+		height: 68rpx;
+		align-items: center;
+		justify-content: center;
+		border-radius: 16rpx;
+	}
+
+	.period-active {
+		background-color: #FFFFFF;
+		border: 1rpx solid #FFD9DC;
+	}
+
+	.period-text {
+		font-size: 24rpx;
+		font-weight: 700;
+		color: #8D817B;
+	}
+
+	.period-text-active {
+		color: $facetof-color-primary;
+	}
+
+	.metric-grid {
+		flex-direction: row;
+		flex-wrap: wrap;
+		margin: 18rpx 32rpx 0;
+	}
+
+	.metric-card {
+		width: 328rpx;
+		margin: 0 14rpx 14rpx 0;
+		padding: 24rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 24rpx;
+	}
+
+	.metric-label {
+		font-size: 21rpx;
+		color: #8D817B;
+	}
+
+	.metric-value {
+		margin-top: 10rpx;
+		font-size: 38rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.metric-delta {
+		margin-top: 8rpx;
+		font-size: 19rpx;
+		color: #10B981;
+	}
+
+	.section-card {
+		margin: 18rpx 32rpx 0;
+		padding: 26rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.section-head {
+		flex-direction: row;
+		align-items: flex-start;
+		justify-content: space-between;
+	}
+
+	.section-title {
+		font-size: 32rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.section-subtitle {
+		margin-top: 6rpx;
+		font-size: 21rpx;
+		color: #8D817B;
+	}
+
+	.trend-total {
+		align-items: flex-end;
+	}
+
+	.trend-total-label {
+		font-size: 19rpx;
+		color: #A1958F;
+	}
+
+	.trend-total-value {
+		margin-top: 4rpx;
+		font-size: 27rpx;
+		font-weight: 700;
+		color: $facetof-color-primary;
+	}
+
+	.chart-area {
+		position: relative;
+		height: 360rpx;
+		margin-top: 24rpx;
+	}
+
+	.chart-line {
+		position: absolute;
+		left: 0;
+		right: 0;
+		height: 1rpx;
+		background-color: #F1E9E5;
+	}
+
+	.line-one {
+		top: 80rpx;
+	}
+
+	.line-two {
+		top: 170rpx;
+	}
+
+	.line-three {
+		top: 260rpx;
+	}
+
+	.trend-row {
+		flex-direction: row;
+		align-items: flex-end;
+		justify-content: space-between;
+		height: 340rpx;
+	}
+
+	.trend-column {
+		flex: 1;
+		align-items: center;
+		justify-content: flex-end;
+		height: 340rpx;
+	}
+
+	.trend-value {
+		font-size: 16rpx;
+		color: #A1958F;
+	}
+
+	.trend-bar {
+		width: 18rpx;
+		margin-top: 10rpx;
+		background-image: linear-gradient(to top, #FD5A6B, #FD955E);
+		border-radius: 999rpx;
+	}
+
+	.trend-dot {
+		width: 12rpx;
+		height: 12rpx;
+		margin: -6rpx auto 0;
+		background-color: #FD5A6B;
+		border: 2rpx solid #FFFFFF;
+		border-radius: 50%;
+	}
+
+	.trend-height-2 {
+		height: 70rpx;
+	}
+
+	.trend-height-3 {
+		height: 105rpx;
+	}
+
+	.trend-height-4 {
+		height: 140rpx;
+	}
+
+	.trend-height-5 {
+		height: 175rpx;
+	}
+
+	.trend-height-6 {
+		height: 210rpx;
+	}
+
+	.trend-height-7 {
+		height: 245rpx;
+	}
+
+	.trend-label {
+		margin-top: 10rpx;
+		font-size: 18rpx;
+		color: #8D817B;
+	}
+
+	.funnel-list {
+		margin-top: 22rpx;
+	}
+
+	.funnel-row {
+		flex-direction: row;
+		align-items: center;
+		margin-bottom: 18rpx;
+	}
+
+	.funnel-label {
+		width: 132rpx;
+		font-size: 21rpx;
+		color: #5F554F;
+	}
+
+	.funnel-track {
+		flex: 1;
+		height: 30rpx;
+		margin: 0 14rpx;
+		background-color: #F1E9E5;
+		border-radius: 999rpx;
+	}
+
+	.funnel-fill {
+		height: 30rpx;
+		background-image: linear-gradient(to right, #FD5A6B, #FCAE59);
+		border-radius: 999rpx;
+	}
+
+	.funnel-width-100 {
+		width: 100%;
+	}
+
+	.funnel-width-80 {
+		width: 80%;
+	}
+
+	.funnel-width-60 {
+		width: 60%;
+	}
+
+	.funnel-width-45 {
+		width: 45%;
+	}
+
+	.funnel-width-35 {
+		width: 35%;
+	}
+
+	.funnel-value {
+		width: 86rpx;
+		text-align: right;
+		font-size: 20rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.insight-card {
+		margin: 18rpx 32rpx 0;
+		padding: 24rpx;
+		background-color: #FFF7E8;
+		border: 1rpx solid #F8DCA7;
+		border-radius: 24rpx;
+	}
+
+	.insight-title {
+		font-size: 25rpx;
+		font-weight: 700;
+		color: #8B641F;
+	}
+
+	.insight-text {
+		margin-top: 8rpx;
+		font-size: 22rpx;
+		line-height: 35rpx;
+		color: #8B641F;
+	}
+
+	.brand-footer {
+		padding: 24rpx 0 4rpx;
+		align-items: center;
+	}
+
+	.brand-text {
+		font-size: 25rpx;
+		color: #253047;
+	}
+
+	.bottom-space {
+		height: 32rpx;
+	}
+</style>

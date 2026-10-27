@@ -445,3 +445,189 @@ export type MomentPublishDraft = {
   serviceId: string,
   visibility: string
 }
+
+export type ProviderTaskItem = {
+  id: string,
+  title: string,
+  description: string,
+  count: number,
+  status: string
+}
+
+export type ProviderDashboardMetric = {
+  label: string,
+  value: string
+}
+
+export type ProviderDashboardSummary = {
+  todayIncome: string,
+  todayOrders: number,
+  tasks: ProviderTaskItem[],
+  metrics: ProviderDashboardMetric[]
+}
+
+export type ProviderProfileDraft = {
+  avatar: string,
+  photos: string[],
+  nickname: string,
+  signature: string,
+  categories: string[],
+  tags: string[],
+  introduction: string
+}
+
+export type ProviderMomentManageItem = {
+  id: string,
+  title: string,
+  coverImage: string,
+  publishedAt: string,
+  viewCount: number,
+  likeCount: number,
+  commentCount: number,
+  status: string
+}
+
+export type ProviderManageServiceItem = {
+  id: string,
+  title: string,
+  coverImage: string,
+  price: string,
+  duration: string,
+  status: string,
+  soldCount: number
+}
+
+export type ProviderServiceDraft = {
+  id: string,
+  title: string,
+  category: string,
+  price: string,
+  duration: string,
+  coverImage: string,
+  introduction: string,
+  locationType: string,
+  tags: string[]
+}
+
+export type ProviderScheduleDay = {
+  id: string,
+  date: string,
+  dayLabel: string,
+  weekday: string,
+  isToday: boolean,
+  isRest: boolean,
+  status: string
+}
+
+export type ProviderScheduleSlot = {
+  id: string,
+  date: string,
+  time: string,
+  period: string,
+  status: string
+}
+
+export type ProviderScheduleSnapshot = {
+  days: ProviderScheduleDay[],
+  slots: ProviderScheduleSlot[]
+}
+
+export type ProviderOrderItem = {
+  id: string,
+  orderNo: string,
+  customerName: string,
+  customerAvatar: string,
+  customerVerified: boolean,
+  serviceTitle: string,
+  duration: string,
+  appointmentDate: string,
+  appointmentTime: string,
+  location: string,
+  amount: string,
+  status: string,
+  note: string
+}
+
+export type ProviderOrderTimelineItem = {
+  title: string,
+  description: string,
+  time: string,
+  state: string
+}
+
+export type ProviderOrderDetail = {
+  order: ProviderOrderItem,
+  timeline: ProviderOrderTimelineItem[]
+}
+
+export type ProviderFinanceTransaction = {
+  id: string,
+  type: string,
+  title: string,
+  time: string,
+  amount: string,
+  status: string
+}
+
+export type ProviderEarningsSummary = {
+  withdrawableAmount: string,
+  totalIncome: string,
+  pendingWithdrawal: string,
+  transactions: ProviderFinanceTransaction[]
+}
+
+export type ProviderReviewItem = {
+  id: string,
+  userName: string,
+  avatar: string,
+  rating: number,
+  content: string,
+  createdAt: string,
+  serviceTitle: string,
+  reply: string
+}
+
+export type ProviderAnalyticsMetric = {
+  label: string,
+  value: string,
+  delta: string
+}
+
+export type ProviderTrendPoint = {
+  label: string,
+  value: string,
+  level: number
+}
+
+export type ProviderFunnelItem = {
+  label: string,
+  value: string,
+  ratio: number
+}
+
+export type ProviderAnalyticsSummary = {
+  metrics: ProviderAnalyticsMetric[],
+  trend: ProviderTrendPoint[],
+  funnel: ProviderFunnelItem[]
+}
+
+export type ProviderCertificationItem = {
+  id: string,
+  title: string,
+  description: string,
+  status: string,
+  actionLabel: string
+}
+
+export type LegalDocumentSection = {
+  title: string,
+  paragraphs: string[]
+}
+
+export type LegalDocument = {
+  type: string,
+  title: string,
+  updatedAt: string,
+  summary: string,
+  sections: LegalDocumentSection[]
+}

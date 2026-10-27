@@ -28,7 +28,22 @@ import {
   NewsDetail,
   ProfileEditDraft,
   ReviewListItem,
-  MomentPublishDraft
+  MomentPublishDraft,
+  ProviderDashboardSummary,
+  ProviderProfileDraft,
+  ProviderMomentManageItem,
+  ProviderManageServiceItem,
+  ProviderServiceDraft,
+  ProviderScheduleDay,
+  ProviderScheduleSlot,
+  ProviderScheduleSnapshot,
+  ProviderOrderItem,
+  ProviderOrderDetail,
+  ProviderEarningsSummary,
+  ProviderReviewItem,
+  ProviderAnalyticsSummary,
+  ProviderCertificationItem,
+  LegalDocument
 } from '../types/models.uts'
 import * as mockAuth from './mock-auth.uts'
 import * as mockPublic from './mock-public.uts'
@@ -52,6 +67,18 @@ import * as mockReview from './mock-review.uts'
 import * as mockProfileEdit from './mock-profile-edit.uts'
 import * as mockReviews from './mock-reviews.uts'
 import * as mockMomentPublish from './mock-moment-publish.uts'
+import * as mockProviderDashboard from './mock-provider-dashboard.uts'
+import * as mockProviderProfile from './mock-provider-profile.uts'
+import * as mockProviderMoments from './mock-provider-moments.uts'
+import * as mockProviderServices from './mock-provider-services.uts'
+import * as mockServiceEdit from './mock-service-edit.uts'
+import * as mockProviderSchedule from './mock-provider-schedule.uts'
+import * as mockProviderOrders from './mock-provider-orders.uts'
+import * as mockProviderFinance from './mock-provider-finance.uts'
+import * as mockProviderReviews from './mock-provider-reviews.uts'
+import * as mockProviderAnalytics from './mock-provider-analytics.uts'
+import * as mockProviderCertification from './mock-provider-certification.uts'
+import * as mockLegalDocuments from './mock-legal-documents.uts'
 
 /**
  * 页面只依赖本文件中的业务服务。
@@ -195,6 +222,118 @@ export function getReceivedReviewItems(): Array<ReviewListItem> {
 
 export function publishMoment(draft: MomentPublishDraft): ActionOutcome {
   return mockMomentPublish.publishMoment(draft)
+}
+
+export function getProviderDashboard(): ProviderDashboardSummary {
+  return mockProviderDashboard.getProviderDashboard()
+}
+
+export function saveProviderProfile(draft: ProviderProfileDraft): ActionOutcome {
+  return mockProviderProfile.saveProviderProfile(draft)
+}
+
+export function getProviderMomentItems(): Array<ProviderMomentManageItem> {
+  return mockProviderMoments.getProviderMomentItems()
+}
+
+export function removeProviderMoment(id: string): ActionOutcome {
+  return mockProviderMoments.removeProviderMoment(id)
+}
+
+export function getProviderManageServices(): Array<ProviderManageServiceItem> {
+  return mockProviderServices.getProviderManageServices()
+}
+
+export function toggleProviderService(id: string): ActionOutcome {
+  return mockProviderServices.toggleProviderService(id)
+}
+
+export function getProviderManageService(id: string): ProviderManageServiceItem {
+  return mockProviderServices.getProviderManageService(id)
+}
+
+export function saveProviderService(draft: ProviderServiceDraft, submitReview: boolean): ActionOutcome {
+  return mockServiceEdit.saveProviderService(draft, submitReview)
+}
+
+export function getProviderScheduleSnapshot(): ProviderScheduleSnapshot {
+  return mockProviderSchedule.getProviderScheduleSnapshot()
+}
+
+export function getProviderScheduleMonth(year: number, month: number): Array<ProviderScheduleDay> {
+  return mockProviderSchedule.getProviderScheduleMonth(year, month)
+}
+
+export function getProviderScheduleWeek(date: string): Array<ProviderScheduleDay> {
+  return mockProviderSchedule.getProviderScheduleWeek(date)
+}
+
+export function getProviderScheduleSlots(date: string): Array<ProviderScheduleSlot> {
+  return mockProviderSchedule.getProviderScheduleSlots(date)
+}
+
+export function toggleProviderScheduleSlot(id: string): ActionOutcome {
+  return mockProviderSchedule.toggleProviderScheduleSlot(id)
+}
+
+export function setProviderScheduleDayMode(date: string, mode: string): ActionOutcome {
+  return mockProviderSchedule.setProviderScheduleDayMode(date, mode)
+}
+
+export function applyProviderScheduleBatch(year: number, month: number, scope: string, mode: string): ActionOutcome {
+  return mockProviderSchedule.applyProviderScheduleBatch(year, month, scope, mode)
+}
+
+export function saveProviderSchedule(): ActionOutcome {
+  return mockProviderSchedule.saveProviderSchedule()
+}
+
+export function getProviderOrderItems(tab: string): Array<ProviderOrderItem> {
+  return mockProviderOrders.getProviderOrderItems(tab)
+}
+
+export function acceptProviderOrder(id: string): ActionOutcome {
+  return mockProviderOrders.acceptProviderOrder(id)
+}
+
+export function rejectProviderOrder(id: string): ActionOutcome {
+  return mockProviderOrders.rejectProviderOrder(id)
+}
+
+export function completeProviderOrder(id: string): ActionOutcome {
+  return mockProviderOrders.completeProviderOrder(id)
+}
+
+export function getProviderOrderDetail(id: string): ProviderOrderDetail {
+  return mockProviderOrders.getProviderOrderDetail(id)
+}
+
+export function getProviderEarnings(): ProviderEarningsSummary {
+  return mockProviderFinance.getProviderEarnings()
+}
+
+export function submitProviderWithdrawal(amount: string, method: string): ActionOutcome {
+  return mockProviderFinance.submitProviderWithdrawal(amount, method)
+}
+
+export function getProviderReviewItems(): Array<ProviderReviewItem> {
+  return mockProviderReviews.getProviderReviewItems()
+}
+
+export function replyProviderReview(id: string, reply: string): ActionOutcome {
+  return mockProviderReviews.replyProviderReview(id, reply)
+}
+
+export function getProviderAnalytics(): ProviderAnalyticsSummary {
+  return mockProviderAnalytics.getProviderAnalytics()
+}
+
+export function getProviderCertifications(): Array<ProviderCertificationItem> {
+  return mockProviderCertification.getProviderCertifications()
+}
+
+export function getLegalDocument(type: string): LegalDocument {
+  return mockLegalDocuments.getLegalDocument(type)
 }
 
 export function getApplicationHistory(): Array<ProviderApplicationRecord> {

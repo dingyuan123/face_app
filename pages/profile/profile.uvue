@@ -55,7 +55,18 @@
 					</view>
 				</view>
 
-				<view v-if="sessionState.applicationStatus != 'none' && sessionState.identity == 'provider'" class="provider-card">
+				<view v-if="profile != null && sessionState.identity == 'user' && sessionState.applicationStatus == 'none'" class="become-provider-card">
+					<view class="become-provider-icon">P</view>
+					<view class="become-provider-copy">
+						<text class="become-provider-title">成为服务者</text>
+						<text class="become-provider-desc">提交服务者申请，开启服务者测试流程</text>
+					</view>
+					<view class="become-provider-button" @click="openProviderApply">
+						<text class="become-provider-button-text">去申请</text>
+					</view>
+				</view>
+
+				<view v-if="sessionState.applicationStatus != 'none'" class="provider-card">
 					<view class="provider-card-head">
 						<text class="section-title">服务者中心</text>
 						<status-pill :label="applicationLabel" :tone="applicationTone"></status-pill>
@@ -107,7 +118,7 @@
 	import { getApplicationHistory, getProfileSummary } from '../../services/service-container.uts'
 	import type { ProfileSummary } from '../../types/models.uts'
 	import { logout, sessionState } from '../../state/session-state.uts'
-	import { openLogin, openProviderApply, PROFILE_ROUTE, ORDER_LIST_ROUTE, FAVORITES_ROUTE, FOLLOWING_ROUTE, SETTINGS_ROUTE, MY_MOMENTS_ROUTE, WALLET_ROUTE, COUPONS_ROUTE, MEMBERSHIP_ROUTE, ID_VERIFY_ROUTE, PROFILE_EDIT_ROUTE, MY_REVIEWS_ROUTE, ABOUT_ROUTE, HELP_ROUTE } from '../../router/route-guard.uts'
+	import { openLogin, openProviderApply, PROFILE_ROUTE, ORDER_LIST_ROUTE, FAVORITES_ROUTE, FOLLOWING_ROUTE, SETTINGS_ROUTE, MY_MOMENTS_ROUTE, WALLET_ROUTE, COUPONS_ROUTE, MEMBERSHIP_ROUTE, ID_VERIFY_ROUTE, PROFILE_EDIT_ROUTE, MY_REVIEWS_ROUTE, ABOUT_ROUTE, HELP_ROUTE, PROVIDER_DASHBOARD_ROUTE } from '../../router/route-guard.uts'
 
 	const profile = ref<ProfileSummary | null>(null)
 
@@ -291,10 +302,8 @@
 
 	function openProviderCenter() {
 		if (sessionState.applicationStatus == 'approved') {
-			uni.showToast({
-				title: '服务者工作台将在后续阶段接入',
-				position: 'bottom',
-				icon: 'none'
+			uni.navigateTo({
+				url: PROVIDER_DASHBOARD_ROUTE
 			})
 			return
 		}
@@ -498,6 +507,58 @@
 		width: 1px;
 		height: 28px;
 		background-color: $facetof-color-border;
+	}
+
+	.become-provider-card {
+		flex-direction: row;
+		align-items: center;
+		margin: 0 $facetof-space-page 14px;
+		padding: 16px;
+		background-color: #FFFFFF;
+		border: 1px solid #F5DED5;
+		border-radius: $facetof-radius-card;
+	}
+
+	.become-provider-icon {
+		width: 44px;
+		height: 44px;
+		align-items: center;
+		justify-content: center;
+		font-size: 18px;
+		font-weight: 700;
+		color: #FFFFFF;
+		background-color: $facetof-color-primary;
+		border-radius: 14px;
+	}
+
+	.become-provider-copy {
+		flex: 1;
+		margin-left: 12px;
+	}
+
+	.become-provider-title {
+		font-size: 15px;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.become-provider-desc {
+		margin-top: 5px;
+		font-size: 11px;
+		color: #8D817B;
+	}
+
+	.become-provider-button {
+		padding: 8px 11px;
+		background-color: #FFF1F2;
+		border: 1px solid #FFD9DC;
+		border-radius: 999px;
+	}
+
+	.become-provider-button-text {
+		font-size: 12px;
+		font-weight: 700;
+		color: $facetof-color-primary;
 	}
 
 	.section-block,

@@ -1,0 +1,203 @@
+<template>
+	<view class="page">
+		<scroll-view class="page-scroll" direction="vertical" :show-scrollbar="false">
+			<view class="page-content">
+				<view class="nav-bar">
+					<view class="nav-button" @click="goBack">
+						<text class="nav-icon">‹</text>
+					</view>
+					<text class="nav-title">{{ legalDocument.title }}</text>
+					<view class="nav-placeholder"></view>
+				</view>
+
+				<view class="document-card">
+					<text class="document-title">{{ legalDocument.title }}</text>
+					<text class="document-date">{{ legalDocument.updatedAt }}</text>
+					<view class="template-notice">
+						<text class="template-icon">i</text>
+						<text class="template-text">{{ legalDocument.summary }}</text>
+					</view>
+
+					<view v-for="section in legalDocument.sections" :key="section.title" class="section">
+						<text class="section-title">{{ section.title }}</text>
+						<text v-for="paragraph in section.paragraphs" :key="paragraph" class="section-paragraph">{{ paragraph }}</text>
+					</view>
+
+					<view class="document-footer">
+						<text class="footer-title">见面聊（FaceTo）</text>
+						<text class="footer-desc">本页面内容为开发模板，最终解释以正式发布版本为准。</text>
+					</view>
+				</view>
+
+				<view class="bottom-space"></view>
+			</view>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { getLegalDocument } from '../../services/service-container.uts'
+	import type { LegalDocument } from '../../types/models.uts'
+
+	const legalDocument = ref<LegalDocument>(getLegalDocument('user-agreement'))
+
+	onLoad((options) => {
+		if (options == null) {
+			return
+		}
+		const type = options['type'] as string
+		legalDocument.value = getLegalDocument(type != null && type.length > 0 ? decodeURIComponent(type) : 'user-agreement')
+	})
+
+	function goBack() {
+		uni.navigateBack({
+			delta: 1,
+			fail: () => {
+				uni.reLaunch({
+					url: '/pages/about/about'
+				})
+			}
+		})
+	}
+</script>
+
+<style lang="scss">
+	.page {
+		flex: 1;
+		min-height: 0;
+		padding-top: var(--uni-safe-area-inset-top);
+		background-color: $facetof-color-warm-background;
+	}
+
+	.page-scroll {
+		flex: 1;
+		min-height: 0;
+	}
+
+	.page-content {
+		padding-bottom: 32rpx;
+	}
+
+	.nav-bar {
+		height: 128rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32rpx;
+		background-color: #FFF9F5;
+	}
+
+	.nav-button,
+	.nav-placeholder {
+		width: 76rpx;
+		height: 76rpx;
+	}
+
+	.nav-button {
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-icon {
+		font-size: 60rpx;
+		color: #253047;
+	}
+
+	.nav-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.document-card {
+		margin: 22rpx 32rpx 0;
+		padding: 32rpx;
+		background-color: #FFFFFF;
+		border: 1rpx solid #F5DED5;
+		border-radius: 28rpx;
+	}
+
+	.document-title {
+		font-size: 42rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.document-date {
+		margin-top: 10rpx;
+		font-size: 21rpx;
+		color: #A1958F;
+	}
+
+	.template-notice {
+		flex-direction: row;
+		align-items: flex-start;
+		margin-top: 22rpx;
+		padding: 18rpx;
+		background-color: #FFF7E8;
+		border: 1rpx solid #F8DCA7;
+		border-radius: 18rpx;
+	}
+
+	.template-icon {
+		width: 32rpx;
+		height: 32rpx;
+		align-items: center;
+		justify-content: center;
+		margin-right: 10rpx;
+		background-color: #F59E0B;
+		border-radius: 50%;
+		font-size: 19rpx;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.template-text {
+		flex: 1;
+		font-size: 21rpx;
+		line-height: 32rpx;
+		color: #8B641F;
+	}
+
+	.section {
+		margin-top: 32rpx;
+	}
+
+	.section-title {
+		font-size: 29rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.section-paragraph {
+		margin-top: 12rpx;
+		font-size: 25rpx;
+		line-height: 43rpx;
+		color: #5F554F;
+	}
+
+	.document-footer {
+		margin-top: 38rpx;
+		padding-top: 24rpx;
+		border-top: 1rpx solid #F5DED5;
+		align-items: center;
+	}
+
+	.footer-title {
+		font-size: 23rpx;
+		font-weight: 700;
+		color: #253047;
+	}
+
+	.footer-desc {
+		margin-top: 8rpx;
+		text-align: center;
+		font-size: 19rpx;
+		line-height: 30rpx;
+		color: #A1958F;
+	}
+
+	.bottom-space {
+		height: 32rpx;
+	}
+</style>

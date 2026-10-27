@@ -1,0 +1,34 @@
+import { ProviderCertificationItem } from '../types/models.uts'
+
+export function getProviderCertifications(): Array<ProviderCertificationItem> {
+  return [
+    {
+      id: 'real-name',
+      title: '实名认证',
+      description: '姓名与身份证信息已通过核验',
+      status: '已通过',
+      actionLabel: '查看'
+    },
+    {
+      id: 'face',
+      title: '人脸认证',
+      description: '完成人脸核验，提高账号可信度',
+      status: '已通过',
+      actionLabel: '查看'
+    },
+    {
+      id: 'skill',
+      title: '技能认证',
+      description: '技能材料需补充清晰证明后重新提交',
+      status: '未通过',
+      actionLabel: '重新认证'
+    },
+    {
+      id: 'provider',
+      title: '服务者认证',
+      description: '服务者资料与服务范围认证',
+      status: '已通过',
+      actionLabel: '查看'
+    }
+  ]
+}
