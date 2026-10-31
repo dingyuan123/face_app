@@ -14,7 +14,7 @@
 
 			<view class="stats-card">
 				<view class="stat-item">
-					<text class="stat-value">{{ moments.length }}</text>
+					<text class="stat-value">{{ publishedCount }}</text>
 					<text class="stat-label">已发布</text>
 				</view>
 				<view class="stat-line"></view>
@@ -29,7 +29,20 @@
 				</view>
 			</view>
 
-			<view v-if="moments.length == 0" class="empty-state">
+			<view class="filter-wrap">
+				<segment-tabs
+					:items="filterLabels"
+					:active="activeFilter"
+					variant="pill"
+					@change="changeFilter"
+				></segment-tabs>
+			</view>
+
+			<view v-if="loading" class="empty-state">
+				<text class="empty-title">正在加载动态…</text>
+			</view>
+
+			<view v-else-if="moments.length == 0" class="empty-state">
 				<image class="empty-image" src="/static/moments/empty.png" mode="aspectFit"></image>
 				<text class="empty-title">还没有发布动态</text>
 				<text class="empty-desc">发布第一条动态，让更多人看到你的服务。</text>
@@ -41,28 +54,32 @@
 			<view v-else class="moment-list">
 				<view v-for="moment in moments" :key="moment.id" class="moment-card">
 					<view class="moment-main">
-						<image class="moment-cover" :src="moment.coverImage" mode="aspectFill"></image>
+						<image class="moment-cover" :src="coverOf(moment)" mode="aspectFill"></image>
 						<view class="moment-copy">
 							<view class="moment-head">
 								<text class="moment-title">{{ moment.title }}</text>
-								<view class="moment-status">
-									<text class="moment-status-text">{{ moment.status }}</text>
+								<view class="moment-status" :class="statusClass(moment.statusCode)">
+									<text class="moment-status-text" :class="statusTextClass(moment.statusCode)">{{ moment.status }}</text>
 								</view>
 							</view>
-							<text class="moment-time">{{ moment.publishedAt }}</text>
+							<text class="moment-time">{{ timeOf(moment) }}</text>
 							<view class="moment-data">
 								<text class="data-text">浏览 {{ moment.viewCount }}</text>
 								<text class="data-text">赞 {{ moment.likeCount }}</text>
 								<text class="data-text">评论 {{ moment.commentCount }}</text>
 							</view>
+							<text v-if="moment.attachedServiceTitle.length > 0" class="moment-service">挂载：{{ moment.attachedServiceTitle }}</text>
 						</view>
+					</view>
+					<view v-if="moment.statusCode == 'REJECTED' && moment.rejectReason.length > 0" class="reject-row">
+						<text class="reject-text">拒绝原因：{{ moment.rejectReason }}</text>
 					</view>
 					<view class="moment-actions">
 						<view class="action-button" @click="editMoment(moment.id)">
 							<text class="action-text">编辑</text>
 						</view>
-						<view class="action-button" @click="showData(moment.id)">
-							<text class="action-text">数据</text>
+						<view v-if="moment.statusCode == 'DRAFT'" class="action-button highlight" @click="publishDraft(moment)">
+							<text class="action-text action-text-highlight">发布</text>
 						</view>
 						<view class="action-button danger" @click="removeMoment(moment.id)">
 							<text class="action-text danger-text">删除</text>
@@ -80,26 +97,105 @@
 </template>
 
 <script setup lang="uts">
-	import { getProviderMomentItems, removeProviderMoment } from '../../services/service-container.uts'
+	import SegmentTabs from '../../components/segment-tabs.uvue'
+	import {
+		listProviderMoments,
+		publishProviderMomentData,
+		removeProviderMoment
+	} from '../../services/service-container.uts'
 	import type { ProviderMomentManageItem } from '../../types/models.uts'
 
-	const moments = ref<ProviderMomentManageItem[]>(getProviderMomentItems())
-
+	const filterLabels = ['全部', '草稿', '已发布', '已拒绝']
+	const filterCodes = ['', 'DRAFT', 'PUBLISHED', 'REJECTED']
+	const activeFilter = ref('全部')
+	const moments = ref<ProviderMomentManageItem[]>([])
+	const loading = ref(false)
+	const publishedCount = ref(0)
 	const totalLikes = ref(0)
 	const totalComments = ref(0)
 
-	function refreshStats() {
-		let likes = 0
-		let comments = 0
-		for (let i = 0; i < moments.value.length; i++) {
-			likes += moments.value[i].likeCount
-			comments += moments.value[i].commentCount
+	// 列表在刷新函数中显式生成，避免响应式数组派生迭代问题。
+	function refreshMoments() {
+		if (loading.value) {
+			return
 		}
-		totalLikes.value = likes
-		totalComments.value = comments
+		loading.value = true
+		let status = ''
+		for (let i = 0; i < filterLabels.length; i++) {
+			if (filterLabels[i] == activeFilter.value) {
+				status = filterCodes[i]
+			}
+		}
+		listProviderMoments(status, 1, 50).then((result) => {
+			loading.value = false
+			if (!result.ok) {
+				uni.showToast({
+					title: result.message,
+					position: 'bottom',
+					icon: 'error'
+				})
+				return
+			}
+			const next: Array<ProviderMomentManageItem> = []
+			let likes = 0
+			let comments = 0
+			let published = 0
+			for (let i = 0; i < result.items.length; i++) {
+				next.push(result.items[i])
+				likes += result.items[i].likeCount
+				comments += result.items[i].commentCount
+				if (result.items[i].statusCode == 'PUBLISHED') {
+					published += 1
+				}
+			}
+			moments.value = next
+			totalLikes.value = likes
+			totalComments.value = comments
+			publishedCount.value = published
+		})
 	}
 
-	refreshStats()
+	function changeFilter(label: string) {
+		activeFilter.value = label
+		refreshMoments()
+	}
+
+	function coverOf(moment: ProviderMomentManageItem): string {
+		if (moment.coverImage.length > 0) {
+			return moment.coverImage
+		}
+		return '/static/content/city.png'
+	}
+
+	function timeOf(moment: ProviderMomentManageItem): string {
+		const value = moment.publishedAt.length > 0 ? moment.publishedAt : moment.updatedAt
+		if (value.length == 0) {
+			return '未发布'
+		}
+		return value.replace('T', ' ').slice(0, 16)
+	}
+
+	function statusClass(code: string): string {
+		if (code == 'PUBLISHED') {
+			return 'status-published'
+		}
+		if (code == 'REJECTED') {
+			return 'status-rejected'
+		}
+		return 'status-draft'
+	}
+
+	function statusTextClass(code: string): string {
+		if (code == 'PUBLISHED') {
+			return 'status-text-published'
+		}
+		if (code == 'REJECTED') {
+			return 'status-text-rejected'
+		}
+		return 'status-text-draft'
+	}
+
+	refreshMoments()
 
 	function publishMoment() {
 		uni.navigateTo({
@@ -108,29 +204,52 @@
 	}
 
 	function editMoment(id: string) {
-		uni.showToast({
-			title: '动态编辑将在后续阶段接入',
-			position: 'bottom',
-			icon: 'none'
+		uni.navigateTo({
+			url: '/pages/moment/publish?momentId=' + encodeURIComponent(id)
 		})
 	}
 
-	function showData(id: string) {
-		uni.showToast({
-			title: '动态数据将在后续阶段接入',
-			position: 'bottom',
-			icon: 'none'
+	function publishDraft(moment: ProviderMomentManageItem) {
+		uni.showModal({
+			title: '发布动态',
+			content: '确认发布这条动态吗？',
+			confirmText: '确认发布',
+			cancelText: '再想想',
+			success: (result) => {
+				if (!result.confirm) {
+					return
+				}
+				publishProviderMomentData(moment.id, moment.version).then((publishResult) => {
+					uni.showToast({
+						title: publishResult.message,
+						position: 'bottom',
+						icon: publishResult.ok ? 'success' : 'error'
+					})
+					refreshMoments()
+				})
+			}
 		})
 	}
 
 	function removeMoment(id: string) {
-		const result = removeProviderMoment(id)
-		moments.value = getProviderMomentItems()
-		refreshStats()
-		uni.showToast({
-			title: result.message,
-			position: 'bottom',
-			icon: result.ok ? 'success' : 'error'
+		uni.showModal({
+			title: '删除动态',
+			content: '删除后不可恢复，确认删除吗？',
+			confirmText: '确认删除',
+			cancelText: '再想想',
+			success: (result) => {
+				if (!result.confirm) {
+					return
+				}
+				removeProviderMoment(id).then((outcome) => {
+					uni.showToast({
+						title: outcome.message,
+						position: 'bottom',
+						icon: outcome.ok ? 'success' : 'error'
+					})
+					refreshMoments()
+				})
+			}
 		})
 	}
 
@@ -240,6 +359,10 @@
 		background-color: #F5DED5;
 	}
 
+	.filter-wrap {
+		margin: 22rpx 32rpx 0;
+	}
+
 	.moment-list {
 		margin: 22rpx 32rpx 0;
 	}
@@ -284,14 +407,38 @@
 	.moment-status {
 		margin-left: 10rpx;
 		padding: 6rpx 10rpx;
-		background-color: #E7F8F2;
+		background-color: #EFE6E1;
 		border-radius: 999rpx;
+	}
+
+	.status-published {
+		background-color: #E7F8F2;
+	}
+
+	.status-rejected {
+		background-color: #FFF1F2;
+	}
+
+	.status-draft {
+		background-color: #F3EDE9;
 	}
 
 	.moment-status-text {
 		font-size: 19rpx;
 		font-weight: 700;
+		color: #8D817B;
+	}
+
+	.status-text-published {
 		color: #10B981;
+	}
+
+	.status-text-rejected {
+		color: #EF4444;
+	}
+
+	.status-text-draft {
+		color: #8D817B;
 	}
 
 	.moment-time {
@@ -311,6 +458,25 @@
 		color: #8D817B;
 	}
 
+	.moment-service {
+		margin-top: 8rpx;
+		font-size: 20rpx;
+		color: $facetof-color-primary;
+	}
+
+	.reject-row {
+		margin-top: 12rpx;
+		padding: 12rpx 14rpx;
+		background-color: #FFF1F2;
+		border-radius: 14rpx;
+	}
+
+	.reject-text {
+		font-size: 21rpx;
+		line-height: 30rpx;
+		color: #EF4444;
+	}
+
 	.moment-actions {
 		flex-direction: row;
 		justify-content: flex-end;
@@ -328,10 +494,19 @@
 		border-radius: 999rpx;
 	}
 
+	.highlight {
+		background-color: $facetof-color-primary;
+		border-color: $facetof-color-primary;
+	}
+
 	.action-text {
 		font-size: 22rpx;
 		font-weight: 700;
 		color: $facetof-color-primary;
+	}
+
+	.action-text-highlight {
+		color: #FFFFFF;
 	}
 
 	.danger {

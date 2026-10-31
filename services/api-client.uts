@@ -1,0 +1,232 @@
+import { API_BASE_URL, API_CONFIG } from './api-config.uts'
+import { logout as clearLocalSession } from '../state/session-state.uts'
+
+// 所有 HTTP 请求统一返回状态码和解析后的响应体，业务模块再转换为业务结果。
+export type HttpResult = {
+  statusCode: number,
+  body: any
+}
+
+function headers(idempotencyKey: string, token: string): any {
+  const result: any = {
+    'Content-Type': 'application/json'
+  }
+  if (idempotencyKey.length > 0) {
+    result['Idempotency-Key'] = idempotencyKey
+  }
+  if (token.length > 0) {
+    result['Authorization'] = 'Bearer ' + token
+  }
+  return result
+}
+
+export function parseBody(value: any): any {
+  if (typeof value == 'string') {
+    try {
+      return JSON.parse(value) as any
+    } catch (e) {
+      return null
+    }
+  }
+  return value
+}
+
+// 后端统一采用 { code, message, data }，同时兼容直接返回业务对象的响应。
+export function payload(body: any): any {
+  if (body == null) {
+    return null
+  }
+  const data = body['data']
+  return data != null ? data : body
+}
+
+export function stringValue(source: any, key: string): string {
+  if (source == null) {
+    return ''
+  }
+  const value = source[key]
+  return value == null ? '' : value.toString()
+}
+
+export function numberValue(source: any, key: string): number {
+  if (source == null) {
+    return 0
+  }
+  const value = source[key]
+  return value == null ? 0 : Number(value)
+}
+
+export function booleanValue(source: any, key: string): boolean {
+  if (source == null) {
+    return false
+  }
+  return source[key] == true
+}
+
+export function businessCode(body: any): number {
+  if (body == null) {
+    return 0
+  }
+  const value = body['code']
+  return value == null ? 0 : Number(value)
+}
+
+function detailMessage(body: any): string {
+  if (body == null) {
+    return ''
+  }
+  const details = body['details']
+  if (details == null) {
+    return ''
+  }
+  const lifePhotoError = stringValue(details, 'life_photo_media_ids')
+  if (lifePhotoError.length > 0) {
+    return lifePhotoError
+  }
+  const avatarError = stringValue(details, 'avatar_media_id')
+  if (avatarError.length > 0) {
+    return avatarError
+  }
+  const introductionError = stringValue(details, 'introduction')
+  if (introductionError.length > 0) {
+    return introductionError
+  }
+  const realNameError = stringValue(details, 'real_name')
+  if (realNameError.length > 0) {
+    return realNameError
+  }
+  const idCardError = stringValue(details, 'id_card_number')
+  if (idCardError.length > 0) {
+    return idCardError
+  }
+  return JSON.stringify(details)
+}
+
+export function businessMessage(result: HttpResult): string {
+  if (result.statusCode == 0) {
+    return '网络连接失败，请稍后重试'
+  }
+  const body = result.body
+  if (body != null) {
+    const message = stringValue(body, 'message')
+    const detail = detailMessage(body)
+    if (message.length > 0 && message != 'success') {
+      return detail.length > 0 ? message + '：' + detail : message
+    }
+    const topDetail = stringValue(body, 'detail')
+    if (topDetail.length > 0) {
+      return topDetail
+    }
+    const code = stringValue(body, 'code')
+    if (code.length > 0 && code != '0') {
+      return code
+    }
+  }
+  return '服务暂时不可用，请稍后重试'
+}
+
+// 401 统一处理为登录失效并返回登录页；登录、退出等认证接口可关闭自动跳转。
+function handleUnauthorized() {
+  clearLocalSession()
+  uni.showToast({
+    title: '登录已过期，请重新登录',
+    position: 'bottom',
+    icon: 'none'
+  })
+  uni.reLaunch({
+    url: '/pages/login/login'
+  })
+}
+
+function request(
+  method: string,
+  path: string,
+  data: any,
+  idempotencyKey: string,
+  token: string,
+  redirectOnUnauthorized: boolean = true
+): Promise<HttpResult> {
+  return new Promise<HttpResult>((resolve) => {
+    uni.request({
+      url: API_BASE_URL + path,
+      method: method,
+      data: data,
+      header: headers(idempotencyKey, token),
+      timeout: API_CONFIG.timeout,
+      success: (response) => {
+        if (response.statusCode == 401 && redirectOnUnauthorized) {
+          handleUnauthorized()
+        }
+        resolve({
+          statusCode: response.statusCode,
+          body: response.data
+        })
+      },
+      fail: () => {
+        resolve({
+          statusCode: 0,
+          body: null
+        })
+      }
+    })
+  })
+}
+
+export function requestGet(path: string, token: string, redirectOnUnauthorized: boolean = true): Promise<HttpResult> {
+  return request('GET', path, null, '', token, redirectOnUnauthorized)
+}
+
+export function requestPost(path: string, data: any, idempotencyKey: string, token: string, redirectOnUnauthorized: boolean = true): Promise<HttpResult> {
+  return request('POST', path, data, idempotencyKey, token, redirectOnUnauthorized)
+}
+
+export function requestPatch(path: string, data: any, idempotencyKey: string, token: string, redirectOnUnauthorized: boolean = true): Promise<HttpResult> {
+  return request('PATCH', path, data, idempotencyKey, token, redirectOnUnauthorized)
+}
+
+export function requestDelete(path: string, token: string, redirectOnUnauthorized: boolean = true): Promise<HttpResult> {
+  return request('DELETE', path, null, '', token, redirectOnUnauthorized)
+}
+
+export function requestUpload(
+  path: string,
+  filePath: string,
+  name: string,
+  formData: any,
+  idempotencyKey: string,
+  token: string,
+  redirectOnUnauthorized: boolean = true
+): Promise<HttpResult> {
+  return new Promise<HttpResult>((resolve) => {
+    const header: any = {}
+    if (idempotencyKey.length > 0) {
+      header['Idempotency-Key'] = idempotencyKey
+    }
+    if (token.length > 0) {
+      header['Authorization'] = 'Bearer ' + token
+    }
+    uni.uploadFile({
+      url: API_BASE_URL + path,
+      filePath: filePath,
+      name: name,
+      formData: formData,
+      header: header,
+      timeout: API_CONFIG.uploadTimeout,
+      success: (response) => {
+        if (response.statusCode == 401 && redirectOnUnauthorized) {
+          handleUnauthorized()
+        }
+        resolve({
+          statusCode: response.statusCode,
+          body: parseBody(response.data)
+        })
+      },
+      fail: () => {
+        resolve({
+          statusCode: 0,
+          body: null
+        })
+      }
+    })
+  })
+}

@@ -14,7 +14,7 @@
 
 			<view class="summary-card">
 				<view class="summary-item">
-					<text class="summary-value">{{ services.length }}</text>
+					<text class="summary-value">{{ totalCount }}</text>
 					<text class="summary-label">全部服务</text>
 				</view>
 				<view class="summary-line"></view>
@@ -41,7 +41,7 @@
 			<view v-else class="service-list">
 				<view v-for="service in services" :key="service.id" class="service-card">
 					<view class="service-main-row">
-						<image class="service-cover" :src="service.coverImage" mode="aspectFill"></image>
+						<image class="service-cover" :src="service.coverUrl" mode="aspectFill"></image>
 						<view class="service-main">
 							<view class="service-head">
 								<text class="service-title">{{ service.title }}</text>
@@ -49,8 +49,8 @@
 									<text class="status-text" :class="service.status == '审核中' ? 'status-text-pending' : service.status == '下架' ? 'status-text-offline' : ''">{{ service.status }}</text>
 								</view>
 							</view>
-							<text class="service-meta">{{ service.duration }} · 已售 {{ service.soldCount }} 次</text>
-							<text class="service-price">{{ service.price }}</text>
+							<text class="service-meta">{{ service.durationMinutes }} 分钟 · 已售 {{ service.soldCount }} 次</text>
+							<text class="service-price">{{ service.priceDisplay }}</text>
 						</view>
 					</view>
 					<view class="service-action-row">
@@ -58,7 +58,7 @@
 							<text class="action-text">编辑</text>
 						</view>
 						<view class="action-button" @click="toggleStatus(service.id)">
-							<text class="action-text">{{ service.status == '上架' ? '下架' : '上架' }}</text>
+							<text class="action-text">{{ service.status == '上架' ? '下架' : service.status == '下架' ? '上架' : service.status == '草稿' ? '提交审核' : service.status == '审核通过' ? '上架' : '查看详情' }}</text>
 						</view>
 					</view>
 				</view>
@@ -73,28 +73,43 @@
 </template>
 
 <script setup lang="uts">
-	import { getProviderManageServices, toggleProviderService } from '../../services/service-container.uts'
-	import type { ProviderManageServiceItem } from '../../types/models.uts'
+	import {
+		listProviderServices,
+		offlineProviderService,
+		onlineProviderService,
+		submitProviderServiceReview
+	} from '../../services/service-container.uts'
+	import type { ProviderServiceData } from '../../types/models.uts'
 
-	const services = ref<ProviderManageServiceItem[]>(getProviderManageServices())
+	const services = ref<ProviderServiceData[]>([])
+	const totalCount = ref(0)
 
 	const onlineCount = ref(0)
 	const totalSold = ref(0)
+	const pendingCount = ref(0)
 
-	function refreshStats() {
-		let online = 0
-		let sold = 0
-		for (let i = 0; i < services.value.length; i++) {
-			if (services.value[i].status == '上架') {
-				online++
+	function refreshServices() {
+		listProviderServices('', 1, 100).then((result) => {
+			if (!result.ok || result.data == null) {
+				uni.showToast({
+					title: result.message,
+					position: 'bottom',
+					icon: 'error'
+				})
+				return
 			}
-			sold += services.value[i].soldCount
-		}
-		onlineCount.value = online
-		totalSold.value = sold
+			services.value = result.data.items
+			totalCount.value = result.data.totalCount
+			onlineCount.value = result.data.onlineCount
+			totalSold.value = result.data.soldCount
+			pendingCount.value = result.data.pendingCount
+		})
 	}
 
-	refreshStats()
+	onShow(() => {
+		refreshServices()
+	})
+
 
 	function statusClass(status: string): string {
 		if (status == '上架') {
@@ -119,13 +134,30 @@
 	}
 
 	function toggleStatus(id: string) {
-		const result = toggleProviderService(id)
-		services.value = getProviderManageServices()
-		refreshStats()
-		uni.showToast({
-			title: result.message,
-			position: 'bottom',
-			icon: result.ok ? 'success' : 'error'
+		const target = services.value.find((item: ProviderServiceData) : boolean => item.id == id)
+		if (target == null) {
+			return
+		}
+		const request = target.status == '上架'
+			? offlineProviderService(id, target.version)
+			: target.status == '下架'
+				? onlineProviderService(id, target.version)
+				: target.status == '草稿' || target.status == '审核通过'
+					? target.status == '草稿' ? submitProviderServiceReview(id, target.version) : onlineProviderService(id, target.version)
+					: null
+		if (request == null) {
+			uni.navigateTo({
+				url: '/pages/provider/service-edit?serviceId=' + encodeURIComponent(id)
+			})
+			return
+		}
+		request.then((result) => {
+			uni.showToast({
+				title: result.message,
+				position: 'bottom',
+				icon: result.ok ? 'success' : 'error'
+			})
+			refreshServices()
 		})
 	}
 

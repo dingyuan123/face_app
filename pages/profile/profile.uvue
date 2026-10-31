@@ -11,13 +11,14 @@
 					</view>
 
 					<view v-if="profile != null" class="profile-card">
-						<image class="profile-avatar" :src="profile.avatar" mode="aspectFill"></image>
+						<image class="profile-avatar" :src="profileAvatarSource()" mode="aspectFill"></image>
 						<view class="profile-copy">
-							<text class="profile-name">{{ profile.displayName }}</text>
-							<text class="profile-meta">{{ profile.city }} · {{ profile.level }}</text>
+							<text class="profile-name">{{ profileDisplayName() }}</text>
+							<text class="profile-meta">{{ profileMetaText() }}</text>
 							<view class="identity-pill">
 								<text class="identity-pill-text">{{ identityLabel }}</text>
 							</view>
+							<text v-if="profileSignatureText().length > 0" class="profile-signature">{{ profileSignatureText() }}</text>
 						</view>
 						<view class="edit-button" @click="showEditTip">
 							<text class="edit-text">编辑资料</text>
@@ -115,12 +116,47 @@
 
 <script setup lang="uts">
 		import StatusPill from '../../components/status-pill.uvue'
-	import { getApplicationHistory, getProfileSummary } from '../../services/service-container.uts'
-	import type { ProfileSummary } from '../../types/models.uts'
-	import { logout, sessionState } from '../../state/session-state.uts'
+	import { getProfileSummary, getProviderApplication, getUserProfile } from '../../services/service-container.uts'
+	import type { ProfileSummary, UserProfile } from '../../types/models.uts'
+	import { sessionState } from '../../state/session-state.uts'
+	import { logoutFromApi } from '../../services/service-container.uts'
 	import { openLogin, openProviderApply, PROFILE_ROUTE, ORDER_LIST_ROUTE, FAVORITES_ROUTE, FOLLOWING_ROUTE, SETTINGS_ROUTE, MY_MOMENTS_ROUTE, WALLET_ROUTE, COUPONS_ROUTE, MEMBERSHIP_ROUTE, ID_VERIFY_ROUTE, PROFILE_EDIT_ROUTE, MY_REVIEWS_ROUTE, ABOUT_ROUTE, HELP_ROUTE, PROVIDER_DASHBOARD_ROUTE } from '../../router/route-guard.uts'
 
 	const profile = ref<ProfileSummary | null>(null)
+	const userProfile = ref<UserProfile | null>(null)
+
+	// UniApp x/Vapor 模板中避免直接读取可空对象属性，统一通过安全函数取值。
+	function profileAvatarSource(): string {
+		const value = userProfile.value
+		if (value == null || value.avatarUrl.length == 0) {
+			return '/static/brand/app-logo.png'
+		}
+		return value.avatarUrl
+	}
+
+	function profileDisplayName(): string {
+		const value = userProfile.value
+		if (value != null && value.nickname.length > 0) {
+			return value.nickname
+		}
+		if (profile.value != null && profile.value.displayName.length > 0) {
+			return profile.value.displayName
+		}
+		return 'FaceTo 用户'
+	}
+
+	function profileMetaText(): string {
+		const value = userProfile.value
+		const fallback = profile.value
+		const cityText = value != null && value.cityName.length > 0 ? value.cityName : (fallback != null ? fallback.city : '')
+		const levelText = value != null && value.trustLevelName.length > 0 ? value.trustLevelName : (fallback != null ? fallback.level : '安心用户')
+		return cityText + ' · ' + levelText
+	}
+
+	function profileSignatureText(): string {
+		const value = userProfile.value
+		return value == null ? '' : value.signature
+	}
 
 	type QuickItem = {
 		name: string,
@@ -141,6 +177,25 @@
 
 	onShow(() => {
 		profile.value = getProfileSummary()
+		// 登录后从 /users/me/profile/ 同步真实资料，并刷新服务者申请状态。
+		if (sessionState.loggedIn) {
+			getUserProfile().then((result) => {
+				if (result.ok && result.profile != null) {
+					userProfile.value = result.profile
+					profile.value = {
+						userId: sessionState.userId,
+						displayName: result.profile.nickname.length > 0 ? result.profile.nickname : sessionState.displayName,
+						avatar: result.profile.avatarUrl,
+						city: result.profile.cityName,
+						level: result.profile.trustLevelName.length > 0 ? result.profile.trustLevelName : '安心用户',
+						orderCount: profile.value != null ? profile.value.orderCount : 0,
+						favoriteCount: profile.value != null ? profile.value.favoriteCount : 0,
+						followingCount: profile.value != null ? profile.value.followingCount : 0
+					}
+				}
+			})
+			getProviderApplication()
+		}
 	})
 
 	const identityLabel = computed(() : string => {
@@ -311,12 +366,13 @@
 	}
 
 	function logoutFromProfile() {
-		logout()
-		profile.value = null
-		uni.showToast({
-			title: '已退出登录，身份选择已保留',
-			position: 'bottom',
-			icon: 'success'
+		logoutFromApi().then((result) => {
+			profile.value = null
+			uni.showToast({
+				title: result.ok ? '已退出登录，身份和申请状态已清理' : '已退出登录，服务端会话清理稍后重试',
+				position: 'bottom',
+				icon: result.ok ? 'success' : 'none'
+			})
 		})
 	}
 
@@ -398,6 +454,13 @@
 		margin-top: 5px;
 		font-size: 11px;
 		color: rgba(255, 255, 255, 0.86);
+	}
+
+	.profile-signature {
+		margin-top: 6px;
+		font-size: 12px;
+		line-height: 18px;
+		color: rgba(255, 255, 255, 0.88);
 	}
 
 	.identity-pill {

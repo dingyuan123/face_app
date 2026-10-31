@@ -41,9 +41,9 @@
 
 		<facetof-button
 			class="continue-button"
-			label="继续"
+			:label="submitting ? '提交中...' : '继续'"
 			tone="gradient"
-			:disabled="selected == 'unset'"
+			:disabled="selected == 'unset' || submitting"
 			@press="continueSelection"
 		></facetof-button>
 	</scroll-view>
@@ -51,12 +51,17 @@
 
 <script setup lang="uts">
 	import FacetofButton from '../../components/facetof-button.uvue'
-	import { sessionState, setIdentity } from '../../state/session-state.uts'
-	import { finishAuthenticatedNavigation, openProviderApply, HOME_ROUTE } from '../../router/route-guard.uts'
+	import { sessionState } from '../../state/session-state.uts'
+	import { selectInitialRole } from '../../services/service-container.uts'
+	import { finishAuthenticatedNavigation, openProviderApply } from '../../router/route-guard.uts'
 
 	const selected = ref(sessionState.identity == 'unset' ? 'unset' : sessionState.identity)
+	const submitting = ref(false)
 
 	function continueSelection() {
+		if (submitting.value) {
+			return
+		}
 		if (selected.value == 'unset') {
 			uni.showToast({
 				title: '请选择身份',
@@ -66,13 +71,24 @@
 			return
 		}
 
-		setIdentity(selected.value)
-		if (selected.value == 'provider') {
-			openProviderApply()
-			return
-		}
-
-		finishAuthenticatedNavigation('已选择普通用户身份')
+		// 身份选择由后端接口确认后再跳转，避免只写本地状态。
+		submitting.value = true
+		selectInitialRole(selected.value).then((result) => {
+			submitting.value = false
+			uni.showToast({
+				title: result.message,
+				position: 'bottom',
+				icon: result.ok ? 'success' : 'error'
+			})
+			if (!result.ok) {
+				return
+			}
+			if (selected.value == 'provider') {
+				openProviderApply()
+				return
+			}
+			finishAuthenticatedNavigation('')
+		})
 	}
 </script>
 

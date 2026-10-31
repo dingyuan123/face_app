@@ -82,7 +82,8 @@ export function openProviderApply() {
 }
 
 export function finishAuthenticatedNavigation(resumeMessage: string) {
-  if (sessionState.identity == 'unset') {
+  // 身份是否需要选择以后端会话结果为准，不使用退出前残留的本地身份。
+  if (sessionState.requiresIdentitySelection || sessionState.identity == 'unset') {
     uni.reLaunch({
       url: IDENTITY_ROUTE
     })

@@ -10,7 +10,17 @@ type SessionState = {
   rejectionReason: string,
   pendingAction: string,
   pendingRoute: string,
-  pendingPayload: string
+  pendingPayload: string,
+  accessToken: string,
+  refreshToken: string,
+  tokenType: string,
+  tokenExpiresAt: number,
+  refreshExpiresAt: number,
+  userStatus: string,
+  requiresIdentitySelection: boolean,
+  primaryRole: string,
+  defaultWorkspace: string,
+  providerStatus: string
 }
 
 const SESSION_KEY = 'faceto.session.v1'
@@ -25,7 +35,17 @@ export const sessionState = reactive({
   rejectionReason: '',
   pendingAction: '',
   pendingRoute: '',
-  pendingPayload: ''
+  pendingPayload: '',
+  accessToken: '',
+  refreshToken: '',
+  tokenType: '',
+  tokenExpiresAt: 0,
+  refreshExpiresAt: 0,
+  userStatus: '',
+  requiresIdentitySelection: false,
+  primaryRole: '',
+  defaultWorkspace: '',
+  providerStatus: ''
 } as SessionState)
 
 function persistSession() {
@@ -49,6 +69,16 @@ function loadSession() {
     sessionState.pendingAction = saved.pendingAction
     sessionState.pendingRoute = saved.pendingRoute
     sessionState.pendingPayload = saved.pendingPayload
+    sessionState.accessToken = typeof saved.accessToken == 'string' ? saved.accessToken : ''
+    sessionState.refreshToken = typeof saved.refreshToken == 'string' ? saved.refreshToken : ''
+    sessionState.tokenType = typeof saved.tokenType == 'string' ? saved.tokenType : ''
+    sessionState.tokenExpiresAt = typeof saved.tokenExpiresAt == 'number' ? saved.tokenExpiresAt : 0
+    sessionState.refreshExpiresAt = typeof saved.refreshExpiresAt == 'number' ? saved.refreshExpiresAt : 0
+    sessionState.userStatus = typeof saved.userStatus == 'string' ? saved.userStatus : ''
+    sessionState.requiresIdentitySelection = saved.requiresIdentitySelection == true
+    sessionState.primaryRole = typeof saved.primaryRole == 'string' ? saved.primaryRole : ''
+    sessionState.defaultWorkspace = typeof saved.defaultWorkspace == 'string' ? saved.defaultWorkspace : ''
+    sessionState.providerStatus = typeof saved.providerStatus == 'string' ? saved.providerStatus : ''
   } catch (e) {
     uni.removeStorageSync(SESSION_KEY)
   }
@@ -61,15 +91,150 @@ export function setLoginUser(user: AuthUser) {
   sessionState.userId = user.id
   sessionState.displayName = user.displayName
   sessionState.providerPermission = false
+  sessionState.accessToken = ''
+  sessionState.refreshToken = ''
+  sessionState.tokenType = ''
+  sessionState.tokenExpiresAt = 0
+  sessionState.refreshExpiresAt = 0
+  sessionState.userStatus = ''
+  sessionState.requiresIdentitySelection = false
+  sessionState.primaryRole = ''
+  sessionState.defaultWorkspace = ''
+  sessionState.providerStatus = ''
   persistSession()
 }
 
+export function setAuthSession(
+  user: AuthUser,
+  accessToken: string,
+  refreshToken: string,
+  tokenType: string,
+  expiresIn: number,
+  refreshExpiresIn: number,
+  userStatus: string,
+  requiresIdentitySelection: boolean
+) {
+  sessionState.loggedIn = true
+  sessionState.userId = user.id
+  sessionState.displayName = user.displayName
+  sessionState.providerPermission = false
+  sessionState.accessToken = accessToken
+  sessionState.refreshToken = refreshToken
+  sessionState.tokenType = tokenType
+  sessionState.tokenExpiresAt = Date.now() + expiresIn * 1000
+  sessionState.refreshExpiresAt = Date.now() + refreshExpiresIn * 1000
+  sessionState.userStatus = userStatus
+  sessionState.requiresIdentitySelection = requiresIdentitySelection
+  sessionState.primaryRole = ''
+  sessionState.defaultWorkspace = ''
+  sessionState.providerStatus = ''
+  if (requiresIdentitySelection) {
+    sessionState.identity = 'unset'
+  }
+  persistSession()
+}
+
+// 同步后端首次身份选择结果；身份与服务者权限仍保持独立管理。
+export function setInitialRoleState(
+  identity: string,
+  primaryRole: string,
+  defaultWorkspace: string,
+  providerStatus: string,
+  requiresIdentitySelection: boolean
+) {
+  sessionState.identity = identity
+  sessionState.primaryRole = primaryRole
+  sessionState.defaultWorkspace = defaultWorkspace
+  sessionState.providerStatus = providerStatus
+  sessionState.applicationStatus = normalizeApplicationStatus(providerStatus)
+  sessionState.requiresIdentitySelection = requiresIdentitySelection
+  sessionState.providerPermission = false
+  persistSession()
+}
+
+// 登录、刷新 Token 后以后端 /users/me/ 返回结果作为身份和申请状态来源。
+export function setBackendSessionState(
+  primaryRole: string,
+  defaultWorkspace: string,
+  providerStatus: string,
+  requiresIdentitySelection: boolean
+) {
+  // /users/me/ 成功返回即表示当前账号处于登录状态。
+  sessionState.loggedIn = true
+  sessionState.primaryRole = primaryRole
+  sessionState.defaultWorkspace = defaultWorkspace
+  sessionState.providerStatus = providerStatus
+  sessionState.applicationStatus = normalizeApplicationStatus(providerStatus)
+  sessionState.requiresIdentitySelection = requiresIdentitySelection
+  if (requiresIdentitySelection) {
+    sessionState.identity = 'unset'
+  } else if (primaryRole.toLowerCase() == 'user') {
+    sessionState.identity = 'user'
+  } else if (primaryRole.toLowerCase() == 'provider') {
+    sessionState.identity = 'provider'
+  } else {
+    // 后端没有返回可识别主角色时不猜测身份，交给身份选择页处理。
+    sessionState.identity = 'unset'
+  }
+  sessionState.providerPermission = false
+  persistSession()
+}
+
+function normalizeApplicationStatus(status: string): string {
+  const value = status.toLowerCase()
+  if (value == 'approved' || value.indexOf('approve') >= 0) {
+    return 'approved'
+  }
+  if (value == 'rejected' || value.indexOf('reject') >= 0) {
+    return 'rejected'
+  }
+  if (value == 'cancelled' || value == 'canceled' || value.indexOf('cancel') >= 0) {
+    return 'cancelled'
+  }
+  if (value.indexOf('not') >= 0 || value.indexOf('none') >= 0 || value.indexOf('unsubmit') >= 0) {
+    return 'none'
+  }
+  if (value == 'pending' || value.indexOf('review') >= 0 || value.indexOf('under_review') >= 0) {
+    return 'pending'
+  }
+  return 'none'
+}
+
+export function getAccessToken(): string {
+  return sessionState.accessToken
+}
+
+export function getRefreshToken(): string {
+  return sessionState.refreshToken
+}
+
+export function isLoginSessionExpired(): boolean {
+  return sessionState.tokenExpiresAt > 0 && sessionState.tokenExpiresAt <= Date.now()
+}
+
+// 退出登录后清理全部账号派生状态，下一次登录以后端会话重新判断身份和申请状态。
 export function logout() {
   sessionState.loggedIn = false
   sessionState.userId = ''
   sessionState.displayName = ''
+  sessionState.identity = 'unset'
+  sessionState.applicationStatus = 'none'
   sessionState.providerPermission = false
-  persistSession()
+  sessionState.rejectionReason = ''
+  sessionState.pendingAction = ''
+  sessionState.pendingRoute = ''
+  sessionState.pendingPayload = ''
+  sessionState.accessToken = ''
+  sessionState.refreshToken = ''
+  sessionState.tokenType = ''
+  sessionState.tokenExpiresAt = 0
+  sessionState.refreshExpiresAt = 0
+  sessionState.userStatus = ''
+  sessionState.requiresIdentitySelection = false
+  sessionState.primaryRole = ''
+  sessionState.defaultWorkspace = ''
+  sessionState.providerStatus = ''
+  uni.removeStorageSync(SESSION_KEY)
 }
 
 export function setIdentity(identity: string) {
@@ -79,6 +244,7 @@ export function setIdentity(identity: string) {
 
 export function setApplicationStatus(status: string) {
   sessionState.applicationStatus = status
+  sessionState.providerStatus = status
   if (status != 'approved') {
     sessionState.providerPermission = false
   }

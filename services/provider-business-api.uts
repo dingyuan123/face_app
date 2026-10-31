@@ -1,0 +1,508 @@
+import {
+  ActionOutcome,
+  ProviderOptionItem,
+  ProviderOptionListResult,
+  ProviderProfileData,
+  ProviderProfileResult,
+  ProviderProfileUpdateDraft,
+  ProviderServiceData,
+  ProviderServiceDraftInput,
+  ProviderServiceListData,
+  ProviderServiceListResult,
+  ProviderServiceResult
+} from '../types/models.uts'
+import {
+  businessCode,
+  businessMessage,
+  numberValue,
+  payload,
+  requestDelete,
+  requestGet,
+  requestPatch,
+  requestPost,
+  requestUpload,
+  stringValue,
+  HttpResult
+} from './api-client.uts'
+import { getAccessToken } from '../state/session-state.uts'
+import { API_CONFIG } from './api-config.uts'
+
+// 服务者资料和服务管理接口；媒体统一使用短期 display_url。
+type ProviderMediaUploadResult = {
+  ok: boolean,
+  mediaId: string,
+  displayUrl: string
+}
+
+function apiGet(path: string): Promise<HttpResult> {
+  return requestGet(path, getAccessToken())
+}
+
+function apiPost(path: string, data: any, idempotencyKey: string): Promise<HttpResult> {
+  return requestPost(path, data, idempotencyKey, getAccessToken())
+}
+
+function apiPatch(path: string, data: any, idempotencyKey: string): Promise<HttpResult> {
+  return requestPatch(path, data, idempotencyKey, getAccessToken())
+}
+
+function apiDelete(path: string): Promise<HttpResult> {
+  return requestDelete(path, getAccessToken())
+}
+
+function apiUpload(path: string, filePath: string, formData: any, idempotencyKey: string): Promise<HttpResult> {
+  return requestUpload(path, filePath, 'file', formData, idempotencyKey, getAccessToken())
+}
+
+function displayUrl(media: any): string {
+  if (media == null) {
+    return ''
+  }
+  const url = stringValue(media, 'display_url')
+  if (url.length > 0) {
+    return absoluteUrl(url)
+  }
+  return absoluteUrl(stringValue(media, 'content_url'))
+}
+
+function absoluteUrl(url: string): string {
+  if (url.length == 0) {
+    return ''
+  }
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url
+  }
+  return API_CONFIG.origin + url
+}
+
+function mediaId(media: any): string {
+  return media == null ? '' : stringValue(media, 'media_id')
+}
+
+function mapOptionList(body: any): ProviderOptionItem[] {
+  const source = payload(body)
+  const result: ProviderOptionItem[] = []
+  if (source == null) {
+    return result
+  }
+  for (let i = 0; i < source.length; i++) {
+    const item = source[i]
+    result.push({
+      code: stringValue(item, 'code'),
+      name: stringValue(item, 'name'),
+      category: stringValue(item, 'category'),
+      sortOrder: numberValue(item, 'sort_order')
+    })
+  }
+  return result
+}
+
+function mapProfile(body: any): ProviderProfileData {
+  const data = payload(body)
+  const avatar = data['avatar_media']
+  const photos = data['photo_media']
+  const photoUrls: string[] = []
+  const photoIds: string[] = []
+  if (photos != null) {
+    for (let i = 0; i < photos.length; i++) {
+      const photo = photos[i]
+      const url = displayUrl(photo)
+      if (url.length > 0) {
+        photoUrls.push(url)
+      }
+      const id = mediaId(photo)
+      if (id.length > 0) {
+        photoIds.push(id)
+      }
+    }
+  }
+  const categoryCodes: string[] = []
+  const rawCategories = data['category_codes']
+  if (rawCategories != null) {
+    for (let i = 0; i < rawCategories.length; i++) {
+      categoryCodes.push(stringValue(rawCategories[i], 'code').length > 0 ? stringValue(rawCategories[i], 'code') : rawCategories[i].toString())
+    }
+  }
+  const tagCodes: string[] = []
+  const rawTags = data['tag_codes']
+  if (rawTags != null) {
+    for (let i = 0; i < rawTags.length; i++) {
+      tagCodes.push(stringValue(rawTags[i], 'code').length > 0 ? stringValue(rawTags[i], 'code') : rawTags[i].toString())
+    }
+  }
+  return {
+    version: numberValue(data, 'version'),
+    nickname: stringValue(data, 'nickname'),
+    signature: stringValue(data, 'signature'),
+    introduction: stringValue(data, 'introduction'),
+    avatarUrl: displayUrl(avatar),
+    avatarMediaId: mediaId(avatar),
+    photoUrls: photoUrls,
+    photoMediaIds: photoIds,
+    categoryCodes: categoryCodes,
+    tagCodes: tagCodes,
+    updatedAt: stringValue(data, 'updated_at')
+  }
+}
+
+function mapService(body: any): ProviderServiceData {
+  const data = payload(body)
+  const price = data['price']
+  const cover = data['cover_media']
+  const gallery = data['gallery_media']
+  const galleryUrls: string[] = []
+  const galleryIds: string[] = []
+  if (gallery != null) {
+    for (let i = 0; i < gallery.length; i++) {
+      const item = gallery[i]
+      const url = displayUrl(item)
+      if (url.length > 0) {
+        galleryUrls.push(url)
+      }
+      const id = mediaId(item)
+      if (id.length > 0) {
+        galleryIds.push(id)
+      }
+    }
+  }
+  const tagCodes: string[] = []
+  const rawTags = data['tag_codes']
+  if (rawTags != null) {
+    for (let i = 0; i < rawTags.length; i++) {
+      tagCodes.push(stringValue(rawTags[i], 'code').length > 0 ? stringValue(rawTags[i], 'code') : rawTags[i].toString())
+    }
+  }
+  return {
+    id: stringValue(data, 'id'),
+    version: numberValue(data, 'version'),
+    title: stringValue(data, 'title'),
+    categoryCode: stringValue(data, 'category_code'),
+    currency: stringValue(price, 'currency'),
+    priceAmountMinor: numberValue(price, 'amount_minor'),
+    priceDisplay: stringValue(data, 'price_display'),
+    durationMinutes: numberValue(data, 'duration_minutes'),
+    introduction: stringValue(data, 'introduction'),
+    coverUrl: displayUrl(cover),
+    coverMediaId: mediaId(cover),
+    galleryUrls: galleryUrls,
+    galleryMediaIds: galleryIds,
+    tagCodes: tagCodes,
+    locationType: stringValue(data, 'location_type'),
+    status: normalizeServiceStatus(stringValue(data, 'status')),
+    rejectReason: stringValue(data, 'reject_reason'),
+    soldCount: numberValue(data, 'sold_count'),
+    updatedAt: stringValue(data, 'updated_at')
+  }
+}
+
+function normalizeServiceStatus(status: string): string {
+  const value = status.toLowerCase()
+  if (value.indexOf('offline') >= 0) {
+    return '下架'
+  }
+  if (value.indexOf('online') >= 0 || value.indexOf('published') >= 0) {
+    return '上架'
+  }
+  if (value.indexOf('reject') >= 0) {
+    return '审核拒绝'
+  }
+  if (value.indexOf('approve') >= 0) {
+    return '审核通过'
+  }
+  if (value.indexOf('pending') >= 0 || value.indexOf('review') >= 0) {
+    return '审核中'
+  }
+  if (value.indexOf('draft') >= 0) {
+    return '草稿'
+  }
+  return '草稿'
+}
+
+function mapServiceList(body: any): ProviderServiceListData {
+  const data = payload(body)
+  const source = data['items']
+  const items: ProviderServiceData[] = []
+  if (source != null) {
+    for (let i = 0; i < source.length; i++) {
+      items.push(mapService(source[i]))
+    }
+  }
+  const summary = data['summary']
+  return {
+    items: items,
+    total: numberValue(data, 'total'),
+    page: numberValue(data, 'page'),
+    pageSize: numberValue(data, 'page_size'),
+    totalCount: numberValue(summary, 'total'),
+    onlineCount: numberValue(summary, 'online'),
+    pendingCount: numberValue(summary, 'pending'),
+    soldCount: numberValue(summary, 'sold_count')
+  }
+}
+
+function uploadProviderMedia(filePath: string, purpose: string): Promise<ProviderMediaUploadResult> {
+  return apiUpload('/media/uploads/', filePath, {
+    purpose: purpose
+  }, 'faceto-provider-media-' + Date.now().toString()).then((result: HttpResult) => {
+    if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+      return {
+        ok: false,
+        mediaId: '',
+        displayUrl: ''
+      }
+    }
+    const data = payload(result.body)
+    return {
+      ok: true,
+      mediaId: stringValue(data, 'media_id'),
+      displayUrl: displayUrl(data)
+    }
+  })
+}
+
+export function getProviderProfile(): Promise<ProviderProfileResult> {
+  return apiGet('/provider-profile/me/').then((result: HttpResult) => {
+    if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+      return { ok: false, code: 'PROVIDER_PROFILE_LOAD_FAILED', message: businessMessage(result), profile: null }
+    }
+    return { ok: true, code: 'PROVIDER_PROFILE_LOADED', message: '服务者资料已加载', profile: mapProfile(result.body) }
+  })
+}
+
+export function updateProviderProfile(draft: ProviderProfileUpdateDraft): Promise<ProviderProfileResult> {
+  const submit = (avatarId: string, photoIds: string[]) => {
+    const body: any = {
+      expected_version: draft.expectedVersion,
+      nickname: draft.nickname,
+      signature: draft.signature,
+      introduction: draft.introduction,
+      category_codes: draft.categoryCodes,
+      tag_codes: draft.tagCodes
+    }
+    if (avatarId.length > 0) {
+      body['avatar_media_id'] = avatarId
+    }
+    if (photoIds.length > 0) {
+      body['photo_media_ids'] = photoIds
+    }
+    return apiPatch('/provider-profile/me/', body, 'faceto-provider-profile-' + Date.now().toString()).then((result: HttpResult) => {
+      if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+        return { ok: false, code: 'PROVIDER_PROFILE_UPDATE_FAILED', message: businessMessage(result), profile: null }
+      }
+      return { ok: true, code: 'PROVIDER_PROFILE_UPDATED', message: '服务者资料已保存', profile: mapProfile(result.body) }
+    })
+  }
+
+  const uploadPhotos = (index: number, ids: string[], avatarId: string): Promise<ProviderProfileResult> => {
+    if (index >= draft.photoPaths.length) {
+      return submit(avatarId, ids)
+    }
+    const path = draft.photoPaths[index]
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      const next: string[] = []
+      for (let i = 0; i < ids.length; i++) {
+        next.push(ids[i])
+      }
+      const previousId = index < draft.photoMediaIds.length ? draft.photoMediaIds[index] : ''
+      if (previousId.length > 0) {
+        next.push(previousId)
+      }
+      return uploadPhotos(index + 1, next, avatarId)
+    }
+    return uploadProviderMedia(path, 'PROVIDER_PROFILE_PHOTO').then((media: ProviderMediaUploadResult) => {
+      if (!media.ok) {
+        return { ok: false, code: 'PROVIDER_PHOTO_UPLOAD_FAILED', message: '照片上传失败，请重试', profile: null }
+      }
+      const next: string[] = []
+      for (let i = 0; i < ids.length; i++) {
+        next.push(ids[i])
+      }
+      next.push(media.mediaId)
+      return uploadPhotos(index + 1, next, avatarId)
+    })
+  }
+
+  const avatarPath = draft.avatarPath
+  if (avatarPath.length > 0 && !avatarPath.startsWith('http://') && !avatarPath.startsWith('https://')) {
+    return uploadProviderMedia(avatarPath, 'PROVIDER_PROFILE_AVATAR').then((avatar: ProviderMediaUploadResult) => {
+      if (!avatar.ok) {
+        return { ok: false, code: 'PROVIDER_AVATAR_UPLOAD_FAILED', message: '头像上传失败，请重试', profile: null }
+      }
+      return uploadPhotos(0, [], avatar.mediaId)
+    })
+  }
+  return uploadPhotos(0, [], draft.avatarMediaId)
+}
+
+export function getProviderTags(): Promise<ProviderOptionListResult> {
+  return apiGet('/provider-options/provider-tags/').then((result: HttpResult) => {
+    if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+      return { ok: false, code: 'PROVIDER_TAG_OPTIONS_FAILED', message: businessMessage(result), items: [] }
+    }
+    return { ok: true, code: 'PROVIDER_TAG_OPTIONS_LOADED', message: '服务者标签已加载', items: mapOptionList(result.body) }
+  })
+}
+
+export function getServiceCategories(): Promise<ProviderOptionListResult> {
+  return apiGet('/provider-options/service-categories/').then((result: HttpResult) => {
+    if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+      return { ok: false, code: 'SERVICE_CATEGORY_OPTIONS_FAILED', message: businessMessage(result), items: [] }
+    }
+    return { ok: true, code: 'SERVICE_CATEGORY_OPTIONS_LOADED', message: '服务类目已加载', items: mapOptionList(result.body) }
+  })
+}
+
+export function getServiceTags(): Promise<ProviderOptionListResult> {
+  return apiGet('/provider-options/service-tags/').then((result: HttpResult) => {
+    if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+      return { ok: false, code: 'SERVICE_TAG_OPTIONS_FAILED', message: businessMessage(result), items: [] }
+    }
+    return { ok: true, code: 'SERVICE_TAG_OPTIONS_LOADED', message: '服务标签已加载', items: mapOptionList(result.body) }
+  })
+}
+
+export function getProviderServices(status: string, page: number, pageSize: number): Promise<ProviderServiceListResult> {
+  let path = '/provider-services/?page=' + page.toString() + '&page_size=' + pageSize.toString()
+  if (status.length > 0) {
+    path += '&status=' + encodeURIComponent(status)
+  }
+  return apiGet(path).then((result: HttpResult) => {
+    if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+      return { ok: false, code: 'SERVICE_LIST_FAILED', message: businessMessage(result), data: null }
+    }
+    return { ok: true, code: 'SERVICE_LIST_LOADED', message: '服务列表已加载', data: mapServiceList(result.body) }
+  })
+}
+
+export function getProviderService(id: string): Promise<ProviderServiceResult> {
+  return apiGet('/provider-services/' + encodeURIComponent(id) + '/').then((result: HttpResult) => {
+    if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+      return { ok: false, code: 'SERVICE_LOAD_FAILED', message: businessMessage(result), service: null }
+    }
+    return { ok: true, code: 'SERVICE_LOADED', message: '服务已加载', service: mapService(result.body) }
+  })
+}
+
+function serviceBody(draft: ProviderServiceDraftInput): any {
+  return {
+    title: draft.title,
+    category_code: draft.categoryCode,
+    currency: draft.currency.length > 0 ? draft.currency : 'CNY',
+    price_amount_minor: draft.priceAmountMinor,
+    duration_minutes: draft.durationMinutes,
+    introduction: draft.introduction,
+    cover_media_id: draft.coverMediaId,
+    gallery_media_ids: draft.galleryMediaIds,
+    tag_codes: draft.tagCodes,
+    location_type: draft.locationType.length > 0 ? draft.locationType : 'PUBLIC_PLACE'
+  }
+}
+
+function uploadServiceMedia(draft: ProviderServiceDraftInput): Promise<ProviderServiceResult> {
+  const uploadGallery = (index: number, ids: string[], coverId: string): Promise<ProviderServiceResult> => {
+    if (index >= draft.galleryPaths.length) {
+      const body = serviceBody({
+        id: draft.id,
+        expectedVersion: draft.expectedVersion,
+        title: draft.title,
+        categoryCode: draft.categoryCode,
+        currency: draft.currency,
+        priceAmountMinor: draft.priceAmountMinor,
+        durationMinutes: draft.durationMinutes,
+        introduction: draft.introduction,
+        coverPath: draft.coverPath,
+        coverMediaId: coverId,
+        galleryPaths: draft.galleryPaths,
+        galleryMediaIds: ids,
+        tagCodes: draft.tagCodes,
+        locationType: draft.locationType
+      })
+      if (draft.id.length == 0) {
+        return apiPost('/provider-services/', body, 'faceto-service-' + Date.now().toString()).then((result: HttpResult) => {
+          if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+            return { ok: false, code: 'SERVICE_CREATE_FAILED', message: businessMessage(result), service: null }
+          }
+          return { ok: true, code: 'SERVICE_CREATED', message: '服务草稿已创建', service: mapService(result.body) }
+        })
+      }
+      const updateBody: any = body
+      updateBody['expected_version'] = draft.expectedVersion
+      return apiPatch('/provider-services/' + encodeURIComponent(draft.id) + '/', updateBody, 'faceto-service-update-' + Date.now().toString()).then((result: HttpResult) => {
+        if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+          return { ok: false, code: 'SERVICE_UPDATE_FAILED', message: businessMessage(result), service: null }
+        }
+        return { ok: true, code: 'SERVICE_UPDATED', message: '服务已保存', service: mapService(result.body) }
+      })
+    }
+    const path = draft.galleryPaths[index]
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      const next: string[] = []
+      for (let i = 0; i < ids.length; i++) {
+        next.push(ids[i])
+      }
+      const previousId = index < draft.galleryMediaIds.length ? draft.galleryMediaIds[index] : ''
+      if (previousId.length > 0) {
+        next.push(previousId)
+      }
+      return uploadGallery(index + 1, next, coverId)
+    }
+    return uploadProviderMedia(path, 'PROVIDER_SERVICE_GALLERY').then((media: ProviderMediaUploadResult) => {
+      if (!media.ok) {
+        return { ok: false, code: 'SERVICE_GALLERY_UPLOAD_FAILED', message: '服务图集上传失败，请重试', service: null }
+      }
+      const next: string[] = []
+      for (let i = 0; i < ids.length; i++) {
+        next.push(ids[i])
+      }
+      next.push(media.mediaId)
+      return uploadGallery(index + 1, next, coverId)
+    })
+  }
+
+  const coverPath = draft.coverPath
+  if (coverPath.length > 0 && !coverPath.startsWith('http://') && !coverPath.startsWith('https://')) {
+    return uploadProviderMedia(coverPath, 'PROVIDER_SERVICE_COVER').then((cover: ProviderMediaUploadResult) => {
+      if (!cover.ok) {
+        return { ok: false, code: 'SERVICE_COVER_UPLOAD_FAILED', message: '服务封面上传失败，请重试', service: null }
+      }
+      return uploadGallery(0, [], cover.mediaId)
+    })
+  }
+  return uploadGallery(0, [], draft.coverMediaId)
+}
+
+export function createOrUpdateProviderService(draft: ProviderServiceDraftInput): Promise<ProviderServiceResult> {
+  return uploadServiceMedia(draft)
+}
+
+export function deleteProviderService(id: string, expectedVersion: number): Promise<ActionOutcome> {
+  return apiDelete('/provider-services/' + encodeURIComponent(id) + '/?expected_version=' + expectedVersion.toString()).then((result: HttpResult) => {
+    if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+      return { ok: false, code: 'SERVICE_DELETE_FAILED', message: businessMessage(result) }
+    }
+    return { ok: true, code: 'SERVICE_DELETED', message: '服务已删除' }
+  })
+}
+
+function actionProviderService(path: string, id: string, expectedVersion: number, successMessage: string): Promise<ProviderServiceResult> {
+  return apiPost('/provider-services/' + encodeURIComponent(id) + '/' + path + '/', {
+    expected_version: expectedVersion
+  }, 'faceto-service-action-' + Date.now().toString()).then((result: HttpResult) => {
+    if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+      return { ok: false, code: 'SERVICE_ACTION_FAILED', message: businessMessage(result), service: null }
+    }
+    return { ok: true, code: 'SERVICE_ACTION_SUCCESS', message: successMessage, service: mapService(result.body) }
+  })
+}
+
+export function onlineProviderService(id: string, expectedVersion: number): Promise<ProviderServiceResult> {
+  return actionProviderService('online', id, expectedVersion, '服务已上架')
+}
+
+export function offlineProviderService(id: string, expectedVersion: number): Promise<ProviderServiceResult> {
+  return actionProviderService('offline', id, expectedVersion, '服务已下架')
+}
+
+export function submitProviderServiceReview(id: string, expectedVersion: number): Promise<ProviderServiceResult> {
+  return actionProviderService('submit-review', id, expectedVersion, '服务已提交审核')
+}

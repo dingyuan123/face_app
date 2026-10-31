@@ -12,6 +12,7 @@
 				<status-pill :label="statusLabel" :tone="statusTone"></status-pill>
 			</view>
 			<text class="current-message">{{ currentStatusMessage }}</text>
+			<text v-if="formLocked" class="readonly-message">审核期间资料只读，不能修改或重复提交。</text>
 		</view>
 
 		<view class="benefit-card">
@@ -53,12 +54,18 @@
 				</view>
 			</view>
 
-			<text class="field-label">生活照</text>
-			<view class="life-photo" @click="chooseLifePhoto">
-				<image v-if="lifePhotoPath.length > 0" class="life-image" :src="lifePhotoPath" mode="aspectFill"></image>
-				<view v-else class="upload-empty">
+			<text class="field-label">生活照（{{ lifePhotoPaths.length }}/9）</text>
+			<text class="field-hint">请上传 3-9 张真实生活照，提交前可删除和继续添加</text>
+			<view class="life-photo-grid">
+				<view v-for="(photo, index) in lifePhotoPaths" :key="photo" class="life-photo-item">
+					<image class="life-photo-image" :src="photo" mode="aspectFill"></image>
+					<view v-if="!formLocked" class="life-photo-remove" @click="removeLifePhoto(index)">
+						<text class="life-photo-remove-text">×</text>
+					</view>
+				</view>
+				<view v-if="!formLocked && lifePhotoPaths.length < 9" class="life-photo-add" @click="chooseLifePhoto">
 					<text class="upload-plus large">＋</text>
-					<text class="upload-desc">点击上传生活照</text>
+					<text class="upload-desc">添加生活照</text>
 				</view>
 			</view>
 
@@ -67,7 +74,8 @@
 				class="textarea"
 				:value="bio"
 				maxlength="120"
-				placeholder="介绍你的服务风格、擅长领域和见面偏好"
+				:disabled="formLocked"
+				:placeholder="formLocked ? '审核期间不回显编辑' : '介绍你的服务风格、擅长领域和见面偏好'"
 				placeholder-class="placeholder"
 				@input="onBioInput"
 			></textarea>
@@ -77,7 +85,8 @@
 				class="input"
 				:value="realName"
 				maxlength="20"
-				placeholder="请输入与证件一致的真实姓名"
+				:disabled="formLocked"
+				:placeholder="formLocked ? '审核期间不回显敏感信息' : '请输入与证件一致的真实姓名'"
 				placeholder-class="placeholder"
 				@input="onRealNameInput"
 			/>
@@ -88,13 +97,21 @@
 				type="text"
 				:value="idCardNumber"
 				maxlength="18"
-				placeholder="请输入 18 位身份证号码"
+				:disabled="formLocked"
+				:placeholder="formLocked ? '审核期间不回显敏感信息' : '请输入 18 位身份证号码'"
 				placeholder-class="placeholder"
 				@input="onIdCardInput"
 			/>
 			<view class="privacy-note">
 				<text class="privacy-title">敏感信息说明</text>
 				<text class="privacy-text">真实姓名和身份证信息仅用于服务者资格审核。开发 Mock 仅保存脱敏摘要，不保存未提交表单或明文身份证号码。</text>
+			</view>
+
+			<view v-if="formLocked" class="review-summary">
+				<text class="review-summary-title">审核资料状态</text>
+				<text class="review-summary-text">实名核验：{{ reviewRealNameStatus() }}</text>
+				<text class="review-summary-text">人脸核验：{{ reviewFaceStatus() }}</text>
+				<text class="review-summary-text">真实姓名和身份证号属于敏感信息，接口不回显明文内容。</text>
 			</view>
 		</view>
 
@@ -113,9 +130,9 @@
 		</view>
 
 		<facetof-button
-			:label="submitLabel"
+			:label="submitButtonText()"
 			tone="gradient"
-			:disabled="submitting"
+			:disabled="submitting || formLocked"
 			@press="submit"
 		></facetof-button>
 		<text class="form-tip">提交后不可撤回为草稿；重新进入本页时，未提交内容会清空。</text>
@@ -125,13 +142,17 @@
 <script setup lang="uts">
 	import FacetofButton from '../../components/facetof-button.uvue'
 	import StatusPill from '../../components/status-pill.uvue'
-	import { getApplicationHistory, getLatestApplication, submitProviderApplication } from '../../services/service-container.uts'
+	import {
+		getProviderApplication,
+		submitProviderApplicationApi,
+		updateProviderApplicationApi
+	} from '../../services/service-container.uts'
 	import type { ProviderApplicationRecord } from '../../types/models.uts'
 	import { sessionState, setRejectionReason } from '../../state/session-state.uts'
 	import { openLogin } from '../../router/route-guard.uts'
 
 	const avatarPath = ref('')
-	const lifePhotoPath = ref('')
+	const lifePhotoPaths = ref<string[]>([])
 	const bio = ref('')
 	const realName = ref('')
 	const idCardNumber = ref('')
@@ -139,13 +160,56 @@
 	const history = ref<ProviderApplicationRecord[]>([])
 	const latest = ref<ProviderApplicationRecord | null>(null)
 
-	function refreshState() {
-		history.value = getApplicationHistory()
-		latest.value = getLatestApplication()
-		if (latest.value != null && latest.value.status == 'rejected') {
-			bio.value = latest.value.bio
-			realName.value = latest.value.realName
+	// UniApp x/Vapor 模板中不直接读取可空 latest 属性，避免空指针。
+	function reviewRealNameStatus(): string {
+		const value = latest.value
+		return value == null ? '' : value.realNameStatus
+	}
+
+	function reviewFaceStatus(): string {
+		const value = latest.value
+		return value == null ? '' : value.faceStatus
+	}
+
+	function submitButtonText(): string {
+		if (formLocked.value) {
+			const value = latest.value
+			return value != null && value.status == 'approved' ? '已审核通过' : '审核中，暂不能提交'
 		}
+		return submitting.value ? '提交中...' : submitLabel.value
+	}
+
+	// 审核中和已通过的申请只读展示，不允许重复提交。
+	const formLocked = computed(() : boolean => {
+		return latest.value != null && (latest.value!.status == 'pending' || latest.value!.status == 'approved')
+	})
+
+	// 每次进入页面都从后端读取当前申请状态，避免本地状态与审核结果不一致。
+	function refreshState() {
+		getProviderApplication().then((result) => {
+			if (!result.ok) {
+				uni.showToast({
+					title: result.message,
+					position: 'bottom',
+					icon: 'error'
+				})
+				return
+			}
+			latest.value = result.record
+			history.value = result.record == null ? [] : [result.record]
+			if (latest.value != null) {
+				// 展示后端允许回显的资料；真实姓名和身份证号不会由接口返回。
+				bio.value = latest.value.bio
+				avatarPath.value = latest.value.avatarAsset
+				lifePhotoPaths.value = latest.value.lifePhotoAssets
+				if (latest.value.status == 'rejected' || latest.value.status == 'cancelled') {
+					realName.value = latest.value.realName
+				} else {
+					realName.value = ''
+					idCardNumber.value = ''
+				}
+			}
+		})
 	}
 
 	onShow(() => {
@@ -169,6 +233,9 @@
 	}
 
 	function chooseAvatar() {
+		if (formLocked.value) {
+			return
+		}
 		uni.chooseImage({
 			count: 1,
 			success: (res) => {
@@ -179,15 +246,46 @@
 		})
 	}
 
+	// 生活照支持一次选择多张，剩余数量不足时限制选择上限。
 	function chooseLifePhoto() {
+		if (formLocked.value) {
+			return
+		}
+		const remaining = 9 - lifePhotoPaths.value.length
+		if (remaining <= 0) {
+			uni.showToast({
+				title: '最多上传 9 张生活照',
+				position: 'bottom',
+				icon: 'error'
+			})
+			return
+		}
 		uni.chooseImage({
-			count: 1,
+			count: remaining,
 			success: (res) => {
-				if (res.tempFilePaths.length > 0) {
-					lifePhotoPath.value = res.tempFilePaths[0]
+				const next: string[] = []
+				for (let i = 0; i < lifePhotoPaths.value.length; i++) {
+					next.push(lifePhotoPaths.value[i])
 				}
+				for (let i = 0; i < res.tempFilePaths.length && next.length < 9; i++) {
+					next.push(res.tempFilePaths[i])
+				}
+				lifePhotoPaths.value = next
 			}
 		})
+	}
+
+	function removeLifePhoto(index: number) {
+		if (formLocked.value) {
+			return
+		}
+		const next: string[] = []
+		for (let i = 0; i < lifePhotoPaths.value.length; i++) {
+			if (i != index) {
+				next.push(lifePhotoPaths.value[i])
+			}
+		}
+		lifePhotoPaths.value = next
 	}
 
 	function labelFor(status: string): string {
@@ -199,6 +297,9 @@
 		}
 		if (status == 'pending') {
 			return '审核中'
+		}
+		if (status == 'cancelled') {
+			return '已取消'
 		}
 		return '未提交'
 	}
@@ -212,6 +313,9 @@
 		}
 		if (status == 'pending') {
 			return 'warning'
+		}
+		if (status == 'cancelled') {
+			return 'neutral'
 		}
 		return 'neutral'
 	}
@@ -233,10 +337,13 @@
 		if (record.status == 'approved') {
 			return '审核已通过。工作台入口将在个人中心展示，默认登录仍进入普通用户首页。'
 		}
+		if (record.status == 'cancelled') {
+			return '申请已取消，可修改资料后重新提交。'
+		}
 		return '资料已提交，请耐心等待审核。'
 	})
 	const submitLabel = computed(() : string => {
-		return latest.value != null && latest.value!.status == 'rejected' ? '修改后重新提交' : '提交审核'
+		return latest.value != null && (latest.value!.status == 'rejected' || latest.value!.status == 'cancelled') ? '修改后重新提交' : '提交审核'
 	})
 
 	function formatDate(value: string): string {
@@ -248,28 +355,34 @@
 			return
 		}
 		submitting.value = true
-		const result = submitProviderApplication({
+		const draft = {
 			avatarPath: avatarPath.value,
-			lifePhotoPath: lifePhotoPath.value,
+			lifePhotoPaths: lifePhotoPaths.value,
 			bio: bio.value,
 			realName: realName.value,
 			idCardNumber: idCardNumber.value
-		})
-		submitting.value = false
-		uni.showToast({
-			title: result.message,
-			position: 'bottom',
-			icon: result.ok ? 'success' : 'error'
-		})
-		if (result.ok) {
-			setRejectionReason('')
-			avatarPath.value = ''
-			lifePhotoPath.value = ''
-			bio.value = ''
-			realName.value = ''
-			idCardNumber.value = ''
-			refreshState()
 		}
+		// 被拒绝或已取消的申请通过 PATCH 重新提交，携带后端版本号防止并发覆盖。
+		const request = latest.value != null && (latest.value!.status == 'rejected' || latest.value!.status == 'cancelled')
+			? updateProviderApplicationApi(draft, latest.value!, latest.value!.version)
+			: submitProviderApplicationApi(draft)
+		request.then((result) => {
+			submitting.value = false
+			uni.showToast({
+				title: result.message,
+				position: 'bottom',
+				icon: result.ok ? 'success' : 'error'
+			})
+			if (result.ok) {
+				setRejectionReason('')
+				avatarPath.value = ''
+				lifePhotoPaths.value = []
+				bio.value = ''
+				realName.value = ''
+				idCardNumber.value = ''
+				refreshState()
+			}
+		})
 	}
 </script>
 
@@ -453,20 +566,59 @@
 		color: $facetof-color-secondary-text;
 	}
 
-	.life-photo {
-		height: 154px;
+	.field-hint {
+		margin-top: 5px;
+		font-size: 11px;
+		line-height: 17px;
+		color: $facetof-color-secondary-text;
+	}
+
+	.life-photo-grid {
+		flex-direction: row;
+		flex-wrap: wrap;
 		margin-top: 10px;
+	}
+
+	.life-photo-item {
+		position: relative;
+		width: 31%;
+		height: 132px;
+		margin: 0 2% 10px 0;
+		border: 1px solid $facetof-color-border;
+		border-radius: 14px;
+	}
+
+	.life-photo-image {
+		width: 100%;
+		height: 100%;
+		border-radius: 14px;
+	}
+
+	.life-photo-remove {
+		position: absolute;
+		top: 6px;
+		right: 6px;
+		width: 24px;
+		height: 24px;
+		align-items: center;
+		justify-content: center;
+		background-color: rgba(31, 26, 23, 0.68);
+		border-radius: 50%;
+	}
+
+	.life-photo-remove-text {
+		font-size: 15px;
+		color: #FFFFFF;
+	}
+
+	.life-photo-add {
+		width: 31%;
+		height: 132px;
 		align-items: center;
 		justify-content: center;
 		background-color: $facetof-color-warm-background;
 		border: 1px solid $facetof-color-border;
-		border-radius: 16px;
-	}
-
-	.life-image {
-		width: 100%;
-		height: 154px;
-		border-radius: 16px;
+		border-radius: 14px;
 	}
 
 	.upload-empty {
@@ -527,6 +679,38 @@
 		font-size: 11px;
 		line-height: 17px;
 		color: $facetof-color-secondary-text;
+	}
+
+	.readonly-message {
+		margin-top: 8px;
+		font-size: 12px;
+		line-height: 18px;
+		color: $facetof-color-primary;
+	}
+
+	.review-summary {
+		margin-top: 12px;
+		padding: 12px;
+		background-color: rgba(253, 90, 107, 0.06);
+		border: 1px solid #FFD9DC;
+		border-radius: 12px;
+	}
+
+	.review-summary-title {
+		font-size: 12px;
+		font-weight: 600;
+		color: $facetof-color-ink;
+	}
+
+	.review-summary-text {
+		margin-top: 5px;
+		font-size: 11px;
+		line-height: 17px;
+		color: $facetof-color-secondary-text;
+	}
+
+	.upload-disabled {
+		opacity: 0.55;
 	}
 
 	.history-card {

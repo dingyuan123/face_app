@@ -27,8 +27,8 @@
 					placeholder-class="placeholder"
 					@input="onCodeInput"
 				/>
-				<view class="code-button" @click="sendCode">
-					<text class="code-button-text">获取验证码</text>
+				<view class="code-button" :class="sendingCode ? 'code-button-disabled' : ''" @click="sendCode">
+					<text class="code-button-text">{{ sendingCode ? '发送中...' : '获取验证码' }}</text>
 				</view>
 			</view>
 
@@ -37,7 +37,7 @@
 				<text class="agreement-text">已阅读并同意用户协议与隐私政策</text>
 			</view>
 
-			<facetof-button label="登录" tone="gradient" :disabled="submitting" @press="submitPhoneLogin"></facetof-button>
+			<facetof-button :label="submitting ? '登录中...' : '登录'" tone="gradient" :disabled="submitting" @press="submitPhoneLogin"></facetof-button>
 
 			<view class="divider">
 				<view class="divider-line"></view>
@@ -99,6 +99,7 @@
 	const code = ref('')
 	const agreed = ref(false)
 	const submitting = ref(false)
+	const sendingCode = ref(false)
 	const devTestEnabled = ref(process.env.NODE_ENV == 'development')
 
 	function onPhoneInput(event: InputEvent) {
@@ -118,23 +119,34 @@
 	}
 
 	function sendCode() {
-		const result = sendSmsCode(phone.value)
-		showOutcome(result.ok, result.message)
+		if (sendingCode.value) {
+			return
+		}
+		sendingCode.value = true
+		sendSmsCode(phone.value).then((result) => {
+			sendingCode.value = false
+			showOutcome(result.ok, result.message)
+		})
 	}
 
 	function submitPhoneLogin() {
+		if (submitting.value) {
+			return
+		}
 		if (!agreed.value) {
 			showOutcome(false, '请先同意用户协议与隐私政策')
 			return
 		}
 		submitting.value = true
-		const result = loginWithPhone(phone.value, code.value)
-		submitting.value = false
-		if (!result.ok) {
-			showOutcome(false, result.message)
-			return
-		}
-		finishAuthenticatedNavigation('登录成功')
+		loginWithPhone(phone.value, code.value).then((result) => {
+			submitting.value = false
+			if (!result.ok) {
+				showOutcome(false, result.message)
+				return
+			}
+			showOutcome(true, '登录成功')
+			finishAuthenticatedNavigation('')
+		})
 	}
 
 	function wechatLogin() {
@@ -250,6 +262,10 @@
 	.code-button-text {
 		font-size: 13px;
 		color: $facetof-color-primary;
+	}
+
+	.code-button-disabled {
+		opacity: 0.55;
 	}
 
 	.agreement {

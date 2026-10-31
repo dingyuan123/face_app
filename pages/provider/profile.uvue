@@ -11,7 +11,7 @@
 			</view>
 
 			<view class="provider-card">
-				<image class="provider-avatar" :src="avatar" mode="aspectFill"></image>
+				<image class="provider-avatar" :src="avatarPath.length > 0 ? avatarPath : '/static/brand/app-logo.png'" mode="aspectFill"></image>
 				<view class="provider-main">
 					<text class="provider-name">阿哲</text>
 					<view class="verified-pill">
@@ -78,17 +78,14 @@
 				<text class="section-title">服务类目</text>
 				<text class="section-desc">选择你主要提供的服务类型</text>
 				<view class="tag-wrap">
-					<view class="tag-button" :class="categorySports ? 'tag-active' : ''" @click="categorySports = !categorySports">
-						<text class="tag-text" :class="categorySports ? 'tag-text-active' : ''">运动</text>
-					</view>
-					<view class="tag-button" :class="categoryEntertainment ? 'tag-active' : ''" @click="categoryEntertainment = !categoryEntertainment">
-						<text class="tag-text" :class="categoryEntertainment ? 'tag-text-active' : ''">娱乐</text>
-					</view>
-					<view class="tag-button" :class="categoryLeisure ? 'tag-active' : ''" @click="categoryLeisure = !categoryLeisure">
-						<text class="tag-text" :class="categoryLeisure ? 'tag-text-active' : ''">休闲</text>
-					</view>
-					<view class="tag-button" :class="categoryTravel ? 'tag-active' : ''" @click="categoryTravel = !categoryTravel">
-						<text class="tag-text" :class="categoryTravel ? 'tag-text-active' : ''">旅游</text>
+					<view
+						v-for="item in categoryOptions"
+						:key="item.code"
+						class="tag-button"
+						:class="isCategorySelected(item.code) ? 'tag-active' : ''"
+						@click="toggleCategory(item.code)"
+					>
+						<text class="tag-text" :class="isCategorySelected(item.code) ? 'tag-text-active' : ''">{{ item.name }}</text>
 					</view>
 				</view>
 			</view>
@@ -97,17 +94,14 @@
 				<text class="section-title">服务标签</text>
 				<text class="section-desc">帮助用户快速了解你的优势</text>
 				<view class="tag-wrap">
-					<view class="tag-button" :class="tagPatient ? 'tag-active' : ''" @click="tagPatient = !tagPatient">
-						<text class="tag-text" :class="tagPatient ? 'tag-text-active' : ''">耐心教学</text>
-					</view>
-					<view class="tag-button" :class="tagAtmosphere ? 'tag-active' : ''" @click="tagAtmosphere = !tagAtmosphere">
-						<text class="tag-text" :class="tagAtmosphere ? 'tag-text-active' : ''">气氛组</text>
-					</view>
-					<view class="tag-button" :class="tagPhoto ? 'tag-active' : ''" @click="tagPhoto = !tagPhoto">
-						<text class="tag-text" :class="tagPhoto ? 'tag-text-active' : ''">拍照好看</text>
-					</view>
-					<view class="tag-button" :class="tagFriendly ? 'tag-active' : ''" @click="tagFriendly = !tagFriendly">
-						<text class="tag-text" :class="tagFriendly ? 'tag-text-active' : ''">新手友好</text>
+					<view
+						v-for="item in tagOptions"
+						:key="item.code"
+						class="tag-button"
+						:class="isTagSelected(item.code) ? 'tag-active' : ''"
+						@click="toggleTag(item.code)"
+					>
+						<text class="tag-text" :class="isTagSelected(item.code) ? 'tag-text-active' : ''">{{ item.name }}</text>
 					</view>
 				</view>
 			</view>
@@ -135,26 +129,136 @@
 </template>
 
 <script setup lang="uts">
-	import { saveProviderProfile } from '../../services/service-container.uts'
+	import {
+		getProviderProfileData,
+		getProviderTagOptions,
+		getServiceCategoryOptions,
+		updateProviderProfileData
+	} from '../../services/service-container.uts'
+	import type {
+		ProviderOptionItem,
+		ProviderProfileData,
+		ProviderProfileUpdateDraft
+	} from '../../types/models.uts'
+	import { sessionState } from '../../state/session-state.uts'
+	import { openLogin } from '../../router/route-guard.uts'
 
-	const avatar = ref('/static/following/avatar-zhe.png')
-	const photos = ref<string[]>([
-		'/static/following/moment-billiards.png',
-		'/static/following/moment-coffee.png',
-		'/static/following/moment-city.png'
-	])
-	const nickname = ref('阿哲')
-	const signature = ref('耐心细致，新手也能轻松上手')
-	const introduction = ref('擅长台球基础教学和轻松陪练，帮助你快速找到运动的乐趣。')
+	const avatarPath = ref('')
+	const avatarMediaId = ref('')
+	const avatarChanged = ref(false)
+	const photos = ref<string[]>([])
+	const photoMediaIds = ref<string[]>([])
+	const photoPaths = ref<string[]>([])
+	const nickname = ref('')
+	const signature = ref('')
+	const introduction = ref('')
+	const selectedCategoryCodes = ref<string[]>([])
+	const selectedTagCodes = ref<string[]>([])
+	const categoryOptions = ref<ProviderOptionItem[]>([])
+	const tagOptions = ref<ProviderOptionItem[]>([])
+	const profileVersion = ref(0)
+	const saving = ref(false)
 
-	const categorySports = ref(true)
-	const categoryEntertainment = ref(false)
-	const categoryLeisure = ref(true)
-	const categoryTravel = ref(false)
-	const tagPatient = ref(true)
-	const tagAtmosphere = ref(true)
-	const tagPhoto = ref(false)
-	const tagFriendly = ref(true)
+	function isSelected(values: string[], code: string): boolean {
+		for (let i = 0; i < values.length; i++) {
+			if (values[i] == code) {
+				return true
+			}
+		}
+		return false
+	}
+
+	function isCategorySelected(code: string): boolean {
+		return isSelected(selectedCategoryCodes.value, code)
+	}
+
+	function isTagSelected(code: string): boolean {
+		return isSelected(selectedTagCodes.value, code)
+	}
+
+	function toggleCategory(code: string) {
+		const next: string[] = []
+		for (let i = 0; i < selectedCategoryCodes.value.length; i++) {
+			if (selectedCategoryCodes.value[i] != code) {
+				next.push(selectedCategoryCodes.value[i])
+			}
+		}
+		if (next.length == selectedCategoryCodes.value.length) {
+			next.push(code)
+		}
+		selectedCategoryCodes.value = next
+	}
+
+	function toggleTag(code: string) {
+		const next: string[] = []
+		for (let i = 0; i < selectedTagCodes.value.length; i++) {
+			if (selectedTagCodes.value[i] != code) {
+				next.push(selectedTagCodes.value[i])
+			}
+		}
+		if (next.length == selectedTagCodes.value.length) {
+			if (next.length >= 8) {
+				uni.showToast({
+					title: '最多选择 8 个服务标签',
+					position: 'bottom',
+					icon: 'error'
+				})
+				return
+			}
+			next.push(code)
+		}
+		selectedTagCodes.value = next
+	}
+
+	function loadOptions() {
+		getServiceCategoryOptions().then((result) => {
+			if (result.ok) {
+				categoryOptions.value = result.items
+			}
+		})
+		getProviderTagOptions().then((result) => {
+			if (result.ok) {
+				tagOptions.value = result.items
+			}
+		})
+	}
+
+	function loadProfile() {
+		getProviderProfileData().then((result) => {
+			if (!result.ok || result.profile == null) {
+				if (!result.ok) {
+					uni.showToast({
+						title: result.message,
+						position: 'bottom',
+						icon: 'error'
+					})
+				}
+				return
+			}
+			const profile = result.profile
+			profileVersion.value = profile.version
+			nickname.value = profile.nickname
+			signature.value = profile.signature
+			introduction.value = profile.introduction
+			avatarPath.value = profile.avatarUrl
+			avatarMediaId.value = profile.avatarMediaId
+			avatarChanged.value = false
+			photos.value = profile.photoUrls
+			photoPaths.value = profile.photoUrls
+			photoMediaIds.value = profile.photoMediaIds
+			selectedCategoryCodes.value = profile.categoryCodes
+			selectedTagCodes.value = profile.tagCodes
+		})
+	}
+
+	onShow(() => {
+		if (!sessionState.loggedIn) {
+			openLogin('provider-profile', '/pages/provider/profile', '')
+			return
+		}
+		loadProfile()
+		loadOptions()
+	})
 
 	function onNicknameInput(event: InputEvent) {
 		nickname.value = event.detail.value
@@ -168,77 +272,100 @@
 		introduction.value = event.detail.value
 	}
 
-	function addPhoto() {
+	function chooseAvatar() {
 		uni.chooseImage({
-			count: 6,
-			success: (result) => {
-				const next: Array<string> = []
-				for (let i = 0; i < result.tempFilePaths.length && i < 6; i++) {
-					next.push(result.tempFilePaths[i])
+			count: 1,
+			success: (res) => {
+				if (res.tempFilePaths.length > 0) {
+					avatarPath.value = res.tempFilePaths[0]
+					avatarChanged.value = true
 				}
-				photos.value = next
+			}
+		})
+	}
+
+	function addPhoto() {
+		const remaining = 6 - photos.value.length
+		if (remaining <= 0) {
+			uni.showToast({
+				title: '最多上传 6 张照片',
+				position: 'bottom',
+				icon: 'error'
+			})
+			return
+		}
+		uni.chooseImage({
+			count: remaining,
+			success: (res) => {
+				const nextPaths: string[] = []
+				const nextIds: string[] = []
+				for (let i = 0; i < photoPaths.value.length; i++) {
+					nextPaths.push(photoPaths.value[i])
+				}
+				for (let i = 0; i < photoMediaIds.value.length; i++) {
+					nextIds.push(photoMediaIds.value[i])
+				}
+				for (let i = 0; i < res.tempFilePaths.length && nextPaths.length < 6; i++) {
+					nextPaths.push(res.tempFilePaths[i])
+				}
+				photoPaths.value = nextPaths
+				photos.value = nextPaths
+				photoMediaIds.value = nextIds
 			}
 		})
 	}
 
 	function removePhoto(index: number) {
-		const next: Array<string> = []
-		for (let i = 0; i < photos.value.length; i++) {
+		const nextPaths: string[] = []
+		const nextIds: string[] = []
+		for (let i = 0; i < photoPaths.value.length; i++) {
 			if (i != index) {
-				next.push(photos.value[i])
+				nextPaths.push(photoPaths.value[i])
 			}
 		}
-		photos.value = next
-	}
-
-	function buildCategories(): Array<string> {
-		const result: Array<string> = []
-		if (categorySports.value) {
-			result.push('运动')
+		for (let i = 0; i < photoMediaIds.value.length; i++) {
+			if (i != index) {
+				nextIds.push(photoMediaIds.value[i])
+			}
 		}
-		if (categoryEntertainment.value) {
-			result.push('娱乐')
-		}
-		if (categoryLeisure.value) {
-			result.push('休闲')
-		}
-		if (categoryTravel.value) {
-			result.push('旅游')
-		}
-		return result
-	}
-
-	function buildTags(): Array<string> {
-		const result: Array<string> = []
-		if (tagPatient.value) {
-			result.push('耐心教学')
-		}
-		if (tagAtmosphere.value) {
-			result.push('气氛组')
-		}
-		if (tagPhoto.value) {
-			result.push('拍照好看')
-		}
-		if (tagFriendly.value) {
-			result.push('新手友好')
-		}
-		return result
+		photoPaths.value = nextPaths
+		photos.value = nextPaths
+		photoMediaIds.value = nextIds
 	}
 
 	function save() {
-		const result = saveProviderProfile({
-			avatar: avatar.value,
-			photos: photos.value,
+		if (saving.value) {
+			return
+		}
+		saving.value = true
+		const draft: ProviderProfileUpdateDraft = {
+			expectedVersion: profileVersion.value,
 			nickname: nickname.value,
 			signature: signature.value,
-			categories: buildCategories(),
-			tags: buildTags(),
-			introduction: introduction.value
-		})
-		uni.showToast({
-			title: result.message,
-			position: 'bottom',
-			icon: result.ok ? 'success' : 'error'
+			introduction: introduction.value,
+			avatarPath: avatarChanged.value ? avatarPath.value : '',
+			avatarMediaId: avatarMediaId.value,
+			photoPaths: photoPaths.value,
+			photoMediaIds: photoMediaIds.value,
+			categoryCodes: selectedCategoryCodes.value,
+			tagCodes: selectedTagCodes.value
+		}
+		updateProviderProfileData(draft).then((result) => {
+			saving.value = false
+			uni.showToast({
+				title: result.message,
+				position: 'bottom',
+				icon: result.ok ? 'success' : 'error'
+			})
+			if (result.ok && result.profile != null) {
+				profileVersion.value = result.profile.version
+				avatarPath.value = result.profile.avatarUrl
+				avatarMediaId.value = result.profile.avatarMediaId
+				photos.value = result.profile.photoUrls
+				photoPaths.value = result.profile.photoUrls
+				photoMediaIds.value = result.profile.photoMediaIds
+				avatarChanged.value = false
+			}
 		})
 	}
 

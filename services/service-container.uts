@@ -2,6 +2,8 @@ import {
   ActionOutcome,
   AuthUser,
   HomeFeedItem,
+  HomeFeedPageResult,
+  ProviderOptionItem,
   MessageThread,
   MomentsPost,
   NewsArticle,
@@ -31,7 +33,6 @@ import {
   MomentPublishDraft,
   ProviderDashboardSummary,
   ProviderProfileDraft,
-  ProviderMomentManageItem,
   ProviderManageServiceItem,
   ProviderServiceDraft,
   ProviderScheduleDay,
@@ -43,10 +44,30 @@ import {
   ProviderReviewItem,
   ProviderAnalyticsSummary,
   ProviderCertificationItem,
-  LegalDocument
+  LegalDocument,
+  InitialRoleResult,
+  ProviderApplicationLoadResult,
+  UserProfile,
+  UserProfileLoadResult,
+  UserProfileUpdateDraft,
+  UserProfileUpdateResult,
+  ProfileInterestTagListResult,
+  ProfileCityListResult,
+  ProviderOptionListResult,
+  ProviderProfileResult,
+  ProviderProfileUpdateDraft,
+  ProviderServiceDraftInput,
+  ProviderServiceListResult,
+  ProviderServiceResult,
+  ProviderMomentDraftInput,
+  ProviderMomentListResult,
+  ProviderMomentResult,
+  MomentMountableServiceListResult
 } from '../types/models.uts'
 import * as mockAuth from './mock-auth.uts'
+import * as authApi from './auth-api.uts'
 import * as mockPublic from './mock-public.uts'
+import * as homeApi from './home-api.uts'
 import * as mockContent from './mock-content.uts'
 import * as mockMessage from './mock-message.uts'
 import * as mockProfile from './mock-profile.uts'
@@ -79,17 +100,41 @@ import * as mockProviderReviews from './mock-provider-reviews.uts'
 import * as mockProviderAnalytics from './mock-provider-analytics.uts'
 import * as mockProviderCertification from './mock-provider-certification.uts'
 import * as mockLegalDocuments from './mock-legal-documents.uts'
+import * as providerApi from './provider-api.uts'
+import * as profileApi from './profile-api.uts'
+import * as providerBusinessApi from './provider-business-api.uts'
+import * as providerMomentsApi from './provider-moments-api.uts'
+import { logout as clearSessionState, sessionState, setInitialRoleState } from '../state/session-state.uts'
 
 /**
  * 页面只依赖本文件中的业务服务。
  * 后续接入真实 API 时，只替换这里的实现，不让页面直接导入 Mock。
  */
-export function sendSmsCode(phone: string): ActionOutcome {
-  return mockAuth.sendSmsCode(phone)
+export function sendSmsCode(phone: string): Promise<ActionOutcome> {
+  return authApi.sendSmsCode(phone)
 }
 
-export function loginWithPhone(phone: string, code: string): ActionOutcome {
-  return mockAuth.loginWithPhone(phone, code)
+export function loginWithPhone(phone: string, code: string): Promise<ActionOutcome> {
+  return authApi.loginWithPhone(phone, code)
+}
+
+export function refreshLogin(): Promise<ActionOutcome> {
+  return authApi.refreshLogin()
+}
+
+// 退出登录接口与本地状态清理保持原子化；开发测试账号只清理本地 Mock 状态。
+export function logoutFromApi(): Promise<ActionOutcome> {
+  if (sessionState.userId.startsWith('test-') || sessionState.userId.startsWith('mock-')) {
+    clearSessionState()
+    return new Promise<ActionOutcome>((resolve) => {
+      resolve({
+        ok: true,
+        code: 'TEST_LOGOUT_SUCCESS',
+        message: '已退出登录，身份和申请状态已清理'
+      })
+    })
+  }
+  return authApi.logout()
 }
 
 export function requestWechatLogin(): ActionOutcome {
@@ -104,8 +149,76 @@ export function loginWithTestAccount(kind: string): ActionOutcome {
   return mockAuth.loginWithTestAccount(kind)
 }
 
+// 真实账号走后端身份接口，开发测试账号继续使用本地 Mock 流程。
+export function selectInitialRole(role: string): Promise<InitialRoleResult> {
+  if (sessionState.userId.startsWith('test-') || sessionState.userId.startsWith('mock-')) {
+    return new Promise<InitialRoleResult>((resolve) => {
+      setInitialRoleState(role, role == 'provider' ? 'PROVIDER' : 'USER', role == 'provider' ? 'provider' : 'user', sessionState.applicationStatus, false)
+      resolve({
+        ok: true,
+        code: 'TEST_INITIAL_ROLE_SELECTED',
+        message: '测试身份已选择',
+        primaryRole: role == 'provider' ? 'PROVIDER' : 'USER',
+        defaultWorkspace: role == 'provider' ? 'provider' : 'user',
+        nextRoute: '',
+        requiresIdentitySelection: false,
+        providerStatus: sessionState.applicationStatus
+      })
+    })
+  }
+  return providerApi.selectInitialRole(role)
+}
+
+export function getProviderApplication(): Promise<ProviderApplicationLoadResult> {
+  if (sessionState.userId.startsWith('test-') || sessionState.userId.startsWith('mock-')) {
+    return new Promise<ProviderApplicationLoadResult>((resolve) => {
+      resolve({
+        ok: true,
+        code: 'TEST_APPLICATION_LOADED',
+        message: '测试申请状态已加载',
+        record: mockProvider.getLatestApplication()
+      })
+    })
+  }
+  return providerApi.getProviderApplication()
+}
+
+export function submitProviderApplicationApi(draft: ProviderApplicationDraft): Promise<ProviderSubmitResult> {
+  if (sessionState.userId.startsWith('test-') || sessionState.userId.startsWith('mock-')) {
+    return new Promise<ProviderSubmitResult>((resolve) => {
+      resolve(mockProvider.submitProviderApplication(draft))
+    })
+  }
+  return providerApi.submitProviderApplicationApi(draft)
+}
+
+export function updateProviderApplicationApi(
+  draft: ProviderApplicationDraft,
+  previous: ProviderApplicationRecord,
+  expectedVersion: number
+): Promise<ProviderSubmitResult> {
+  if (sessionState.userId.startsWith('test-') || sessionState.userId.startsWith('mock-')) {
+    return new Promise<ProviderSubmitResult>((resolve) => {
+      resolve(mockProvider.submitProviderApplication(draft))
+    })
+  }
+  return providerApi.updateProviderApplicationApi(draft, previous, expectedVersion)
+}
+
 export function getHomeFeed(): Array<HomeFeedItem> {
   return mockPublic.getHomeFeed()
+}
+
+// 首页卡片流使用真实公开接口，游客也可以访问。
+export function getHomeFeedPage(
+  categoryCode: string,
+  cityCode: string,
+  cursor: string,
+  limit: number,
+  sort: string,
+  categoryOptions: ProviderOptionItem[]
+): Promise<HomeFeedPageResult> {
+  return homeApi.getHomeFeedPage(categoryCode, cityCode, cursor, limit, sort, categoryOptions)
 }
 
 export function getMomentsFeed(tab: string): Array<MomentsPost> {
@@ -122,6 +235,72 @@ export function getMessageThreads(tab: string): Array<MessageThread> {
 
 export function getProfileSummary(): ProfileSummary | null {
   return mockProfile.getProfileSummary()
+}
+
+// 个人资料和资料选项走真实 API，页面不再使用本地 Mock 资料覆盖接口结果。
+export function getUserProfile(): Promise<UserProfileLoadResult> {
+  return profileApi.getUserProfile()
+}
+
+export function updateUserProfile(draft: UserProfileUpdateDraft, avatarFilePath: string): Promise<UserProfileUpdateResult> {
+  return profileApi.updateUserProfile(draft, avatarFilePath)
+}
+
+export function getProfileInterestTags(): Promise<ProfileInterestTagListResult> {
+  return profileApi.getProfileInterestTags()
+}
+
+export function getProfileCities(): Promise<ProfileCityListResult> {
+  return profileApi.getProfileCities()
+}
+
+// 服务者资料管理、服务管理、服务创建/编辑的真实业务接口入口。
+export function getProviderProfileData(): Promise<ProviderProfileResult> {
+  return providerBusinessApi.getProviderProfile()
+}
+
+export function updateProviderProfileData(draft: ProviderProfileUpdateDraft): Promise<ProviderProfileResult> {
+  return providerBusinessApi.updateProviderProfile(draft)
+}
+
+export function getProviderTagOptions(): Promise<ProviderOptionListResult> {
+  return providerBusinessApi.getProviderTags()
+}
+
+export function getServiceCategoryOptions(): Promise<ProviderOptionListResult> {
+  return providerBusinessApi.getServiceCategories()
+}
+
+export function getServiceTagOptions(): Promise<ProviderOptionListResult> {
+  return providerBusinessApi.getServiceTags()
+}
+
+export function listProviderServices(status: string, page: number, pageSize: number): Promise<ProviderServiceListResult> {
+  return providerBusinessApi.getProviderServices(status, page, pageSize)
+}
+
+export function getProviderServiceData(id: string): Promise<ProviderServiceResult> {
+  return providerBusinessApi.getProviderService(id)
+}
+
+export function createOrUpdateProviderService(draft: ProviderServiceDraftInput): Promise<ProviderServiceResult> {
+  return providerBusinessApi.createOrUpdateProviderService(draft)
+}
+
+export function deleteProviderService(id: string, expectedVersion: number): Promise<ActionOutcome> {
+  return providerBusinessApi.deleteProviderService(id, expectedVersion)
+}
+
+export function onlineProviderService(id: string, expectedVersion: number): Promise<ProviderServiceResult> {
+  return providerBusinessApi.onlineProviderService(id, expectedVersion)
+}
+
+export function offlineProviderService(id: string, expectedVersion: number): Promise<ProviderServiceResult> {
+  return providerBusinessApi.offlineProviderService(id, expectedVersion)
+}
+
+export function submitProviderServiceReview(id: string, expectedVersion: number): Promise<ProviderServiceResult> {
+  return providerBusinessApi.submitProviderServiceReview(id, expectedVersion)
 }
 
 export function getSearchResults(query: string, tab: string): Array<SearchResultItem> {
@@ -232,12 +411,60 @@ export function saveProviderProfile(draft: ProviderProfileDraft): ActionOutcome 
   return mockProviderProfile.saveProviderProfile(draft)
 }
 
-export function getProviderMomentItems(): Array<ProviderMomentManageItem> {
-  return mockProviderMoments.getProviderMomentItems()
+// 服务者动态管理：开发测试账号走 Mock，真实账号走 /provider-moments/ 接口。
+export function listProviderMoments(status: string, page: number, pageSize: number): Promise<ProviderMomentListResult> {
+  if (sessionState.userId.startsWith('test-') || sessionState.userId.startsWith('mock-')) {
+    return new Promise<ProviderMomentListResult>((resolve) => {
+      resolve(mockProviderMoments.listProviderMomentItems(status, page, pageSize))
+    })
+  }
+  return providerMomentsApi.listProviderMoments(status, page, pageSize)
 }
 
-export function removeProviderMoment(id: string): ActionOutcome {
-  return mockProviderMoments.removeProviderMoment(id)
+export function getProviderMomentData(id: string): Promise<ProviderMomentResult> {
+  if (sessionState.userId.startsWith('test-') || sessionState.userId.startsWith('mock-')) {
+    return new Promise<ProviderMomentResult>((resolve) => {
+      resolve(mockProviderMoments.getProviderMomentItem(id))
+    })
+  }
+  return providerMomentsApi.getProviderMomentItem(id)
+}
+
+export function saveProviderMomentData(draft: ProviderMomentDraftInput, publishAfter: boolean): Promise<ProviderMomentResult> {
+  if (sessionState.userId.startsWith('test-') || sessionState.userId.startsWith('mock-')) {
+    return new Promise<ProviderMomentResult>((resolve) => {
+      resolve(mockProviderMoments.saveProviderMoment(draft, publishAfter))
+    })
+  }
+  return providerMomentsApi.saveProviderMoment(draft, publishAfter)
+}
+
+export function publishProviderMomentData(id: string, expectedVersion: number): Promise<ProviderMomentResult> {
+  if (sessionState.userId.startsWith('test-') || sessionState.userId.startsWith('mock-')) {
+    return new Promise<ProviderMomentResult>((resolve) => {
+      resolve(mockProviderMoments.publishProviderMoment(id, expectedVersion))
+    })
+  }
+  return providerMomentsApi.publishProviderMoment(id, expectedVersion)
+}
+
+export function removeProviderMoment(id: string): Promise<ActionOutcome> {
+  if (sessionState.userId.startsWith('test-') || sessionState.userId.startsWith('mock-')) {
+    return new Promise<ActionOutcome>((resolve) => {
+      resolve(mockProviderMoments.removeProviderMoment(id))
+    })
+  }
+  return providerMomentsApi.deleteProviderMoment(id)
+}
+
+// 动态可挂载服务（本人已上架服务）。
+export function getMomentMountableServices(): Promise<MomentMountableServiceListResult> {
+  if (sessionState.userId.startsWith('test-') || sessionState.userId.startsWith('mock-')) {
+    return new Promise<MomentMountableServiceListResult>((resolve) => {
+      resolve(mockProviderMoments.listMomentMountableServices())
+    })
+  }
+  return providerMomentsApi.getMomentMountableServices()
 }
 
 export function getProviderManageServices(): Array<ProviderManageServiceItem> {

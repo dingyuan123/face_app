@@ -1,0 +1,253 @@
+import {
+  ProfileCityListResult,
+  ProfileCityOption,
+  ProfileInterestTag,
+  ProfileInterestTagListResult,
+  UserProfile,
+  UserProfileLoadResult,
+  UserProfileUpdateDraft,
+  UserProfileUpdateResult
+} from '../types/models.uts'
+import {
+  businessCode,
+  businessMessage,
+  numberValue,
+  payload,
+  requestGet,
+  requestPatch,
+  requestUpload,
+  stringValue,
+  HttpResult
+} from './api-client.uts'
+import { API_CONFIG } from './api-config.uts'
+import { getAccessToken } from '../state/session-state.uts'
+
+// 个人资料、城市和兴趣标签接口只保留业务映射，请求层由 api-client 统一处理。
+type ProfileAvatarUploadResult = {
+  ok: boolean,
+  mediaId: string,
+  displayUrl: string
+}
+
+function createIdempotencyKey(prefix: string): string {
+  return prefix + '-' + Date.now().toString()
+}
+
+function mediaUrl(contentUrl: string): string {
+  if (contentUrl.length == 0) {
+    return ''
+  }
+  if (contentUrl.startsWith('http://') || contentUrl.startsWith('https://')) {
+    return contentUrl
+  }
+  return API_CONFIG.origin + contentUrl
+}
+
+function displayMediaUrl(media: any): string {
+  if (media == null) {
+    return ''
+  }
+  const displayUrl = stringValue(media, 'display_url')
+  if (displayUrl.length > 0) {
+    return mediaUrl(displayUrl)
+  }
+  return mediaUrl(stringValue(media, 'content_url'))
+}
+
+function mapProfile(body: any): UserProfile {
+  const data = payload(body)
+  const avatarMedia = data['avatar_media']
+  const trustLevel = data['trust_level']
+  const tagItems = data['interest_tags']
+  const tags: ProfileInterestTag[] = []
+  if (tagItems != null) {
+    for (let i = 0; i < tagItems.length; i++) {
+      const tag = tagItems[i]
+      tags.push({
+        code: stringValue(tag, 'code'),
+        name: stringValue(tag, 'name'),
+        category: stringValue(tag, 'category'),
+        sortOrder: numberValue(tag, 'sort_order')
+      })
+    }
+  }
+  return {
+    version: numberValue(data, 'version'),
+    nickname: stringValue(data, 'nickname'),
+    avatarUrl: displayMediaUrl(avatarMedia),
+    gender: stringValue(data, 'gender'),
+    age: numberValue(data, 'age'),
+    cityCode: stringValue(data, 'city_code'),
+    cityName: stringValue(data, 'city_name'),
+    signature: stringValue(data, 'signature'),
+    interestTags: tags,
+    trustLevelCode: stringValue(trustLevel, 'code'),
+    trustLevelName: stringValue(trustLevel, 'name'),
+    profileCompleteness: numberValue(data, 'profile_completeness'),
+    updatedAt: stringValue(data, 'updated_at')
+  }
+}
+
+function mapTagList(body: any): ProfileInterestTag[] {
+  const source = payload(body)
+  const result: ProfileInterestTag[] = []
+  if (source == null) {
+    return result
+  }
+  for (let i = 0; i < source.length; i++) {
+    const item = source[i]
+    result.push({
+      code: stringValue(item, 'code'),
+      name: stringValue(item, 'name'),
+      category: stringValue(item, 'category'),
+      sortOrder: numberValue(item, 'sort_order')
+    })
+  }
+  return result
+}
+
+function mapCityList(body: any): ProfileCityOption[] {
+  const source = payload(body)
+  const result: ProfileCityOption[] = []
+  if (source == null) {
+    return result
+  }
+  for (let i = 0; i < source.length; i++) {
+    const item = source[i]
+    result.push({
+      code: stringValue(item, 'code'),
+      name: stringValue(item, 'name'),
+      sortOrder: numberValue(item, 'sort_order')
+    })
+  }
+  return result
+}
+
+function uploadProfileAvatar(filePath: string): Promise<ProfileAvatarUploadResult> {
+  return requestUpload('/media/uploads/', filePath, 'file', {
+    purpose: 'USER_PROFILE_AVATAR'
+  }, createIdempotencyKey('faceto-profile-avatar'), getAccessToken()).then((result: HttpResult) => {
+    if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+      return {
+        ok: false,
+        mediaId: '',
+        displayUrl: ''
+      }
+    }
+    const data = payload(result.body)
+    return {
+      ok: true,
+      mediaId: stringValue(data, 'media_id'),
+      displayUrl: displayMediaUrl(data)
+    }
+  })
+}
+
+// 查询当前用户个人资料。
+export function getUserProfile(): Promise<UserProfileLoadResult> {
+  return requestGet('/users/me/profile/', getAccessToken()).then((result: HttpResult) => {
+    if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+      return {
+        ok: false,
+        code: 'PROFILE_LOAD_FAILED',
+        message: businessMessage(result),
+        profile: null
+      }
+    }
+    return {
+      ok: true,
+      code: 'PROFILE_LOADED',
+      message: '资料已加载',
+      profile: mapProfile(result.body)
+    }
+  })
+}
+
+// 更新用户个人资料。avatarMediaId 为空时保留原头像，避免误清空。
+export function updateUserProfile(draft: UserProfileUpdateDraft, avatarFilePath: string): Promise<UserProfileUpdateResult> {
+  const submit = (avatarMediaId: string) => {
+    const body: any = {
+      expected_version: draft.expectedVersion,
+      nickname: draft.nickname,
+      gender: draft.gender.length > 0 ? draft.gender : null,
+      age: draft.age,
+      city_code: draft.cityCode,
+      signature: draft.signature,
+      interest_tag_codes: draft.interestTagCodes
+    }
+    if (avatarMediaId.length > 0) {
+      body['avatar_media_id'] = avatarMediaId
+    }
+    return requestPatch('/users/me/profile/', body, createIdempotencyKey('faceto-profile-update'), getAccessToken()).then((result: HttpResult) => {
+      if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+        return {
+          ok: false,
+          code: 'PROFILE_UPDATE_FAILED',
+          message: businessMessage(result),
+          profile: null
+        }
+      }
+      return {
+        ok: true,
+        code: 'PROFILE_UPDATED',
+        message: '资料已保存',
+        profile: mapProfile(result.body)
+      }
+    })
+  }
+
+  if (avatarFilePath.length == 0 || avatarFilePath.startsWith('http://') || avatarFilePath.startsWith('https://')) {
+    return submit('')
+  }
+  return uploadProfileAvatar(avatarFilePath).then((avatar: ProfileAvatarUploadResult) => {
+    if (!avatar.ok) {
+      return {
+        ok: false,
+        code: 'PROFILE_AVATAR_UPLOAD_FAILED',
+        message: '头像上传失败，请重试',
+        profile: null
+      }
+    }
+    return submit(avatar.mediaId)
+  })
+}
+
+// 获取兴趣标签选项。
+export function getProfileInterestTags(): Promise<ProfileInterestTagListResult> {
+  return requestGet('/profile-options/interest-tags/', getAccessToken()).then((result: HttpResult) => {
+    if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+      return {
+        ok: false,
+        code: 'INTEREST_TAG_OPTIONS_FAILED',
+        message: businessMessage(result),
+        items: []
+      }
+    }
+    return {
+      ok: true,
+      code: 'INTEREST_TAG_OPTIONS_LOADED',
+      message: '兴趣标签已加载',
+      items: mapTagList(result.body)
+    }
+  })
+}
+
+// 获取城市选项。
+export function getProfileCities(): Promise<ProfileCityListResult> {
+  return requestGet('/profile-options/cities/', getAccessToken()).then((result: HttpResult) => {
+    if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+      return {
+        ok: false,
+        code: 'CITY_OPTIONS_FAILED',
+        message: businessMessage(result),
+        items: []
+      }
+    }
+    return {
+      ok: true,
+      code: 'CITY_OPTIONS_LOADED',
+      message: '城市选项已加载',
+      items: mapCityList(result.body)
+    }
+  })
+}

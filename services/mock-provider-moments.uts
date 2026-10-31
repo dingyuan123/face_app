@@ -1,40 +1,214 @@
-import { ActionOutcome, ProviderMomentManageItem } from '../types/models.uts'
+import {
+  ActionOutcome,
+  MomentMountableServiceItem,
+  MomentMountableServiceListResult,
+  ProviderMomentDraftInput,
+  ProviderMomentListResult,
+  ProviderMomentManageItem,
+  ProviderMomentResult
+} from '../types/models.uts'
+
+// 开发测试账号使用的动态管理 Mock；真实账号走 provider-moments-api.uts。
 
 let items: Array<ProviderMomentManageItem> = [
   {
     id: 'provider-moment-001',
     title: '在泸州，练好第一杆',
+    content: '在泸州，练好第一杆。周末台球体验课持续开放，新手也能快速上手。',
     coverImage: '/static/following/moment-billiards.png',
+    mediaUrls: ['/static/following/moment-billiards.png'],
+    mediaIds: ['mock-moment-media-001'],
     publishedAt: '今天 12:10',
+    updatedAt: '今天 12:10',
     viewCount: 128,
     likeCount: 18,
     commentCount: 3,
-    status: '已发布'
+    shareCount: 1,
+    status: '已发布',
+    statusCode: 'PUBLISHED',
+    rejectReason: '',
+    version: 1,
+    visibility: 'PUBLIC',
+    allowRecommend: true,
+    attachedServiceId: 'mock-service-001',
+    attachedServiceTitle: '台球助教 · 新手体验'
   },
   {
     id: 'provider-moment-002',
     title: '一杯手冲的慢时光',
+    content: '一杯手冲的慢时光，分享今天的咖啡与见闻。',
     coverImage: '/static/following/moment-coffee.png',
+    mediaUrls: ['/static/following/moment-coffee.png'],
+    mediaIds: ['mock-moment-media-002'],
     publishedAt: '昨天 10:35',
+    updatedAt: '昨天 10:35',
     viewCount: 96,
     likeCount: 12,
     commentCount: 2,
-    status: '已发布'
+    shareCount: 0,
+    status: '已发布',
+    statusCode: 'PUBLISHED',
+    rejectReason: '',
+    version: 1,
+    visibility: 'PUBLIC',
+    allowRecommend: true,
+    attachedServiceId: '',
+    attachedServiceTitle: ''
   },
   {
     id: 'provider-moment-003',
     title: '沿着江边，走进老城',
+    content: '沿着江边，走进老城。城市漫步路线正在准备中。',
     coverImage: '/static/following/moment-city.png',
-    publishedAt: '10月14日 16:20',
-    viewCount: 86,
-    likeCount: 26,
-    commentCount: 4,
-    status: '已发布'
+    mediaUrls: ['/static/following/moment-city.png'],
+    mediaIds: ['mock-moment-media-003'],
+    publishedAt: '',
+    updatedAt: '10月14日 16:20',
+    viewCount: 0,
+    likeCount: 0,
+    commentCount: 0,
+    shareCount: 0,
+    status: '草稿',
+    statusCode: 'DRAFT',
+    rejectReason: '',
+    version: 1,
+    visibility: 'PUBLIC',
+    allowRecommend: true,
+    attachedServiceId: '',
+    attachedServiceTitle: ''
   }
 ]
 
-export function getProviderMomentItems(): Array<ProviderMomentManageItem> {
-  return items.slice()
+function cloneItem(item: ProviderMomentManageItem): ProviderMomentManageItem {
+  return {
+    id: item.id,
+    title: item.title,
+    content: item.content,
+    coverImage: item.coverImage,
+    mediaUrls: item.mediaUrls.slice(),
+    mediaIds: item.mediaIds.slice(),
+    publishedAt: item.publishedAt,
+    updatedAt: item.updatedAt,
+    viewCount: item.viewCount,
+    likeCount: item.likeCount,
+    commentCount: item.commentCount,
+    shareCount: item.shareCount,
+    status: item.status,
+    statusCode: item.statusCode,
+    rejectReason: item.rejectReason,
+    version: item.version,
+    visibility: item.visibility,
+    allowRecommend: item.allowRecommend,
+    attachedServiceId: item.attachedServiceId,
+    attachedServiceTitle: item.attachedServiceTitle
+  }
+}
+
+function findIndex(id: string): number {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].id == id) {
+      return i
+    }
+  }
+  return -1
+}
+
+function titleFromContent(content: string): string {
+  let firstLine = ''
+  for (let i = 0; i < content.length; i++) {
+    if (content[i] == '\n') {
+      break
+    }
+    firstLine += content[i]
+  }
+  const text = firstLine.trim().length > 0 ? firstLine.trim() : content.trim()
+  return text.length > 30 ? text.substring(0, 30) + '…' : text
+}
+
+export function listProviderMomentItems(status: string, page: number, pageSize: number): ProviderMomentListResult {
+  const result: Array<ProviderMomentManageItem> = []
+  for (let i = 0; i < items.length; i++) {
+    if (status.length == 0 || items[i].statusCode == status) {
+      result.push(cloneItem(items[i]))
+    }
+  }
+  return {
+    ok: true,
+    code: 'MOMENT_LIST_LOADED',
+    message: '动态列表已加载（开发 Mock）',
+    items: result,
+    total: result.length
+  }
+}
+
+export function getProviderMomentItem(id: string): ProviderMomentResult {
+  const index = findIndex(id)
+  if (index < 0) {
+    return { ok: false, code: 'MOMENT_LOAD_FAILED', message: '动态不存在（开发 Mock）', moment: null }
+  }
+  return { ok: true, code: 'MOMENT_LOADED', message: '动态已加载（开发 Mock）', moment: cloneItem(items[index]) }
+}
+
+export function saveProviderMoment(draft: ProviderMomentDraftInput, publishAfter: boolean): ProviderMomentResult {
+  if (draft.content.trim().length == 0 && draft.mediaPaths.length == 0) {
+    return { ok: false, code: 'MOMENT_CONTENT_REQUIRED', message: '请先添加图片或文字', moment: null }
+  }
+  const status = publishAfter ? 'PUBLISHED' : 'DRAFT'
+  const statusText = publishAfter ? '已发布' : '草稿'
+  const index = findIndex(draft.id)
+  const next: ProviderMomentManageItem = {
+    id: index >= 0 ? items[index].id : 'provider-moment-' + Date.now().toString(),
+    title: titleFromContent(draft.content),
+    content: draft.content,
+    coverImage: draft.mediaPaths.length > 0 ? draft.mediaPaths[0] : '',
+    mediaUrls: draft.mediaPaths.slice(),
+    mediaIds: draft.mediaPaths.slice(),
+    publishedAt: publishAfter ? '刚刚' : '',
+    updatedAt: '刚刚',
+    viewCount: index >= 0 ? items[index].viewCount : 0,
+    likeCount: index >= 0 ? items[index].likeCount : 0,
+    commentCount: index >= 0 ? items[index].commentCount : 0,
+    shareCount: index >= 0 ? items[index].shareCount : 0,
+    status: statusText,
+    statusCode: status,
+    rejectReason: '',
+    version: index >= 0 ? items[index].version + 1 : 1,
+    visibility: 'PUBLIC',
+    allowRecommend: draft.allowRecommend,
+    attachedServiceId: draft.attachedServiceId,
+    attachedServiceTitle: ''
+  }
+  if (index >= 0) {
+    items[index] = next
+  } else {
+    // 用显式数组拼接，保持 UTS 跨平台兼容。
+    const merged: Array<ProviderMomentManageItem> = [next]
+    for (let i = 0; i < items.length; i++) {
+      merged.push(items[i])
+    }
+    items = merged
+  }
+  return {
+    ok: true,
+    code: publishAfter ? 'MOMENT_PUBLISHED' : 'MOMENT_SAVED',
+    message: publishAfter ? '动态已发布（开发 Mock）' : '动态已保存为草稿（开发 Mock）',
+    moment: cloneItem(next)
+  }
+}
+
+export function publishProviderMoment(id: string, expectedVersion: number): ProviderMomentResult {
+  const index = findIndex(id)
+  if (index < 0) {
+    return { ok: false, code: 'MOMENT_PUBLISH_FAILED', message: '动态不存在（开发 Mock）', moment: null }
+  }
+  const current = items[index]
+  const next = cloneItem(current)
+  next.statusCode = 'PUBLISHED'
+  next.status = '已发布'
+  next.publishedAt = '刚刚'
+  next.version = current.version + 1
+  items[index] = next
+  return { ok: true, code: 'MOMENT_PUBLISHED', message: '动态已发布（开发 Mock）', moment: cloneItem(next) }
 }
 
 export function removeProviderMoment(id: string): ActionOutcome {
@@ -47,7 +221,34 @@ export function removeProviderMoment(id: string): ActionOutcome {
   items = next
   return {
     ok: true,
-    code: 'MOMENT_REMOVED',
+    code: 'MOMENT_DELETED',
     message: '动态已删除（开发 Mock）'
+  }
+}
+
+export function listMomentMountableServices(): MomentMountableServiceListResult {
+  const services: MomentMountableServiceItem[] = [
+    {
+      id: 'mock-service-001',
+      title: '台球助教 · 新手体验',
+      categoryCode: 'SPORT',
+      priceDisplay: '¥68/小时',
+      durationMinutes: 60,
+      coverUrl: '/static/content/billiards.png'
+    },
+    {
+      id: 'mock-service-002',
+      title: '城市漫步 · 老城路线',
+      categoryCode: 'TRAVEL',
+      priceDisplay: '¥128/次',
+      durationMinutes: 120,
+      coverUrl: '/static/content/city.png'
+    }
+  ]
+  return {
+    ok: true,
+    code: 'MOMENT_MOUNTABLE_LOADED',
+    message: '可挂载服务已加载（开发 Mock）',
+    items: services
   }
 }

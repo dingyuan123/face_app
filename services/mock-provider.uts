@@ -62,8 +62,8 @@ export function getLatestApplication(): ProviderApplicationRecord | null {
 }
 
 export function submitProviderApplication(draft: ProviderApplicationDraft): ProviderSubmitResult {
-  if (draft.avatarPath.length == 0 || draft.lifePhotoPath.length == 0) {
-    return { ok: false, code: 'MISSING_IMAGES', message: '请上传头像和生活照', record: null }
+  if (draft.avatarPath.length == 0 || draft.lifePhotoPaths.length < 3 || draft.lifePhotoPaths.length > 9) {
+    return { ok: false, code: 'MISSING_IMAGES', message: '请上传头像，并上传 3-9 张生活照', record: null }
   }
   if (draft.bio.trim().length < 8) {
     return { ok: false, code: 'INVALID_BIO', message: '个人简介至少填写 8 个字', record: null }
@@ -77,14 +77,23 @@ export function submitProviderApplication(draft: ProviderApplicationDraft): Prov
 
   const record: ProviderApplicationRecord = {
     id: 'application-' + Date.now().toString(),
+    applicationNo: 'mock-application-' + Date.now().toString(),
     submittedAt: new Date().toISOString(),
     status: 'approved',
     rejectionReason: '',
     avatarAsset: 'mock://avatar-submitted',
     lifePhotoAsset: 'mock://life-photo-submitted',
+    lifePhotoAssets: ['mock://life-photo-1', 'mock://life-photo-2', 'mock://life-photo-3'],
     bio: draft.bio.trim(),
     realName: draft.realName.trim(),
-    idCardMasked: maskIdCard(draft.idCardNumber.trim())
+    idCardMasked: maskIdCard(draft.idCardNumber.trim()),
+    version: 1,
+    realNameStatus: 'MOCK_PASSED',
+    faceStatus: 'MOCK_PASSED',
+    userPublicId: 'mock-user',
+    userPhoneMasked: '***',
+    avatarMediaId: '',
+    lifePhotoMediaIds: []
   }
   addRecord(record)
   // 开发 Mock：提交后直接进入可测试的服务者状态，不代表真实审核通过。
@@ -104,14 +113,23 @@ export function seedTestApplication(kind: string) {
 
   const record: ProviderApplicationRecord = {
     id: 'test-application-' + kind,
+    applicationNo: 'test-application-' + kind,
     submittedAt: new Date().toISOString(),
     status: status,
     rejectionReason: status == 'rejected' ? '个人简介信息不足，请补充服务经历后重新提交。' : '',
     avatarAsset: 'mock://avatar-submitted',
     lifePhotoAsset: 'mock://life-photo-submitted',
+    lifePhotoAssets: ['mock://life-photo-1', 'mock://life-photo-2', 'mock://life-photo-3'],
     bio: '喜欢与人交流，可以在公共场所提供友好、安心的陪伴服务。',
     realName: '测试用户',
-    idCardMasked: '110***********1234'
+    idCardMasked: '110***********1234',
+    version: 1,
+    realNameStatus: 'MOCK_PASSED',
+    faceStatus: 'MOCK_PASSED',
+    userPublicId: 'test-user',
+    userPhoneMasked: '***',
+    avatarMediaId: '',
+    lifePhotoMediaIds: []
   }
   history = []
   addRecord(record)

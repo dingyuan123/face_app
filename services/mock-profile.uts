@@ -1,13 +1,14 @@
 import { ProfileSummary } from '../types/models.uts'
-import { sessionState } from '../state/session-state.uts'
+import { getAccessToken, sessionState } from '../state/session-state.uts'
 
 export function getProfileSummary(): ProfileSummary | null {
-  if (!sessionState.loggedIn) {
+  // 兼容 Token 已保存但登录状态尚未重新写入的启动时序。
+  if (!sessionState.loggedIn && getAccessToken().length == 0) {
     return null
   }
   return {
-    userId: sessionState.userId,
-    displayName: sessionState.displayName,
+    userId: sessionState.userId.length > 0 ? sessionState.userId : 'current-user',
+    displayName: sessionState.displayName.length > 0 ? sessionState.displayName : 'FaceTo 用户',
     avatar: '/static/avatars/acheng.png',
     city: '泸州',
     level: '安心用户 Lv.2',

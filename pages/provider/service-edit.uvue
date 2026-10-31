@@ -12,13 +12,26 @@
 
 				<view class="cover-card">
 					<view class="cover-preview" @click="chooseCover">
-						<image v-if="coverImage.length > 0" class="cover-image" :src="coverImage" mode="aspectFill"></image>
+						<image v-if="coverPath.length > 0" class="cover-image" :src="coverPath" mode="aspectFill"></image>
 						<view v-else class="cover-empty">
 							<text class="cover-plus">＋</text>
 							<text class="cover-text">上传服务封面</text>
 						</view>
 					</view>
 					<text class="cover-hint">建议使用能展示服务场景的清晰图片</text>
+					<text class="field-label">服务图集（{{ galleryPaths.length }}/6）</text>
+					<view class="gallery-grid">
+						<view v-for="(photo, index) in galleryPaths" :key="photo" class="gallery-item">
+							<image class="gallery-image" :src="photo" mode="aspectFill"></image>
+							<view class="gallery-remove" @click="removeGallery(index)">
+								<text class="gallery-remove-text">×</text>
+							</view>
+						</view>
+						<view v-if="galleryPaths.length < 6" class="gallery-add" @click="chooseGallery">
+							<text class="cover-plus">＋</text>
+							<text class="cover-hint">添加图集</text>
+						</view>
+					</view>
 				</view>
 
 				<view class="form-card">
@@ -35,20 +48,14 @@
 
 					<text class="field-label">服务类目</text>
 					<view class="tag-wrap">
-						<view class="tag-button" :class="category == '运动' ? 'tag-active' : ''" @click="selectCategory('运动')">
-							<text class="tag-text">运动</text>
-						</view>
-						<view class="tag-button" :class="category == '娱乐' ? 'tag-active' : ''" @click="selectCategory('娱乐')">
-							<text class="tag-text">娱乐</text>
-						</view>
-						<view class="tag-button" :class="category == '休闲' ? 'tag-active' : ''" @click="selectCategory('休闲')">
-							<text class="tag-text">休闲</text>
-						</view>
-						<view class="tag-button" :class="category == '旅游' ? 'tag-active' : ''" @click="selectCategory('旅游')">
-							<text class="tag-text">旅游</text>
-						</view>
-						<view class="tag-button" :class="category == '学习' ? 'tag-active' : ''" @click="selectCategory('学习')">
-							<text class="tag-text">学习</text>
+						<view
+							v-for="item in categoryOptions"
+							:key="item.code"
+							class="tag-button"
+							:class="categoryCode == item.code ? 'tag-active' : ''"
+							@click="selectCategory(item.code)"
+						>
+							<text class="tag-text">{{ item.name }}</text>
 						</view>
 					</view>
 
@@ -57,7 +64,7 @@
 							<text class="field-label">价格</text>
 							<input
 								class="field-input"
-								:value="price"
+								:value="priceText"
 								type="number"
 								maxlength="8"
 								placeholder="¥68"
@@ -69,7 +76,7 @@
 							<text class="field-label">服务时长</text>
 							<input
 								class="field-input"
-								:value="duration"
+								:value="durationText"
 								maxlength="12"
 								placeholder="60 分钟"
 								placeholder-class="field-placeholder"
@@ -93,20 +100,14 @@
 					<text class="section-title">服务标签</text>
 					<text class="section-desc">帮助用户快速了解你的服务特点</text>
 					<view class="tag-wrap">
-						<view class="tag-button" :class="tagNewbie ? 'tag-active' : ''" @click="tagNewbie = !tagNewbie">
-							<text class="tag-text">新手友好</text>
-						</view>
-						<view class="tag-button" :class="tagPatient ? 'tag-active' : ''" @click="tagPatient = !tagPatient">
-							<text class="tag-text">耐心教学</text>
-						</view>
-						<view class="tag-button" :class="tagPro ? 'tag-active' : ''" @click="tagPro = !tagPro">
-							<text class="tag-text">专业指导</text>
-						</view>
-						<view class="tag-button" :class="tagEasy ? 'tag-active' : ''" @click="tagEasy = !tagEasy">
-							<text class="tag-text">轻松交流</text>
-						</view>
-						<view class="tag-button" :class="tagPublic ? 'tag-active' : ''" @click="tagPublic = !tagPublic">
-							<text class="tag-text">公共场所</text>
+						<view
+							v-for="item in tagOptions"
+							:key="item.code"
+							class="tag-button"
+							:class="isTagSelected(item.code) ? 'tag-active' : ''"
+							@click="toggleTag(item.code)"
+						>
+							<text class="tag-text">{{ item.name }}</text>
 						</view>
 					</view>
 				</view>
@@ -138,39 +139,68 @@
 </template>
 
 <script setup lang="uts">
-	import { getProviderManageService, saveProviderService } from '../../services/service-container.uts'
+	import {
+		createOrUpdateProviderService,
+		getProviderServiceData,
+		getServiceCategoryOptions,
+		getServiceTagOptions,
+		submitProviderServiceReview
+	} from '../../services/service-container.uts'
+	import type {
+		ProviderOptionItem,
+		ProviderServiceData,
+		ProviderServiceDraftInput
+	} from '../../types/models.uts'
 
 	const editId = ref('')
+	const serviceVersion = ref(0)
 	const pageTitle = ref('创建服务')
 	const title = ref('')
-	const category = ref('运动')
-	const price = ref('')
-	const duration = ref('')
-	const coverImage = ref('')
+	const categoryCode = ref('')
+	const priceText = ref('')
+	const durationText = ref('')
 	const introduction = ref('')
-	const tagNewbie = ref(false)
-	const tagPatient = ref(false)
-	const tagPro = ref(false)
-	const tagEasy = ref(false)
-	const tagPublic = ref(false)
-	onLoad((options) => {
-		if (options == null) {
-			return
-		}
-		const serviceId = options['serviceId'] as string
-		if (serviceId != null && serviceId.length > 0) {
-			editId.value = decodeURIComponent(serviceId)
-			pageTitle.value = '编辑服务'
-			const service = getProviderManageService(editId.value)
-			title.value = service.title
-			coverImage.value = service.coverImage
-			price.value = service.price.replace('¥', '').replace('/小时', '')
-			duration.value = service.duration
-		}
-	})
+	const coverPath = ref('')
+	const coverMediaId = ref('')
+	const galleryPaths = ref<string[]>([])
+	const galleryMediaIds = ref<string[]>([])
+	const selectedTagCodes = ref<string[]>([])
+	const categoryOptions = ref<ProviderOptionItem[]>([])
+	const tagOptions = ref<ProviderOptionItem[]>([])
+	const saving = ref(false)
 
-	function selectCategory(value: string) {
-		category.value = value
+	function isTagSelected(code: string): boolean {
+		for (let i = 0; i < selectedTagCodes.value.length; i++) {
+			if (selectedTagCodes.value[i] == code) {
+				return true
+			}
+		}
+		return false
+	}
+
+	function toggleTag(code: string) {
+		const next: string[] = []
+		for (let i = 0; i < selectedTagCodes.value.length; i++) {
+			if (selectedTagCodes.value[i] != code) {
+				next.push(selectedTagCodes.value[i])
+			}
+		}
+		if (next.length == selectedTagCodes.value.length) {
+			if (next.length >= 8) {
+				uni.showToast({
+					title: '最多选择 8 个服务标签',
+					position: 'bottom',
+					icon: 'error'
+				})
+				return
+			}
+			next.push(code)
+		}
+		selectedTagCodes.value = next
+	}
+
+	function selectCategory(code: string) {
+		categoryCode.value = code
 	}
 
 	function onTitleInput(event: InputEvent) {
@@ -178,11 +208,11 @@
 	}
 
 	function onPriceInput(event: InputEvent) {
-		price.value = event.detail.value
+		priceText.value = event.detail.value
 	}
 
 	function onDurationInput(event: InputEvent) {
-		duration.value = event.detail.value
+		durationText.value = event.detail.value
 	}
 
 	function onIntroductionInput(event: InputEvent) {
@@ -194,70 +224,200 @@
 			count: 1,
 			success: (result) => {
 				if (result.tempFilePaths.length > 0) {
-					coverImage.value = result.tempFilePaths[0]
+					coverPath.value = result.tempFilePaths[0]
 				}
 			}
 		})
 	}
 
-	function buildTags(): Array<string> {
-		const result: Array<string> = []
-		if (tagNewbie.value) {
-			result.push('新手友好')
+	function chooseGallery() {
+		const remaining = 6 - galleryPaths.value.length
+		if (remaining <= 0) {
+			return
 		}
-		if (tagPatient.value) {
-			result.push('耐心教学')
-		}
-		if (tagPro.value) {
-			result.push('专业指导')
-		}
-		if (tagEasy.value) {
-			result.push('轻松交流')
-		}
-		if (tagPublic.value) {
-			result.push('公共场所')
-		}
-		return result
-	}
-
-	function buildDraft() {
-		return {
-			id: editId.value,
-			title: title.value,
-			category: category.value,
-			price: price.value,
-			duration: duration.value,
-			coverImage: coverImage.value,
-			introduction: introduction.value,
-			locationType: '仅限公共场所',
-			tags: buildTags()
-		}
-	}
-
-	function saveDraft() {
-		const result = saveProviderService(buildDraft(), false)
-		uni.showToast({
-			title: result.message,
-			position: 'bottom',
-			icon: result.ok ? 'success' : 'error'
+		uni.chooseImage({
+			count: remaining,
+			success: (result) => {
+				const next: string[] = []
+				for (let i = 0; i < galleryPaths.value.length; i++) {
+					next.push(galleryPaths.value[i])
+				}
+				for (let i = 0; i < result.tempFilePaths.length && next.length < 6; i++) {
+					next.push(result.tempFilePaths[i])
+				}
+				galleryPaths.value = next
+			}
 		})
 	}
 
-	function submitReview() {
-		if (title.value.trim().length == 0) {
+	function removeGallery(index: number) {
+		const next: string[] = []
+		const nextIds: string[] = []
+		for (let i = 0; i < galleryPaths.value.length; i++) {
+			if (i != index) {
+				next.push(galleryPaths.value[i])
+			}
+		}
+		for (let i = 0; i < galleryMediaIds.value.length; i++) {
+			if (i != index) {
+				nextIds.push(galleryMediaIds.value[i])
+			}
+		}
+		galleryPaths.value = next
+		galleryMediaIds.value = nextIds
+	}
+
+	function priceToMinor(value: string): number {
+		const amount = parseFloat(value)
+		return Math.round(amount * 100)
+	}
+
+	function durationToMinutes(value: string): number {
+		const result = parseInt(value)
+		return result > 0 ? result : 0
+	}
+
+	function loadOptions() {
+		getServiceCategoryOptions().then((result) => {
+			if (result.ok) {
+				categoryOptions.value = result.items
+				if (categoryCode.value.length == 0 && result.items.length > 0) {
+					categoryCode.value = result.items[0].code
+				}
+			}
+		})
+		getServiceTagOptions().then((result) => {
+			if (result.ok) {
+				tagOptions.value = result.items
+			}
+		})
+	}
+
+	function loadService(id: string) {
+		getProviderServiceData(id).then((result) => {
+			if (!result.ok || result.service == null) {
+				uni.showToast({
+					title: result.message,
+					position: 'bottom',
+					icon: 'error'
+				})
+				return
+			}
+			const service = result.service
+			editId.value = service.id
+			serviceVersion.value = service.version
+			pageTitle.value = '编辑服务'
+			title.value = service.title
+			categoryCode.value = service.categoryCode
+			priceText.value = (service.priceAmountMinor / 100).toFixed(2)
+			durationText.value = service.durationMinutes.toString()
+			introduction.value = service.introduction
+			coverPath.value = service.coverUrl
+			coverMediaId.value = service.coverMediaId
+			galleryPaths.value = service.galleryUrls
+			galleryMediaIds.value = service.galleryMediaIds
+			selectedTagCodes.value = service.tagCodes
+		})
+	}
+
+	onLoad((options) => {
+		loadOptions()
+		if (options == null) {
+			return
+		}
+		const serviceId = options['serviceId'] as string
+		if (serviceId != null && serviceId.length > 0) {
+			loadService(decodeURIComponent(serviceId))
+		}
+	})
+
+	function buildDraft(): ProviderServiceDraftInput {
+		return {
+			id: editId.value,
+			expectedVersion: serviceVersion.value,
+			title: title.value.trim(),
+			categoryCode: categoryCode.value,
+			currency: 'CNY',
+			priceAmountMinor: priceToMinor(priceText.value),
+			durationMinutes: durationToMinutes(durationText.value),
+			introduction: introduction.value.trim(),
+			coverPath: coverPath.value,
+			coverMediaId: coverMediaId.value,
+			galleryPaths: galleryPaths.value,
+			galleryMediaIds: galleryMediaIds.value,
+			tagCodes: selectedTagCodes.value,
+			locationType: 'PUBLIC_PLACE'
+		}
+	}
+
+	function submitDraft(afterSubmit: boolean) {
+		if (saving.value) {
+			return
+		}
+		if (title.value.trim().length == 0 || categoryCode.value.length == 0) {
 			uni.showToast({
-				title: '请填写服务名称',
+				title: '请填写服务名称并选择类目',
 				position: 'bottom',
 				icon: 'error'
 			})
 			return
 		}
-		const result = saveProviderService(buildDraft(), true)
-		uni.showToast({
-			title: result.message,
-			position: 'bottom',
-			icon: result.ok ? 'success' : 'error'
+		if (coverPath.value.length == 0) {
+			uni.showToast({
+				title: '请上传服务封面',
+				position: 'bottom',
+				icon: 'error'
+			})
+			return
+		}
+		if (galleryPaths.value.length == 0) {
+			uni.showToast({
+				title: '请至少上传 1 张服务图集图片',
+				position: 'bottom',
+				icon: 'error'
+			})
+			return
+		}
+		saving.value = true
+		createOrUpdateProviderService(buildDraft()).then((result) => {
+			saving.value = false
+			if (!result.ok || result.service == null) {
+				uni.showToast({
+					title: result.message,
+					position: 'bottom',
+					icon: 'error'
+				})
+				return
+			}
+			editId.value = result.service.id
+			serviceVersion.value = result.service.version
+			if (!afterSubmit) {
+				uni.showToast({
+					title: result.message,
+					position: 'bottom',
+					icon: 'success'
+				})
+				return
+			}
+			submitProviderServiceReview(result.service.id, result.service.version).then((reviewResult) => {
+				uni.showToast({
+					title: reviewResult.message,
+					position: 'bottom',
+					icon: reviewResult.ok ? 'success' : 'error'
+				})
+				if (reviewResult.ok && reviewResult.service != null) {
+					serviceVersion.value = reviewResult.service.version
+				}
+			})
 		})
+	}
+
+	function saveDraft() {
+		submitDraft(false)
+	}
+
+	function submitReview() {
+		submitDraft(true)
 	}
 
 	function goBack() {
@@ -362,6 +522,53 @@
 		margin-top: 12rpx;
 		font-size: 21rpx;
 		color: #8D817B;
+	}
+
+	.gallery-grid {
+		flex-direction: row;
+		flex-wrap: wrap;
+		margin-top: 14rpx;
+	}
+
+	.gallery-item {
+		position: relative;
+		width: 142rpx;
+		height: 112rpx;
+		margin: 0 12rpx 12rpx 0;
+		border: 1rpx solid #F5DED5;
+		border-radius: 14rpx;
+	}
+
+	.gallery-image {
+		width: 100%;
+		height: 100%;
+		border-radius: 14rpx;
+	}
+
+	.gallery-remove {
+		position: absolute;
+		top: 6rpx;
+		right: 6rpx;
+		width: 28rpx;
+		height: 28rpx;
+		align-items: center;
+		justify-content: center;
+		background-color: rgba(31, 26, 23, 0.68);
+		border-radius: 50%;
+	}
+
+	.gallery-remove-text {
+		font-size: 18rpx;
+		color: #FFFFFF;
+	}
+
+	.gallery-add {
+		width: 142rpx;
+		height: 112rpx;
+		align-items: center;
+		justify-content: center;
+		border: 1rpx dashed #F1B8BE;
+		border-radius: 14rpx;
 	}
 
 	.form-card,

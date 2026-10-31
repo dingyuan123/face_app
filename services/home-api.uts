@@ -1,0 +1,172 @@
+import {
+  HomeFeedItem,
+  HomeFeedPageResult,
+  ProviderOptionItem
+} from '../types/models.uts'
+import {
+  businessCode,
+  businessMessage,
+  numberValue,
+  payload,
+  requestGet,
+  stringValue,
+  HttpResult
+} from './api-client.uts'
+import { getAccessToken } from '../state/session-state.uts'
+import { API_CONFIG } from './api-config.uts'
+
+function cursorFromUri(value: string): string {
+  const marker = 'cursor='
+  const index = value.indexOf(marker)
+  if (index < 0) {
+    return ''
+  }
+  return decodeURIComponent(value.substring(index + marker.length))
+}
+
+function mediaUrl(media: any): string {
+  if (media == null) {
+    return ''
+  }
+  const display = stringValue(media, 'display_url')
+  const value = display.length > 0 ? display : stringValue(media, 'content_url')
+  if (value.length == 0) {
+    return ''
+  }
+  if (value.startsWith('http://') || value.startsWith('https://')) {
+    return value
+  }
+  return API_CONFIG.origin + value
+}
+
+function categoryName(codes: string[], categoryOptions: ProviderOptionItem[]): string {
+  for (let i = 0; i < codes.length; i++) {
+    for (let j = 0; j < categoryOptions.length; j++) {
+      if (categoryOptions[j].code == codes[i] && categoryOptions[j].name.length > 0) {
+        return categoryOptions[j].name
+      }
+    }
+  }
+  return codes.length > 0 ? codes[0] : '综合'
+}
+
+function mapHomeItem(item: any, categoryOptions: ProviderOptionItem[]): HomeFeedItem {
+  const provider = item['provider']
+  const verification = item['verification']
+  const services = item['services']
+  const photos = item['recent_photo_media']
+  const categoryCodes: string[] = []
+  const rawCodes = item['category_codes']
+  if (rawCodes != null) {
+    for (let i = 0; i < rawCodes.length; i++) {
+      categoryCodes.push(rawCodes[i].toString())
+    }
+  }
+  const coverImages: string[] = []
+  if (photos != null) {
+    for (let i = 0; i < photos.length; i++) {
+      const url = mediaUrl(photos[i])
+      if (url.length > 0) {
+        coverImages.push(url)
+      }
+    }
+  }
+  let serviceName = ''
+  let servicePrice = ''
+  let serviceId = ''
+  if (services != null && services.length > 0) {
+    const service = services[0]
+    serviceId = stringValue(service, 'id')
+    serviceName = stringValue(service, 'title')
+    const price = service['price']
+    const amountMinor = numberValue(price, 'amount_minor')
+    const currency = stringValue(price, 'currency')
+    servicePrice = '¥' + (amountMinor / 100).toFixed(2)
+    if (currency.length > 0 && currency != 'CNY') {
+      servicePrice = currency + ' ' + (amountMinor / 100).toFixed(2)
+    }
+  }
+  const distance = item['distance_km']
+  const distanceText = distance == null ? '距离未知' : Number(distance).toFixed(1) + 'km'
+  const realNameStatus = stringValue(verification, 'real_name_status')
+  return {
+    id: stringValue(item, 'provider_public_id'),
+    providerId: stringValue(item, 'provider_public_id'),
+    providerName: stringValue(provider, 'nickname'),
+    providerAvatar: mediaUrl(provider['avatar_media']),
+    headline: stringValue(provider, 'signature'),
+    description: serviceName.length > 0 ? serviceName : stringValue(provider, 'signature'),
+    categoryName: categoryName(categoryCodes, categoryOptions),
+    age: numberValue(provider, 'age'),
+    distance: distanceText,
+    serviceName: serviceName.length > 0 ? serviceName : '可预约服务',
+    price: servicePrice.length > 0 ? servicePrice : '价格待定',
+    online: stringValue(item, 'online_status') == 'ONLINE',
+    // 开发环境后端返回 MOCK_PASSED，与真实认证通过一样展示认证标签。
+    verified: realNameStatus == 'PASSED' || realNameStatus == 'APPROVED' || realNameStatus == 'MOCK_PASSED',
+    coverLabel: serviceName.length > 0 ? serviceName : stringValue(provider, 'nickname'),
+    coverImages: coverImages
+  }
+}
+
+// 首页卡片流支持类目、城市、排序和游标分页。
+export function getHomeFeedPage(
+  categoryCode: string,
+  cityCode: string,
+  cursor: string,
+  limit: number,
+  sort: string,
+  categoryOptions: ProviderOptionItem[]
+): Promise<HomeFeedPageResult> {
+  let path = '/home/feed/?limit=' + limit.toString()
+  if (categoryCode.length > 0) {
+    path += '&category_code=' + encodeURIComponent(categoryCode)
+  }
+  if (cityCode.length > 0) {
+    path += '&city_code=' + encodeURIComponent(cityCode)
+  }
+  if (cursor.length > 0) {
+    path += '&cursor=' + encodeURIComponent(cursor)
+  }
+  if (sort.length > 0) {
+    path += '&sort=' + encodeURIComponent(sort)
+  }
+  return requestGet(path, getAccessToken()).then((result: HttpResult) => {
+    if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+      return {
+        ok: false,
+        code: 'HOME_FEED_FAILED',
+        message: businessMessage(result),
+        items: [],
+        next: '',
+        previous: ''
+      }
+    }
+    const data = payload(result.body)
+    // 兼容两种返回结构：文档示例为 data.results，当前后端实际返回的 data 直接是数组。
+    let source = data['results']
+    if (source == null) {
+      source = data
+    }
+    const items: HomeFeedItem[] = []
+    if (source != null) {
+      for (let i = 0; i < source.length; i++) {
+        items.push(mapHomeItem(source[i], categoryOptions))
+      }
+    }
+    // 分页游标优先取 meta.next_cursor，兼容旧结构 data.next（完整 URL）。
+    const meta = result.body['meta']
+    let nextCursor = stringValue(meta, 'next_cursor')
+    if (nextCursor.length == 0) {
+      nextCursor = cursorFromUri(stringValue(data, 'next'))
+    }
+    return {
+      ok: true,
+      code: 'HOME_FEED_LOADED',
+      message: '首页数据已加载',
+      items: items,
+      next: nextCursor,
+      previous: stringValue(data, 'previous')
+    }
+  })
+}

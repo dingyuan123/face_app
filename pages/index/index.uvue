@@ -44,7 +44,7 @@
 			<status-pill label="公开数据" tone="brand"></status-pill>
 		</view>
 
-		<view v-if="filteredFeed.length == 0" class="empty-state">
+		<view v-if="filteredFeed.length == 0 && !loadingFeed" class="empty-state">
 			<text class="empty-title">暂时没有相关动态</text>
 			<text class="empty-desc">换一个分类看看吧</text>
 		</view>
@@ -119,29 +119,107 @@
 <script setup lang="uts">
 	import StatusPill from '../../components/status-pill.uvue'
 	import SegmentTabs from '../../components/segment-tabs.uvue'
-	import { getHomeFeed, performAccountAction } from '../../services/service-container.uts'
-	import type { HomeFeedItem } from '../../types/models.uts'
+	import {
+		getHomeFeedPage,
+		getServiceCategoryOptions,
+		performAccountAction
+	} from '../../services/service-container.uts'
+	import type { HomeFeedItem, ProviderOptionItem } from '../../types/models.uts'
 	import { sessionState } from '../../state/session-state.uts'
 	import { openLogin } from '../../router/route-guard.uts'
 
-	const categories = ['全部', '运动', '娱乐', '休闲']
+	// 分类 Tab 由服务类目接口动态加载，不再使用本地 Mock 标签。
+	const categories = ref<string[]>(['全部'])
 	const selectedCategory = ref('全部')
 	const allFeed = ref<HomeFeedItem[]>([])
 	const filteredFeed = ref<HomeFeedItem[]>([])
+	const categoryOptions = ref<ProviderOptionItem[]>([])
+	const nextCursor = ref('')
+	const cityCode = ref('LZ')
+	const loadingFeed = ref(false)
 
-	function refreshFeed() {
-		allFeed.value = getHomeFeed()
-		const result: Array<HomeFeedItem> = []
-		for (let i = 0; i < allFeed.value.length; i++) {
-			if (selectedCategory.value == '全部' || allFeed.value[i].categoryName == selectedCategory.value) {
-				result.push(allFeed.value[i])
+	function categoryCodeForLabel(label: string): string {
+		if (label == '全部') {
+			return ''
+		}
+		for (let i = 0; i < categoryOptions.value.length; i++) {
+			if (categoryOptions.value[i].name == label) {
+				return categoryOptions.value[i].code
 			}
 		}
-		filteredFeed.value = result
+		return label
+	}
+
+	function applyFeed(items: HomeFeedItem[]) {
+		// 分类筛选由服务端 category_code 完成，这里直接展示结果，
+		// 不再按名称二次过滤，避免类目名称映射差异误删卡片。
+		filteredFeed.value = items
+	}
+
+	function refreshFeed() {
+		if (loadingFeed.value) {
+			return
+		}
+		loadingFeed.value = true
+		getServiceCategoryOptions().then((optionResult) => {
+			if (optionResult.ok) {
+				categoryOptions.value = optionResult.items
+				// 用接口返回的类目名称生成 Tab，选择时再映射回 category_code 请求。
+				const labels: string[] = ['全部']
+				for (let i = 0; i < optionResult.items.length; i++) {
+					const name = optionResult.items[i].name
+					if (name.length > 0) {
+						labels.push(name)
+					}
+				}
+				categories.value = labels
+			}
+			return getHomeFeedPage(categoryCodeForLabel(selectedCategory.value), cityCode.value, '', 10, 'RECOMMENDED', categoryOptions.value)
+		}).then((result) => {
+			loadingFeed.value = false
+			if (!result.ok) {
+				uni.showToast({
+					title: result.message,
+					position: 'bottom',
+					icon: 'error'
+				})
+				return
+			}
+			allFeed.value = result.items
+			nextCursor.value = result.next
+			applyFeed(result.items)
+		})
+	}
+
+	function loadMore() {
+		if (loadingFeed.value || nextCursor.value.length == 0) {
+			return
+		}
+		loadingFeed.value = true
+		getHomeFeedPage(categoryCodeForLabel(selectedCategory.value), cityCode.value, nextCursor.value, 20, 'RECOMMENDED', categoryOptions.value).then((result) => {
+			loadingFeed.value = false
+			if (!result.ok) {
+				return
+			}
+			const merged: HomeFeedItem[] = []
+			for (let i = 0; i < allFeed.value.length; i++) {
+				merged.push(allFeed.value[i])
+			}
+			for (let i = 0; i < result.items.length; i++) {
+				merged.push(result.items[i])
+			}
+			allFeed.value = merged
+			nextCursor.value = result.next
+			applyFeed(merged)
+		})
 	}
 
 	onShow(() => {
 		refreshFeed()
+	})
+
+	onReachBottom(() => {
+		loadMore()
 	})
 
 	onLoad((options) => {
@@ -172,6 +250,7 @@
 
 	function changeCategory(category: string) {
 		selectedCategory.value = category
+		nextCursor.value = ''
 		refreshFeed()
 	}
 

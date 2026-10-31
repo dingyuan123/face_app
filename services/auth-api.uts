@@ -1,0 +1,198 @@
+import { ActionOutcome, AuthUser } from '../types/models.uts'
+import {
+  businessCode,
+  businessMessage,
+  numberValue,
+  payload,
+  requestGet,
+  requestPost,
+  stringValue,
+  HttpResult
+} from './api-client.uts'
+import {
+  getAccessToken,
+  getRefreshToken,
+  logout as clearLocalSession,
+  setAuthSession,
+  setBackendSessionState
+} from '../state/session-state.uts'
+
+// 登录接口只在这里定义路径，域名和请求头由 api-client 统一管理。
+function createIdempotencyKey(prefix: string, phone: string): string {
+  return prefix + '-' + Date.now().toString() + '-' + phone
+}
+
+function parseSmsResponse(result: HttpResult): ActionOutcome {
+  if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+    return {
+      ok: false,
+      code: 'SMS_REQUEST_FAILED',
+      message: businessMessage(result)
+    }
+  }
+  const debugCode = stringValue(payload(result.body), 'debug_code')
+  let message = '验证码已发送'
+  if (debugCode.length > 0) {
+    message = '验证码已发送：' + debugCode
+  }
+  return {
+    ok: true,
+    code: 'SMS_SENT',
+    message: message
+  }
+}
+
+function parseSessionResponse(result: HttpResult): ActionOutcome {
+  if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+    return {
+      ok: false,
+      code: 'SESSION_REQUEST_FAILED',
+      message: businessMessage(result)
+    }
+  }
+  const data = payload(result.body)
+  // /users/me/ 是登录、刷新后身份和申请状态的权威来源。
+  setBackendSessionState(
+    stringValue(data, 'primary_role'),
+    stringValue(data, 'default_workspace'),
+    stringValue(data, 'provider_status'),
+    data['requires_identity_selection'] == true
+  )
+  return {
+    ok: true,
+    code: 'SESSION_LOADED',
+    message: '会话状态已同步'
+  }
+}
+
+function parseLoginResponse(result: HttpResult): ActionOutcome {
+  if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+    return {
+      ok: false,
+      code: 'LOGIN_FAILED',
+      message: businessMessage(result)
+    }
+  }
+  const data = payload(result.body)
+  const accessToken = stringValue(data, 'access_token')
+  const refreshToken = stringValue(data, 'refresh_token')
+  const userPublicId = stringValue(data, 'user_public_id')
+  if (accessToken.length == 0 || refreshToken.length == 0 || userPublicId.length == 0) {
+    return {
+      ok: false,
+      code: 'LOGIN_RESPONSE_INVALID',
+      message: '登录响应缺少必要的认证信息'
+    }
+  }
+  const phoneMasked = stringValue(data, 'phone_masked')
+  const user: AuthUser = {
+    id: userPublicId,
+    displayName: phoneMasked.length > 0 ? phoneMasked : 'FaceTo 用户'
+  }
+  // Token 由 session-state 持久化，后续 API 客户端统一读取。
+  setAuthSession(
+    user,
+    accessToken,
+    refreshToken,
+    stringValue(data, 'token_type'),
+    numberValue(data, 'expires_in'),
+    numberValue(data, 'refresh_expires_in'),
+    stringValue(data, 'status'),
+    data['requires_identity_selection'] == true
+  )
+  return {
+    ok: true,
+    code: 'LOGIN_SUCCESS',
+    message: '登录成功'
+  }
+}
+
+// 发送手机号登录验证码。
+export function sendSmsCode(phone: string): Promise<ActionOutcome> {
+  return requestPost('/auth/sms-code/', {
+    phone: phone
+  }, createIdempotencyKey('faceto-sms', phone), '', false).then((result: HttpResult) => {
+    return parseSmsResponse(result)
+  })
+}
+
+// 手机号验证码登录或自动注册。
+export function loginWithPhone(phone: string, code: string): Promise<ActionOutcome> {
+  return requestPost('/auth/login/', {
+    phone: phone,
+    code: code
+  }, createIdempotencyKey('faceto-login', phone), '', false).then((result: HttpResult) => {
+    const loginResult = parseLoginResponse(result)
+    if (!loginResult.ok) {
+      return loginResult
+    }
+    // Token 获取成功后立即同步后端身份、默认工作区和申请状态。
+    return syncSessionFromApi().then((sessionResult: ActionOutcome) => {
+      return sessionResult.ok ? loginResult : sessionResult
+    })
+  })
+}
+
+// 刷新访问令牌和刷新令牌。
+export function refreshLogin(): Promise<ActionOutcome> {
+  const refreshToken = getRefreshToken()
+  if (refreshToken.length == 0) {
+    return new Promise<ActionOutcome>((resolve) => {
+      resolve({
+        ok: false,
+        code: 'REFRESH_TOKEN_MISSING',
+        message: '登录状态已失效，请重新登录'
+      })
+    })
+  }
+  return requestPost('/auth/refresh/', {
+    refresh_token: refreshToken
+  }, createIdempotencyKey('faceto-refresh', refreshToken), '', true).then((result: HttpResult) => {
+    const refreshResult = parseLoginResponse(result)
+    if (!refreshResult.ok) {
+      return refreshResult
+    }
+    return syncSessionFromApi().then((sessionResult: ActionOutcome) => {
+      return sessionResult.ok ? refreshResult : sessionResult
+    })
+  })
+}
+
+// 登录、刷新 Token 后同步 /users/me/，避免本地身份状态覆盖后端结果。
+export function syncSessionFromApi(): Promise<ActionOutcome> {
+  return requestGet('/users/me/', getAccessToken()).then((result: HttpResult) => {
+    return parseSessionResponse(result)
+  })
+}
+
+// 查询当前登录会话，供后续需要校验 Token 的业务复用。
+export function getCurrentSession(token: string): Promise<ActionOutcome> {
+  return requestGet('/users/me/', token).then((result: HttpResult) => {
+    return parseSessionResponse(result)
+  })
+}
+
+// 调用后端退出登录并清理本地账号状态；后端失败时仍清理本地，避免残留身份。
+export function logout(): Promise<ActionOutcome> {
+  // 先保存当前 Token 并立即清理本地账号状态，网络失败不会残留身份和申请状态。
+  const token = getAccessToken()
+  clearLocalSession()
+  return requestPost('/auth/logout/', {}, 'faceto-logout-' + Date.now().toString(), token, false).then((result: HttpResult) => {
+    if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+      return {
+        ok: false,
+        code: 'LOGOUT_REQUEST_FAILED',
+        message: businessMessage(result)
+      }
+    }
+    return {
+      ok: true,
+      code: 'LOGOUT_SUCCESS',
+      message: '已退出登录'
+    }
+  })
+}
+
+export function getApiAccessToken(): string {
+  return getAccessToken()
+}

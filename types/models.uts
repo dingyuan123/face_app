@@ -11,7 +11,7 @@ export type AuthUser = {
 
 export type ProviderApplicationDraft = {
   avatarPath: string,
-  lifePhotoPath: string,
+  lifePhotoPaths: string[],
   bio: string,
   realName: string,
   idCardNumber: string
@@ -19,14 +19,23 @@ export type ProviderApplicationDraft = {
 
 export type ProviderApplicationRecord = {
   id: string,
+  applicationNo: string,
   submittedAt: string,
   status: string,
   rejectionReason: string,
   avatarAsset: string,
   lifePhotoAsset: string,
+  lifePhotoAssets: string[],
   bio: string,
   realName: string,
-  idCardMasked: string
+  idCardMasked: string,
+  version: number,
+  realNameStatus: string,
+  faceStatus: string,
+  userPublicId: string,
+  userPhoneMasked: string,
+  avatarMediaId: string,
+  lifePhotoMediaIds: string[]
 }
 
 export type ProviderSubmitResult = {
@@ -34,6 +43,30 @@ export type ProviderSubmitResult = {
   code: string,
   message: string,
   record: ProviderApplicationRecord | null
+}
+
+export type ProviderApplicationLoadResult = {
+  ok: boolean,
+  code: string,
+  message: string,
+  record: ProviderApplicationRecord | null
+}
+
+export type InitialRoleResult = {
+  ok: boolean,
+  code: string,
+  message: string,
+  primaryRole: string,
+  defaultWorkspace: string,
+  nextRoute: string,
+  requiresIdentitySelection: boolean,
+  providerStatus: string
+}
+
+export type ProviderMediaAsset = {
+  mediaId: string,
+  contentUrl: string,
+  purpose: string
 }
 
 export type HomeFeedItem = {
@@ -52,6 +85,16 @@ export type HomeFeedItem = {
   verified: boolean,
   coverLabel: string,
   coverImages: string[]
+}
+
+
+export type HomeFeedPageResult = {
+  ok: boolean,
+  code: string,
+  message: string,
+  items: HomeFeedItem[],
+  next: string,
+  previous: string
 }
 
 export type PendingIntent = {
@@ -476,15 +519,80 @@ export type ProviderProfileDraft = {
   introduction: string
 }
 
+// 服务者动态管理条目；statusCode 为接口原始状态（DRAFT/PENDING/PUBLISHED/REJECTED）。
 export type ProviderMomentManageItem = {
   id: string,
   title: string,
+  content: string,
   coverImage: string,
+  mediaUrls: string[],
+  mediaIds: string[],
   publishedAt: string,
+  updatedAt: string,
   viewCount: number,
   likeCount: number,
   commentCount: number,
-  status: string
+  shareCount: number,
+  status: string,
+  statusCode: string,
+  rejectReason: string,
+  version: number,
+  visibility: string,
+  allowRecommend: boolean,
+  attachedServiceId: string,
+  attachedServiceTitle: string
+}
+
+export type ProviderMomentListResult = {
+  ok: boolean,
+  code: string,
+  message: string,
+  items: ProviderMomentManageItem[],
+  total: number
+}
+
+export type ProviderMomentResult = {
+  ok: boolean,
+  code: string,
+  message: string,
+  moment: ProviderMomentManageItem | null
+}
+
+// 动态保存输入；mediaPaths 为本地路径或已上传地址，mediaIds 与之一一对应（未上传为空）。
+export type ProviderMomentDraftInput = {
+  id: string,
+  expectedVersion: number,
+  content: string,
+  mediaPaths: string[],
+  mediaIds: string[],
+  visibility: string,
+  allowRecommend: boolean,
+  attachedServiceId: string
+}
+
+// 动态可挂载服务摘要，仅包含本人已上架服务。
+export type MomentMountableServiceItem = {
+  id: string,
+  title: string,
+  categoryCode: string,
+  priceDisplay: string,
+  durationMinutes: number,
+  coverUrl: string
+}
+
+export type MomentMountableServiceListResult = {
+  ok: boolean,
+  code: string,
+  message: string,
+  items: MomentMountableServiceItem[]
+}
+
+export type MomentMediaUploadResult = {
+  ok: boolean,
+  code: string,
+  message: string,
+  mediaId: string,
+  displayUrl: string
 }
 
 export type ProviderManageServiceItem = {
@@ -630,4 +738,184 @@ export type LegalDocument = {
   updatedAt: string,
   summary: string,
   sections: LegalDocumentSection[]
+}
+
+export type ProfileInterestTag = {
+  code: string,
+  name: string,
+  category: string,
+  sortOrder: number
+}
+
+export type ProfileCityOption = {
+  code: string,
+  name: string,
+  sortOrder: number
+}
+
+export type UserProfile = {
+  version: number,
+  nickname: string,
+  avatarUrl: string,
+  gender: string,
+  age: number,
+  cityCode: string,
+  cityName: string,
+  signature: string,
+  interestTags: ProfileInterestTag[],
+  trustLevelCode: string,
+  trustLevelName: string,
+  profileCompleteness: number,
+  updatedAt: string
+}
+
+export type UserProfileUpdateDraft = {
+  expectedVersion: number,
+  nickname: string,
+  avatarMediaId: string,
+  gender: string,
+  age: number,
+  cityCode: string,
+  signature: string,
+  interestTagCodes: string[]
+}
+
+export type UserProfileLoadResult = {
+  ok: boolean,
+  code: string,
+  message: string,
+  profile: UserProfile | null
+}
+
+export type UserProfileUpdateResult = {
+  ok: boolean,
+  code: string,
+  message: string,
+  profile: UserProfile | null
+}
+
+export type ProfileInterestTagListResult = {
+  ok: boolean,
+  code: string,
+  message: string,
+  items: ProfileInterestTag[]
+}
+
+export type ProfileCityListResult = {
+  ok: boolean,
+  code: string,
+  message: string,
+  items: ProfileCityOption[]
+}
+
+export type ProviderOptionItem = {
+  code: string,
+  name: string,
+  category: string,
+  sortOrder: number
+}
+
+export type ProviderProfileData = {
+  version: number,
+  nickname: string,
+  signature: string,
+  introduction: string,
+  avatarUrl: string,
+  avatarMediaId: string,
+  photoUrls: string[],
+  photoMediaIds: string[],
+  categoryCodes: string[],
+  tagCodes: string[],
+  updatedAt: string
+}
+
+export type ProviderProfileUpdateDraft = {
+  expectedVersion: number,
+  nickname: string,
+  signature: string,
+  introduction: string,
+  avatarPath: string,
+  avatarMediaId: string,
+  photoPaths: string[],
+  photoMediaIds: string[],
+  categoryCodes: string[],
+  tagCodes: string[]
+}
+
+export type ProviderProfileResult = {
+  ok: boolean,
+  code: string,
+  message: string,
+  profile: ProviderProfileData | null
+}
+
+export type ProviderOptionListResult = {
+  ok: boolean,
+  code: string,
+  message: string,
+  items: ProviderOptionItem[]
+}
+
+export type ProviderServiceData = {
+  id: string,
+  version: number,
+  title: string,
+  categoryCode: string,
+  currency: string,
+  priceAmountMinor: number,
+  priceDisplay: string,
+  durationMinutes: number,
+  introduction: string,
+  coverUrl: string,
+  coverMediaId: string,
+  galleryUrls: string[],
+  galleryMediaIds: string[],
+  tagCodes: string[],
+  locationType: string,
+  status: string,
+  rejectReason: string,
+  soldCount: number,
+  updatedAt: string
+}
+
+export type ProviderServiceListData = {
+  items: ProviderServiceData[],
+  total: number,
+  page: number,
+  pageSize: number,
+  totalCount: number,
+  onlineCount: number,
+  pendingCount: number,
+  soldCount: number
+}
+
+export type ProviderServiceListResult = {
+  ok: boolean,
+  code: string,
+  message: string,
+  data: ProviderServiceListData | null
+}
+
+export type ProviderServiceResult = {
+  ok: boolean,
+  code: string,
+  message: string,
+  service: ProviderServiceData | null
+}
+
+export type ProviderServiceDraftInput = {
+  id: string,
+  expectedVersion: number,
+  title: string,
+  categoryCode: string,
+  currency: string,
+  priceAmountMinor: number,
+  durationMinutes: number,
+  introduction: string,
+  coverPath: string,
+  coverMediaId: string,
+  galleryPaths: string[],
+  galleryMediaIds: string[],
+  tagCodes: string[],
+  locationType: string
 }

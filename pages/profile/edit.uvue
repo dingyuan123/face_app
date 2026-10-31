@@ -69,52 +69,21 @@
 				<text class="tag-title">兴趣标签</text>
 				<text class="tag-desc">选择兴趣，让同城玩伴更了解你</text>
 
-				<view class="tag-group">
-					<text class="group-label">运动</text>
+				<view v-for="group in tagGroups" :key="group.category" class="tag-group">
+					<text class="group-label">{{ group.category }}</text>
 					<view class="tag-list">
-						<view class="tag-button" :class="tagBilliards ? 'tag-button-active' : ''" @click="tagBilliards = !tagBilliards">
-							<text class="tag-text" :class="tagBilliards ? 'tag-text-active' : ''">台球</text>
-						</view>
-						<view class="tag-button" :class="tagBadminton ? 'tag-button-active' : ''" @click="tagBadminton = !tagBadminton">
-							<text class="tag-text" :class="tagBadminton ? 'tag-text-active' : ''">羽毛球</text>
-						</view>
-						<view class="tag-button" :class="tagRunning ? 'tag-button-active' : ''" @click="tagRunning = !tagRunning">
-							<text class="tag-text" :class="tagRunning ? 'tag-text-active' : ''">跑步</text>
-						</view>
-					</view>
-				</view>
-
-				<view class="tag-group">
-					<text class="group-label">娱乐</text>
-					<view class="tag-list">
-						<view class="tag-button" :class="tagMovie ? 'tag-button-active' : ''" @click="tagMovie = !tagMovie">
-							<text class="tag-text" :class="tagMovie ? 'tag-text-active' : ''">看电影</text>
-						</view>
-						<view class="tag-button" :class="tagBoardGame ? 'tag-button-active' : ''" @click="tagBoardGame = !tagBoardGame">
-							<text class="tag-text" :class="tagBoardGame ? 'tag-text-active' : ''">桌游</text>
-						</view>
-						<view class="tag-button" :class="tagMusic ? 'tag-button-active' : ''" @click="tagMusic = !tagMusic">
-							<text class="tag-text" :class="tagMusic ? 'tag-text-active' : ''">音乐</text>
-						</view>
-					</view>
-				</view>
-
-				<view class="tag-group">
-					<text class="group-label">休闲</text>
-					<view class="tag-list">
-						<view class="tag-button" :class="tagCoffee ? 'tag-button-active' : ''" @click="tagCoffee = !tagCoffee">
-							<text class="tag-text" :class="tagCoffee ? 'tag-text-active' : ''">咖啡</text>
-						</view>
-						<view class="tag-button" :class="tagWalk ? 'tag-button-active' : ''" @click="tagWalk = !tagWalk">
-							<text class="tag-text" :class="tagWalk ? 'tag-text-active' : ''">城市漫步</text>
-						</view>
-						<view class="tag-button" :class="tagFood ? 'tag-button-active' : ''" @click="tagFood = !tagFood">
-							<text class="tag-text" :class="tagFood ? 'tag-text-active' : ''">美食</text>
+						<view
+							v-for="tag in group.tags"
+							:key="tag.code"
+							class="tag-button"
+							:class="isTagSelected(tag.code) ? 'tag-button-active' : ''"
+							@click="toggleTag(tag.code)"
+						>
+							<text class="tag-text" :class="isTagSelected(tag.code) ? 'tag-text-active' : ''">{{ tag.name }}</text>
 						</view>
 					</view>
 				</view>
 			</view>
-
 			<view class="privacy-row">
 				<view class="privacy-check">✓</view>
 				<text class="privacy-text">资料仅用于完善个人主页，放心填写</text>
@@ -126,24 +95,172 @@
 </template>
 
 <script setup lang="uts">
-	import { saveProfileDraft } from '../../services/service-container.uts'
+	import {
+		getProfileCities,
+		getProfileInterestTags,
+		getUserProfile,
+		updateUserProfile
+	} from '../../services/service-container.uts'
+	import type {
+		ProfileCityOption,
+		ProfileInterestTag,
+		UserProfileUpdateDraft
+	} from '../../types/models.uts'
+	import { sessionState } from '../../state/session-state.uts'
+	import { openLogin } from '../../router/route-guard.uts'
 
-	const avatar = ref('/static/following/avatar-linchuan.png')
-	const nickname = ref('小林同学')
-	const gender = ref('男')
-	const age = ref('24 岁')
-	const city = ref('四川省 · 泸州市')
-	const bio = ref('喜欢台球、咖啡和城市漫步')
+	type TagGroup = {
+		category: string,
+		tags: ProfileInterestTag[]
+	}
 
-	const tagBilliards = ref(true)
-	const tagBadminton = ref(false)
-	const tagRunning = ref(false)
-	const tagMovie = ref(false)
-	const tagBoardGame = ref(false)
-	const tagMusic = ref(false)
-	const tagCoffee = ref(true)
-	const tagWalk = ref(false)
-	const tagFood = ref(false)
+	const avatar = ref('')
+	const avatarChanged = ref(false)
+	const nickname = ref('')
+	const gender = ref('未填写')
+	const genderCode = ref('')
+	const age = ref(0)
+	const cityCode = ref('')
+	const city = ref('请选择城市')
+	const bio = ref('')
+	const selectedTagCodes = ref<string[]>([])
+	const cities = ref<ProfileCityOption[]>([])
+	const interestTags = ref<ProfileInterestTag[]>([])
+	const tagGroups = ref<TagGroup[]>([])
+	const profileVersion = ref(0)
+	const saving = ref(false)
+
+	function mapGenderLabel(code: string): string {
+		if (code == 'MALE') {
+			return '男'
+		}
+		if (code == 'FEMALE') {
+			return '女'
+		}
+		return '未填写'
+	}
+
+	function buildTagGroups(items: ProfileInterestTag[]) {
+		const groups: TagGroup[] = []
+		for (let i = 0; i < items.length; i++) {
+			const item = items[i]
+			let groupIndex = -1
+			for (let j = 0; j < groups.length; j++) {
+				if (groups[j].category == item.category) {
+					groupIndex = j
+					break
+				}
+			}
+			if (groupIndex < 0) {
+				groups.push({
+					category: item.category,
+					tags: [item]
+				})
+			} else {
+				groups[groupIndex].tags.push(item)
+			}
+		}
+		tagGroups.value = groups
+	}
+
+	function isTagSelected(code: string): boolean {
+		for (let i = 0; i < selectedTagCodes.value.length; i++) {
+			if (selectedTagCodes.value[i] == code) {
+				return true
+			}
+		}
+		return false
+	}
+
+	function toggleTag(code: string) {
+		const next: string[] = []
+		let exists = false
+		for (let i = 0; i < selectedTagCodes.value.length; i++) {
+			if (selectedTagCodes.value[i] == code) {
+				exists = true
+			} else {
+				next.push(selectedTagCodes.value[i])
+			}
+		}
+		if (!exists) {
+			if (next.length >= 5) {
+				uni.showToast({
+					title: '最多选择 5 个兴趣标签',
+					position: 'bottom',
+					icon: 'error'
+				})
+				return
+			}
+			next.push(code)
+		}
+		selectedTagCodes.value = next
+	}
+
+	function loadOptions() {
+		getProfileInterestTags().then((result) => {
+			if (!result.ok) {
+				uni.showToast({
+					title: result.message,
+					position: 'bottom',
+					icon: 'error'
+				})
+				return
+			}
+			interestTags.value = result.items
+			buildTagGroups(result.items)
+		})
+		getProfileCities().then((result) => {
+			if (!result.ok) {
+				uni.showToast({
+					title: result.message,
+					position: 'bottom',
+					icon: 'error'
+				})
+				return
+			}
+			cities.value = result.items
+		})
+	}
+
+	function loadProfile() {
+		getUserProfile().then((result) => {
+			if (!result.ok || result.profile == null) {
+				if (!result.ok) {
+					uni.showToast({
+						title: result.message,
+						position: 'bottom',
+						icon: 'error'
+					})
+				}
+				return
+			}
+			const profile = result.profile
+			profileVersion.value = profile.version
+			nickname.value = profile.nickname
+			avatar.value = profile.avatarUrl
+			avatarChanged.value = false
+			genderCode.value = profile.gender
+			gender.value = mapGenderLabel(profile.gender)
+			age.value = profile.age
+			cityCode.value = profile.cityCode
+			city.value = profile.cityName.length > 0 ? profile.cityName : '请选择城市'
+			bio.value = profile.signature
+			const codes: string[] = []
+			for (let i = 0; i < profile.interestTags.length; i++) {
+				codes.push(profile.interestTags[i].code)
+			}
+			selectedTagCodes.value = codes
+		})
+	}
+
+	onShow(() => {
+		if (!sessionState.loggedIn) {
+			openLogin('edit-profile', '/pages/profile/edit', '')
+			return
+		}
+		loadProfile()
+		loadOptions()
+	})
 
 	function onNicknameInput(event: InputEvent) {
 		nickname.value = event.detail.value
@@ -159,81 +276,86 @@
 			success: (result) => {
 				if (result.tempFilePaths.length > 0) {
 					avatar.value = result.tempFilePaths[0]
+					avatarChanged.value = true
 				}
 			}
 		})
 	}
 
 	function chooseGender() {
-		uni.showToast({
-			title: '性别选择将在后续阶段接入',
-			position: 'bottom',
-			icon: 'none'
+		const options = ['男', '女']
+		uni.showActionSheet({
+			itemList: options,
+			success: (result) => {
+				gender.value = options[result.tapIndex]
+				genderCode.value = options[result.tapIndex] == '男' ? 'MALE' : 'FEMALE'
+			}
 		})
 	}
 
 	function chooseAge() {
-		uni.showToast({
-			title: '年龄选择将在后续阶段接入',
-			position: 'bottom',
-			icon: 'none'
+		const options: string[] = []
+		for (let i = 18; i <= 40; i++) {
+			options.push(i.toString() + ' 岁')
+		}
+		uni.showActionSheet({
+			itemList: options,
+			success: (result) => {
+				age.value = 18 + result.tapIndex
+			}
 		})
 	}
 
 	function chooseCity() {
-		uni.showToast({
-			title: '城市选择将在后续阶段接入',
-			position: 'bottom',
-			icon: 'none'
+		if (cities.value.length == 0) {
+			uni.showToast({
+				title: '城市选项加载中',
+				position: 'bottom',
+				icon: 'none'
+			})
+			return
+		}
+		const options: string[] = []
+		for (let i = 0; i < cities.value.length; i++) {
+			options.push(cities.value[i].name)
+		}
+		uni.showActionSheet({
+			itemList: options,
+			success: (result) => {
+				const selected = cities.value[result.tapIndex]
+				cityCode.value = selected.code
+				city.value = selected.name
+			}
 		})
-	}
-
-	function buildTags(): Array<string> {
-		const result: Array<string> = []
-		if (tagBilliards.value) {
-			result.push('台球')
-		}
-		if (tagBadminton.value) {
-			result.push('羽毛球')
-		}
-		if (tagRunning.value) {
-			result.push('跑步')
-		}
-		if (tagMovie.value) {
-			result.push('看电影')
-		}
-		if (tagBoardGame.value) {
-			result.push('桌游')
-		}
-		if (tagMusic.value) {
-			result.push('音乐')
-		}
-		if (tagCoffee.value) {
-			result.push('咖啡')
-		}
-		if (tagWalk.value) {
-			result.push('城市漫步')
-		}
-		if (tagFood.value) {
-			result.push('美食')
-		}
-		return result
 	}
 
 	function save() {
-		const result = saveProfileDraft({
+		if (saving.value) {
+			return
+		}
+		saving.value = true
+		const draft: UserProfileUpdateDraft = {
+			expectedVersion: profileVersion.value,
 			nickname: nickname.value,
-			gender: gender.value,
+			avatarMediaId: '',
+			gender: genderCode.value,
 			age: age.value,
-			city: city.value,
-			bio: bio.value,
-			avatar: avatar.value,
-			tags: buildTags()
-		})
-		uni.showToast({
-			title: result.message,
-			position: 'bottom',
-			icon: result.ok ? 'success' : 'error'
+			cityCode: cityCode.value,
+			signature: bio.value,
+			interestTagCodes: selectedTagCodes.value
+		}
+		updateUserProfile(draft, avatarChanged.value ? avatar.value : '').then((result) => {
+			saving.value = false
+			uni.showToast({
+				title: result.message,
+				position: 'bottom',
+				icon: result.ok ? 'success' : 'error'
+			})
+			if (result.ok && result.profile != null) {
+				profileVersion.value = result.profile.version
+				avatar.value = result.profile.avatarUrl
+				avatarChanged.value = false
+			}
 		})
 	}
 

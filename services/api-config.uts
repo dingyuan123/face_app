@@ -1,0 +1,10 @@
+// API 环境配置。
+// 当前是 Cloudflare 测试域名；正式域名变更时只需要修改 origin。
+export const API_CONFIG = {
+  origin: 'https://preceding-shell-display-lodging.trycloudflare.com',
+  prefix: '/api/v1',
+  timeout: 15000,
+  uploadTimeout: 30000
+}
+
+export const API_BASE_URL = API_CONFIG.origin + API_CONFIG.prefix

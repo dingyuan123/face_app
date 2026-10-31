@@ -1,0 +1,400 @@
+import {
+  InitialRoleResult,
+  ProviderApplicationDraft,
+  ProviderApplicationRecord,
+  ProviderMediaAsset,
+  ProviderApplicationLoadResult,
+  ProviderSubmitResult
+} from '../types/models.uts'
+import {
+  getAccessToken,
+  setApplicationStatus,
+  setInitialRoleState,
+  setRejectionReason
+} from '../state/session-state.uts'
+import {
+  businessCode,
+  businessMessage,
+  numberValue,
+  payload,
+  requestGet,
+  requestPatch,
+  requestPost,
+  requestUpload,
+  stringValue,
+  HttpResult
+} from './api-client.uts'
+import { API_CONFIG } from './api-config.uts'
+
+// 身份选择和入驻申请的业务接口路径；域名由 api-config 统一维护。
+function createIdempotencyKey(prefix: string): string {
+  return prefix + '-' + Date.now().toString()
+}
+
+function apiPost(path: string, data: any, idempotencyKey: string): Promise<HttpResult> {
+  return requestPost(path, data, idempotencyKey, getAccessToken())
+}
+
+function apiPatch(path: string, data: any, idempotencyKey: string): Promise<HttpResult> {
+  return requestPatch(path, data, idempotencyKey, getAccessToken())
+}
+
+function apiGet(path: string): Promise<HttpResult> {
+  return requestGet(path, getAccessToken())
+}
+
+function apiUpload(path: string, filePath: string, formData: any, idempotencyKey: string): Promise<HttpResult> {
+  return requestUpload(path, filePath, 'file', formData, idempotencyKey, getAccessToken())
+}
+
+function normalizeStatus(status: string): string {
+  const value = status.toLowerCase()
+  if (value == 'approved' || value.indexOf('approve') >= 0) {
+    return 'approved'
+  }
+  if (value == 'rejected' || value.indexOf('reject') >= 0) {
+    return 'rejected'
+  }
+  if (value == 'cancelled' || value == 'canceled' || value.indexOf('cancel') >= 0) {
+    return 'cancelled'
+  }
+  if (value.indexOf('not') >= 0 || value.indexOf('none') >= 0 || value.indexOf('unsubmit') >= 0) {
+    return 'none'
+  }
+  if (value == 'pending' || value.indexOf('review') >= 0 || value.indexOf('under_review') >= 0) {
+    return 'pending'
+  }
+  return 'none'
+}
+
+function mediaUrl(contentUrl: string): string {
+  if (contentUrl.length == 0) {
+    return ''
+  }
+  if (contentUrl.startsWith('http://') || contentUrl.startsWith('https://')) {
+    return contentUrl
+  }
+  return API_CONFIG.origin + contentUrl
+}
+
+// 优先使用后端签名的 display_url；失效后可由下一次 /provider-applications/me/ 刷新。
+function mediaDisplayUrl(media: any): string {
+  if (media == null) {
+    return ''
+  }
+  const displayUrl = stringValue(media, 'display_url')
+  if (displayUrl.length > 0) {
+    return mediaUrl(displayUrl)
+  }
+  return mediaUrl(stringValue(media, 'content_url'))
+}
+
+function firstMediaUrl(items: any): string {
+  if (items == null || items.length == 0) {
+    return ''
+  }
+  return mediaDisplayUrl(items[0])
+}
+
+function mediaUrlList(items: any): string[] {
+  const result: string[] = []
+  if (items == null) {
+    return result
+  }
+  for (let i = 0; i < items.length; i++) {
+    const url = mediaDisplayUrl(items[i])
+    if (url.length > 0) {
+      result.push(url)
+    }
+  }
+  return result
+}
+
+function mediaIdList(items: any): string[] {
+  const result: string[] = []
+  if (items == null) {
+    return result
+  }
+  for (let i = 0; i < items.length; i++) {
+    const id = stringValue(items[i], 'media_id')
+    if (id.length > 0) {
+      result.push(id)
+    }
+  }
+  return result
+}
+
+// 后端不返回真实姓名和身份证号，客户端不保存明文敏感信息。
+function mapApplication(body: any): ProviderApplicationRecord {
+  const data = payload(body)
+  const avatarMedia = data['avatar_media']
+  const lifeMedia = data['life_photo_media']
+  const lifeIds = mediaIdList(lifeMedia)
+  const lifeAssets = mediaUrlList(lifeMedia)
+  const applicationNo = stringValue(data, 'application_no')
+  return {
+    id: applicationNo.length > 0 ? applicationNo : stringValue(data, 'user_public_id'),
+    applicationNo: applicationNo,
+    submittedAt: stringValue(data, 'submitted_at'),
+    status: normalizeStatus(stringValue(data, 'status')),
+    rejectionReason: stringValue(data, 'reject_reason'),
+    avatarAsset: mediaDisplayUrl(avatarMedia),
+    lifePhotoAsset: firstMediaUrl(lifeMedia),
+    lifePhotoAssets: lifeAssets,
+    bio: stringValue(data, 'introduction'),
+    realName: '',
+    idCardMasked: '',
+    version: numberValue(data, 'version'),
+    realNameStatus: stringValue(data, 'real_name_status'),
+    faceStatus: stringValue(data, 'face_status'),
+    userPublicId: stringValue(data, 'user_public_id'),
+    userPhoneMasked: stringValue(data, 'user_phone_masked'),
+    avatarMediaId: stringValue(data, 'avatar_media_id'),
+    lifePhotoMediaIds: lifeIds
+  }
+}
+
+function applyApplicationState(record: ProviderApplicationRecord) {
+  setApplicationStatus(record.status)
+  setRejectionReason(record.rejectionReason)
+}
+
+function mediaUpload(filePath: string, purpose: string): Promise<ProviderMediaAsset | null> {
+  return apiUpload('/media/uploads/', filePath, {
+    purpose: purpose
+  }, createIdempotencyKey('faceto-media')).then((result: HttpResult) => {
+    if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+      return null
+    }
+    const data = payload(result.body)
+    return {
+      mediaId: stringValue(data, 'media_id'),
+      contentUrl: stringValue(data, 'content_url'),
+      purpose: stringValue(data, 'purpose')
+    }
+  })
+}
+
+function submitResult(ok: boolean, code: string, message: string, record: ProviderApplicationRecord | null): ProviderSubmitResult {
+  return {
+    ok: ok,
+    code: code,
+    message: message,
+    record: record
+  }
+}
+
+// 选择首次登录身份；同一身份重复提交为幂等成功，已选择后不能切换。
+export function selectInitialRole(role: string): Promise<InitialRoleResult> {
+  const apiRole = role == 'provider' ? 'PROVIDER' : 'USER'
+  return apiPost('/users/me/initial-role/', {
+    role: apiRole
+  }, createIdempotencyKey('faceto-role')).then((result: HttpResult) => {
+    if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+      return {
+        ok: false,
+        code: 'INITIAL_ROLE_FAILED',
+        message: businessMessage(result),
+        primaryRole: '',
+        defaultWorkspace: '',
+        nextRoute: '',
+        requiresIdentitySelection: true,
+        providerStatus: ''
+      }
+    }
+    const data = payload(result.body)
+    const primaryRole = stringValue(data, 'primary_role')
+    const defaultWorkspace = stringValue(data, 'default_workspace')
+    const nextRoute = stringValue(data, 'next_route')
+    const providerStatus = stringValue(data, 'provider_status')
+    const requiresIdentitySelection = data['requires_identity_selection'] == true
+    setInitialRoleState(role, primaryRole, defaultWorkspace, providerStatus, requiresIdentitySelection)
+    return {
+      ok: true,
+      code: 'INITIAL_ROLE_SELECTED',
+      message: '身份已选择',
+      primaryRole: primaryRole,
+      defaultWorkspace: defaultWorkspace,
+      nextRoute: nextRoute,
+      requiresIdentitySelection: requiresIdentitySelection,
+      providerStatus: providerStatus
+    }
+  })
+}
+
+// 查询当前用户申请；无申请时后端返回 404，这里转换为“无申请”结果。
+export function getProviderApplication(): Promise<ProviderApplicationLoadResult> {
+  return apiGet('/provider-applications/me/').then((result: HttpResult) => {
+    if (result.statusCode == 404) {
+      // 新账号没有申请记录时，也必须清掉上一次登录可能遗留的申请状态。
+      setApplicationStatus('none')
+      setRejectionReason('')
+      return {
+        ok: true,
+        code: 'APPLICATION_NOT_FOUND',
+        message: '尚未提交服务者申请',
+        record: null
+      }
+    }
+    if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+      return {
+        ok: false,
+        code: 'APPLICATION_LOAD_FAILED',
+        message: businessMessage(result),
+        record: null
+      }
+    }
+    const record = mapApplication(result.body)
+    applyApplicationState(record)
+    return {
+      ok: true,
+      code: 'APPLICATION_LOADED',
+      message: '申请状态已加载',
+      record: record
+    }
+  })
+}
+
+type LifePhotoUploadResult = {
+  ok: boolean,
+  mediaIds: string[]
+}
+
+// 顺序上传多张生活照，保持图片顺序与提交给后端的 media_id 顺序一致。
+function uploadLifePhotos(paths: string[], index: number, mediaIds: string[]): Promise<LifePhotoUploadResult> {
+  if (index >= paths.length) {
+    return new Promise<LifePhotoUploadResult>((resolve) => {
+      resolve({
+        ok: true,
+        mediaIds: mediaIds
+      })
+    })
+  }
+  return mediaUpload(paths[index], 'PROVIDER_APPLICATION_LIFE_PHOTO').then((media: ProviderMediaAsset | null) => {
+    if (media == null) {
+      return {
+        ok: false,
+        mediaIds: mediaIds
+      }
+    }
+    const nextIds: string[] = []
+    for (let i = 0; i < mediaIds.length; i++) {
+      nextIds.push(mediaIds[i])
+    }
+    nextIds.push(media.mediaId)
+    return uploadLifePhotos(paths, index + 1, nextIds)
+  })
+}
+
+// 上传申请图片并创建入驻申请。生活照必须满足后端 3-9 张约束。
+export function submitProviderApplicationApi(draft: ProviderApplicationDraft): Promise<ProviderSubmitResult> {
+  if (draft.avatarPath.length == 0) {
+    return new Promise<ProviderSubmitResult>((resolve) => {
+      resolve(submitResult(false, 'MISSING_AVATAR', '请上传头像', null))
+    })
+  }
+  if (draft.lifePhotoPaths.length < 3 || draft.lifePhotoPaths.length > 9) {
+    return new Promise<ProviderSubmitResult>((resolve) => {
+      resolve(submitResult(false, 'INVALID_LIFE_PHOTO_COUNT', '生活照数量必须在 3 到 9 之间', null))
+    })
+  }
+  if (draft.bio.trim().length < 8 || draft.realName.trim().length < 2 || draft.idCardNumber.trim().length != 18) {
+    return new Promise<ProviderSubmitResult>((resolve) => {
+      resolve(submitResult(false, 'INVALID_APPLICATION', '请完整填写申请资料', null))
+    })
+  }
+
+  return mediaUpload(draft.avatarPath, 'PROVIDER_APPLICATION_AVATAR').then((avatarMedia: ProviderMediaAsset | null) => {
+    if (avatarMedia == null) {
+      return submitResult(false, 'AVATAR_UPLOAD_FAILED', '头像上传失败，请重试', null)
+    }
+    return uploadLifePhotos(draft.lifePhotoPaths, 0, []).then((lifeResult: LifePhotoUploadResult) => {
+      if (!lifeResult.ok) {
+        return submitResult(false, 'LIFE_PHOTO_UPLOAD_FAILED', '生活照上传失败，请重试', null)
+      }
+      return apiPost('/provider-applications/', {
+        introduction: draft.bio.trim(),
+        real_name: draft.realName.trim(),
+        id_card_number: draft.idCardNumber.trim(),
+        avatar_media_id: avatarMedia.mediaId,
+        life_photo_media_ids: lifeResult.mediaIds
+      }, createIdempotencyKey('faceto-application')).then((result: HttpResult) => {
+        if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+          return submitResult(false, 'APPLICATION_SUBMIT_FAILED', businessMessage(result), null)
+        }
+        const record = mapApplication(result.body)
+        applyApplicationState(record)
+        return submitResult(true, 'APPLICATION_SUBMITTED', '申请已提交，等待平台审核', record)
+      })
+    })
+  })
+}
+
+// 被拒绝或已取消的申请使用 PATCH 重新提交，必须携带 expected_version 防止并发覆盖。
+export function updateProviderApplicationApi(
+  draft: ProviderApplicationDraft,
+  previous: ProviderApplicationRecord,
+  expectedVersion: number
+): Promise<ProviderSubmitResult> {
+  return new Promise<ProviderSubmitResult>((resolve) => {
+    if (draft.bio.trim().length < 8 || draft.realName.trim().length < 2 || draft.idCardNumber.trim().length != 18) {
+      resolve(submitResult(false, 'INVALID_APPLICATION', '请完整填写申请资料', null))
+      return
+    }
+    if (draft.lifePhotoPaths.length > 0 && (draft.lifePhotoPaths.length < 3 || draft.lifePhotoPaths.length > 9)) {
+      resolve(submitResult(false, 'INVALID_LIFE_PHOTO_COUNT', '生活照数量必须在 3 到 9 之间', null))
+      return
+    }
+
+    const submitWithMedia = (avatarMediaId: string, lifePhotoMediaIds: string[]) => {
+      const body: any = {
+        introduction: draft.bio.trim(),
+        real_name: draft.realName.trim(),
+        id_card_number: draft.idCardNumber.trim(),
+        expected_version: expectedVersion
+      }
+      if (avatarMediaId.length > 0) {
+        body['avatar_media_id'] = avatarMediaId
+      }
+      if (lifePhotoMediaIds.length > 0) {
+        body['life_photo_media_ids'] = lifePhotoMediaIds
+      }
+      apiPatch('/provider-applications/me/', body, createIdempotencyKey('faceto-application-update')).then((result: HttpResult) => {
+        if (result.statusCode < 200 || result.statusCode >= 300 || businessCode(result.body) != 0) {
+          resolve(submitResult(false, 'APPLICATION_UPDATE_FAILED', businessMessage(result), null))
+          return
+        }
+        const record = mapApplication(result.body)
+        applyApplicationState(record)
+        resolve(submitResult(true, 'APPLICATION_UPDATED', '申请已重新提交，等待平台审核', record))
+      })
+    }
+
+    const submitLifePhotos = (avatarMediaId: string) => {
+      if (draft.lifePhotoPaths.length == 0) {
+        submitWithMedia(avatarMediaId, previous.lifePhotoMediaIds)
+        return
+      }
+      uploadLifePhotos(draft.lifePhotoPaths, 0, []).then((lifeResult: LifePhotoUploadResult) => {
+        if (!lifeResult.ok) {
+          resolve(submitResult(false, 'LIFE_PHOTO_UPLOAD_FAILED', '生活照上传失败，请重试', null))
+          return
+        }
+        submitWithMedia(avatarMediaId, lifeResult.mediaIds)
+      })
+    }
+
+    if (draft.avatarPath.length == 0) {
+      submitLifePhotos(previous.avatarMediaId)
+      return
+    }
+
+    mediaUpload(draft.avatarPath, 'PROVIDER_APPLICATION_AVATAR').then((avatarMedia: ProviderMediaAsset | null) => {
+      if (avatarMedia == null) {
+        resolve(submitResult(false, 'AVATAR_UPLOAD_FAILED', '头像上传失败，请重试', null))
+        return
+      }
+      submitLifePhotos(avatarMedia.mediaId)
+    })
+  })
+}
